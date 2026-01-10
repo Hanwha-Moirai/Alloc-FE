@@ -73,10 +73,10 @@ const router = createRouter({
                             path: 'docs',
                             component: () => import('@/pages/projectTabs/ProjectDocuments.vue'),
                         },
-                        // {
-                        //     path: 'members',
-                        //     component: () => import('@/pages/projectTabs/ProjectMembers.vue'),
-                        // },
+                        {
+                            path: 'members',
+                            component: () => import('@/pages/projectTabs/ProjectMembers.vue'),
+                        },
                     ],
                 },
                 {
