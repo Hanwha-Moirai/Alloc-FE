@@ -86,7 +86,7 @@
             v-if="isActive('schedule')"
             class="schedule-actions"
         >
-          <button class="add-btn">
+          <button class="add-btn" @click="showMilestoneAddModal = true">
             + 마일스톤 추가하기
           </button>
         </div>
@@ -109,6 +109,12 @@
         @close="isFilterOpen = false"
         @filter="handleFilter"
     />
+
+    <ScheduleAddModal
+        v-if="showMilestoneAddModal"
+        @close="showMilestoneAddModal = false"
+        @add="handleAddMilestone"
+    />
   </div>
 </template>
 
@@ -118,12 +124,14 @@ import { useRoute, useRouter } from 'vue-router'
 
 import TaskAddModal from '@/components/common/TaskAddModal.vue'
 import TaskFilterDrawer from '@/components/common/TaskFilterDrawer.vue'
+import ScheduleAddModal from '@/components/common/ScheduleAddModal.vue'
 
 const route = useRoute()
 const router = useRouter()
 const projectId = route.params.projectId
 
 const showAddModal = ref(false)
+const showMilestoneAddModal = ref(false)
 
 const handleAddTask = (newTask: any) => {
   console.log('새로운 태스크 데이터:', newTask)
@@ -134,6 +142,11 @@ const isFilterOpen = ref(false)
 
 const handleFilter = (filterData: any) => {
   console.log('적용할 필터:', filterData)
+}
+
+const handleAddMilestone = (newMilestone: any) => {
+  console.log('새로운 마일스톤 데이터:', newMilestone)
+  showMilestoneAddModal.value = false
 }
 
 const goTab = (tab: string) => {

@@ -291,7 +291,7 @@ const confirmDelete = () => {
     isDeleteModalOpen.value = false;
     targetDeleteId.value = null;
   }
-};
+}
 </script>
 
 <style scoped>
