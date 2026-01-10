@@ -2,13 +2,25 @@
   <div class="gantt-wrapper">
     <div class="gantt-sidebar">
       <div class="sidebar-header">
-        <button class="filter-mini">
-          <img src="/filter.png" alt="filter" /> 필터
-        </button>
+        <div class="view-selector-container">
+          <button class="view-selector-btn" @click="isViewMenuOpen = !isViewMenuOpen">
+            <div class="view-btn-left">
+              <img src="/icons/calendar.png" alt="calendar" class="calendar-mini-icon" />
+              <span>{{ currentViewMode }} 보기</span>
+            </div>
+            <span class="chevron-down">▼</span>
+          </button>
+
+          <ul v-if="isViewMenuOpen" class="view-dropdown-menu">
+            <li v-for="mode in viewModes" :key="mode" @click="changeViewMode(mode)">
+              {{ mode }} 보기
+            </li>
+          </ul>
+        </div>
       </div>
 
       <div class="project-list">
-        <div v-for="group in scheduleData" :key="group.id" class="project-item-container">
+        <div v-for="(group, index) in scheduleData" :key="group.id" class="project-item-container">
           <div class="project-item" @click="group.expanded = !group.expanded">
             <div class="project-info">
               <span class="arrow" :class="{ rotated: group.expanded }">〉</span>
@@ -31,39 +43,49 @@
     </div>
 
     <div class="gantt-chart-container">
-      <div class="chart-header">
-        <div v-for="month in months" :key="month.name" class="month-col">
-          <div class="month-name">{{ month.name }}</div>
-          <div class="weeks">
-            <span v-for="week in month.weeks" :key="week">{{ week }}</span>
+      <div class="chart-content" :style="{ width: TOTAL_CHART_WIDTH + 'px' }">
+        <div class="chart-grid-background">
+          <div v-for="month in months" :key="month.name" class="grid-month-col" :style="{ width: month.width }"></div>
+        </div>
+
+        <div class="chart-header">
+          <div v-for="month in months" :key="month.name" class="month-col" :style="{ width: month.width }">
+            <div class="month-name">{{ month.name }}</div>
+            <div class="weeks">
+              <span v-for="week in month.weeks" :key="week">{{ week }}</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="chart-body">
-        <div class="today-line"></div>
+        <div class="chart-body">
+          <div class="today-line" :style="todayPos"></div>
 
-        <div v-for="group in scheduleData" :key="group.id" class="chart-row-group">
-          <div class="chart-row main">
-            <div
-                class="gantt-bar project-bar"
-                :style="calculatePos(group.startDate, group.endDate)"
-            >
-              <span class="bar-label">{{ group.projectName }}</span>
-            </div>
-          </div>
-
-          <template v-if="group.expanded">
-            <div v-for="task in group.tasks" :key="task.id" class="chart-row sub">
-              <div
-                  class="gantt-bar task-bar"
-                  :style="calculatePos(task.startDate, task.endDate)"
-              >
-                <span class="bar-label">{{ task.name }}</span>
-                <span class="bar-date">🚩 {{ task.startDate }} - {{ task.endDate }}</span>
+          <div v-for="(group, index) in scheduleData" :key="group.id" class="chart-row-group">
+            <div class="chart-row main">
+              <div class="gantt-bar project-bar" :style="calculatePos(group.startDate, group.endDate)">
+                <div class="bar-color-indicator" :style="{ backgroundColor: getProjectColor(index) }"></div>
+                <div class="bar-content">
+                  <div class="bar-title-row">
+                    <span class="bar-label">{{ group.projectName }}</span>
+                    <button class="bar-more-inline">⋮</button>
+                  </div>
+                  <div class="bar-sub-info">
+                    <span class="bar-date-range">{{ group.startDate }} - {{ group.endDate }}</span>
+                    <span class="bar-task-count">{{ group.tasks.length }} 태스크</span>
+                  </div>
+                </div>
               </div>
             </div>
-          </template>
+
+            <template v-if="group.expanded">
+              <div v-for="task in group.tasks" :key="task.id" class="chart-row sub">
+                <div class="gantt-bar task-bar" :style="calculatePos(task.startDate, task.endDate)">
+                  <span class="task-label">{{ task.name }}</span>
+                  <span class="task-date">🚩 {{ task.startDate }} - {{ task.endDate }}</span>
+                </div>
+              </div>
+            </template>
+          </div>
         </div>
       </div>
     </div>
@@ -71,7 +93,42 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import dayjs from 'dayjs'
+
+//보기 모드 상태
+const isViewMenuOpen = ref(false)
+const currentViewMode = ref('월간')
+const viewModes = ['일간', '주간', '월간']
+
+// --- 보기 모드별 하루당 차지하는 픽셀 폭 (동적 계산) ---
+const pixelPerDay = computed(() => {
+  switch (currentViewMode.value) {
+    case '일간': return 120; // 하루가 아주 넓게 보임 (텍스트 충분히 표시)
+    case '주간': return 40;  // 1주일 단위 보기에 적합
+    case '월간': return 8.2; // 기존의 컴팩트한 1년 보기
+    case '연간': return 2.5; // 전체 흐름 파악용
+    default: return 8.2;
+  }
+})
+
+//설정값
+const currentYear = 2026
+const startOfYear = dayjs(`${currentYear}-01-01`)
+const endOfYear = dayjs(`${currentYear}-12-31`)
+const totalDaysInYear = endOfYear.diff(startOfYear, 'day') + 1
+const TOTAL_CHART_WIDTH = computed(() => totalDaysInYear * pixelPerDay.value)
+const MONTH_WIDTH = computed(() => TOTAL_CHART_WIDTH.value / 12)
+
+const changeViewMode = (mode: string) => {
+  currentViewMode.value = mode
+  isViewMenuOpen.value = false
+}
+
+
+// 프로젝트별 고유 색상 배열
+const projectColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+const getProjectColor = (index: number) => projectColors[index % projectColors.length];
 
 const scheduleData = ref([
   {
@@ -79,75 +136,74 @@ const scheduleData = ref([
     projectName: '클라우드 인프라 전환 프로젝트',
     startDate: '2026.01.25',
     endDate: '2026.03.25',
-    expanded: false, // 펼침 상태 추가
-    tasks: [
-      { id: 11, name: '서버 가동 범위 설정', startDate: '2026.01.25', endDate: '2026.02.10' }
-    ]
+    expanded: false,
+    tasks: [{ id: 11, name: '서버 가동 범위 설정', startDate: '2026.01.25', endDate: '2026.02.10' }]
   },
   {
     id: 2,
     projectName: '신규 서비스 런칭 준비',
     startDate: '2026.01.03',
     endDate: '2026.01.31',
-    expanded: true, // 기본값 펼침
+    expanded: true,
     tasks: [
-      { id: 21, name: 'UI/UX 개선 설계', startDate: '2026.01.03', endDate: '2026.01.07' },
-      { id: 22, name: '메인 화면 개편', startDate: '2026.01.08', endDate: '2026.01.15' },
-      { id: 23, name: '성능 최적화', startDate: '2026.01.16', endDate: '2026.01.25' }
+      { id: 21, name: 'UI/UX 개선 설계', startDate: '2026.01.03', endDate: '2026.01.15' },
+      { id: 22, name: '메인 화면 개편', startDate: '2026.01.08', endDate: '2026.01.25' }
     ]
   }
 ])
 
-const months = [
-  { name: '1월', weeks: [2, 9, 16, 23] },
-  { name: '2월', weeks: [1, 8, 15, 22] },
-  { name: '3월', weeks: [1, 8, 15, 22] },
-  { name: '4월', weeks: [1, 8, 15, 22] }
-]
+// --- 타임라인 생성 로직 (일간 보기 대응 추가) ---
+const months = computed(() => {
+  return Array.from({ length: 12 }, (_, i) => {
+    const startOfMonth = dayjs(`${currentYear}-${i + 1}-01`);
+    const daysInMonth = startOfMonth.daysInMonth();
+    const weeks = [];
 
+    if (currentViewMode.value === '일간') {
+      // 일간 보기일 때는 해당 월의 모든 날짜(1~31)를 추가
+      for (let day = 1; day <= daysInMonth; day++) {
+        weeks.push(day);
+      }
+    } else if (currentViewMode.value === '주간') {
+      // 주간 보기는 7일 간격
+      for (let day = 1; day <= daysInMonth; day += 7) {
+        weeks.push(day);
+      }
+    } else {
+      // 월간 보기는 주요 지점만
+      weeks.push(1, 8, 15, 22);
+    }
+
+    return {
+      name: `${i + 1}월`,
+      weeks,
+      width: (daysInMonth * pixelPerDay.value) + 'px'
+    };
+  });
+});
+
+// --- 위치 계산 로직 수정 ---
 const calculatePos = (start: string, end: string) => {
-  // 예시 위치값 (실제로는 날짜 계산 로직 필요)
-  if (start === '2026.01.03') return { left: '10%', width: '15%' }
-  if (start === '2026.01.08') return { left: '15%', width: '10%' }
-  if (start === '2026.01.16') return { left: '20%', width: '12%' }
-  return { left: '30%', width: '40%' }
+  const startDate = dayjs(start.replace(/\./g, '-'))
+  const endDate = dayjs(end.replace(/\./g, '-'))
+  const startDiff = startDate.diff(startOfYear, 'day')
+  const duration = endDate.diff(startDate, 'day') + 1
+
+  return {
+    left: `${startDiff * pixelPerDay.value}px`,
+    width: `${duration * pixelPerDay.value}px`
+  }
 }
+
+const todayPos = computed(() => {
+  const today = dayjs();
+  if (today.year() !== currentYear) return { display: 'none' };
+  const diff = today.diff(startOfYear, 'day');
+  return { left: `${diff * pixelPerDay.value}px`, display: 'block' };
+});
 </script>
 
 <style scoped>
-.project-item {
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.project-item:hover { background-color: #f9fafb; }
-
-.arrow {
-  font-size: 12px;
-  transition: transform 0.2s;
-  display: inline-block;
-  color: #9ca3af;
-}
-.arrow.rotated {
-  transform: rotate(90deg); /* 클릭 시 화살표 아래로 회전 */
-}
-
-/* 하위 태스크 리스트 (왼쪽) */
-.sub-task-list {
-  background-color: #f9fafb;
-}
-.sub-task-item {
-  padding: 10px 16px 10px 45px; /* 들여쓰기 */
-  font-size: 13px;
-  color: #6b7280;
-  border-bottom: 1px solid #f3f4f6;
-}
-
-/* 간트 바 애니메이션 (선택사항) */
-.chart-row {
-  transition: all 0.3s ease;
-  overflow: hidden;
-}
-
 .gantt-wrapper {
   display: flex;
   height: calc(100vh - 200px);
@@ -155,95 +211,229 @@ const calculatePos = (start: string, end: string) => {
   border: 1px solid #e5e7eb;
 }
 
-/* 사이드바 */
-.gantt-sidebar {
-  width: 280px;
-  border-right: 1px solid #e5e7eb;
-  display: flex;
-  flex-direction: column;
-}
+/* [왼쪽] 사이드바 */
+.gantt-sidebar { width: 280px; min-width: 280px; border-right: 1px solid #e5e7eb; display: flex; flex-direction: column; z-index: 20; background: #fff; }
 .sidebar-header { padding: 12px; border-bottom: 1px solid #f3f4f6; }
-/* 필터 버튼 컨테이너 */
-.filter-mini {
-  background: white;
-  border: 1px solid #e5e7eb;
-  padding: 6px 12px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #4b5563;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border-radius: 4px;
-  transition: all 0.2s;
-}
+.project-item { padding: 16px; border-bottom: 1px solid #f3f4f6; position: relative; cursor: pointer; }
+/* 리스트 마일스톤 왼쪽 색상 라인 */
+.project-item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: #3b82f6; }
+.project-item-container:nth-child(2) .project-item::before { background: #10b981; }
+.project-item-container:nth-child(3) .project-item::before { background: #f59e0b; }
 
-.filter-mini:hover {
-  background-color: #f9fafb;
-  border-color: #d1d5db;
-}
-
-.filter-mini img {
-  width: 14px;
-  height: 14px;
-  object-fit: contain;
-  opacity: 0.7;
-}
-
-.project-item { padding: 16px; border-bottom: 1px solid #f3f4f6; position: relative; }
-.project-item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #3b82f6; } /* 프로젝트별 포인트 컬러 */
 .project-info { display: flex; gap: 10px; align-items: flex-start; }
+.arrow { font-size: 12px; color: #9ca3af; transition: transform 0.2s; }
+.arrow.rotated { transform: rotate(90deg); }
 .name { font-size: 13px; font-weight: 700; margin: 0; color: #374151; }
 .period, .count { font-size: 11px; color: #9ca3af; margin: 2px 0 0 0; }
-.more-btn { background: none; border: none; cursor: pointer; color: #9ca3af; }
+.more-btn { background: none; border: none; cursor: pointer; color: #ccc; margin-left: auto; }
 
-/* 차트 영역 */
-.gantt-chart-container {
-  flex: 1;
-  overflow-x: auto;
+.sub-task-list { background-color: #f9fafb; }
+.sub-task-item { padding: 10px 16px 10px 45px; font-size: 12px; color: #6b7280; border-bottom: 1px solid #f1f1f1; }
+
+/* [오른쪽] 차트 */
+.gantt-chart-container { flex: 1; overflow-x: auto; position: relative; background-color: #fff; }
+.chart-content { position: relative; }
+
+/* 캘린더 배경 그리드 (이미지처럼 배경색 번갈아 가기) */
+.chart-grid-background {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; pointer-events: none;
+}
+.grid-month-col {
+  flex-shrink: 0;
+  border-right: 1px solid #e5e7eb;
   position: relative;
 }
 
-.chart-header {
-  display: flex;
-  background: #fff;
-  border-bottom: 1px solid #e5e7eb;
-}
-.month-col { flex: 1; min-width: 200px; border-right: 1px solid #f3f4f6; text-align: center; }
-.month-name { padding: 8px; font-size: 12px; font-weight: 600; color: #374151; }
-.weeks { display: flex; justify-content: space-around; padding-bottom: 8px; border-top: 1px solid #f3f4f6; padding-top: 4px; }
-.weeks span { font-size: 10px; color: #9ca3af; }
-
-.chart-body { position: relative; min-height: 100%; padding-top: 20px; background-image: linear-gradient(to right, #f3f4f6 1px, transparent 1px); background-size: 50px 100%; }
-
-/* 간트 바 */
-.chart-row { height: 60px; display: flex; align-items: center; padding: 0 20px; }
-.chart-row.sub { height: 40px; }
-
-.gantt-bar {
+/* 일간 보기일 때 날짜별로 아주 연한 세로 가이드라인 추가 */
+.grid-month-col::after {
+  content: '';
   position: absolute;
-  height: 80%;
-  border-radius: 4px;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image: v-bind("currentViewMode === '일간' ? 'linear-gradient(to right, #f1f1f1 1px, transparent 1px)' : 'none'");
+  background-size: v-bind("pixelPerDay + 'px'") 100%;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* 홀수 달마다 연한 하늘색 배경 추가 */
+.grid-month-col:nth-child(odd) { background-color: #f8faff; }
+
+.chart-header { display: flex; border-bottom: 1px solid #e5e7eb; background: #fff; position: relative; z-index: 5; }
+.month-col {
+  flex-shrink: 0;
+  border-right: 1px solid #e5e7eb;
+  text-align: center;
+  transition: width 0.3s ease; /* 모드 변경 시 부드러운 애니메이션 */
+}
+
+.grid-month-col {
+  flex-shrink: 0;
+  border-right: 1px solid #f1f1f1;
+  transition: width 0.3s ease;
+}
+.month-name { padding: 8px; font-size: 12px; font-weight: 700; color: #333; }
+.weeks {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-top: 1px solid #f3f4f6;
+  /* 일간 보기에서 날짜가 많을 때를 대비 */
+  overflow: hidden;
+}
+
+.weeks span {
+  font-size: 10px;
+  color: #9ca3af;
+  flex: 1; /* 날짜마다 균등한 공간 할당 */
+  text-align: center;
+  min-width: 20px;
+}
+
+.chart-body { position: relative; min-height: 100%; padding-top: 20px; z-index: 2; }
+.chart-row { position: relative; height: 70px; display: flex; align-items: center; }
+.chart-row.main { height: 80px; }
+.chart-row.sub { height: 45px; }
+
+/* 마일스톤 바 수정 (그림자 및 왼쪽 컬러바) */
+.gantt-bar { position: absolute; border-radius: 6px; display: flex; align-items: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden; }
+.project-bar {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  height: 60px; /* 정보를 넣기 위해 높이 상향 */
+  z-index: 3;
+  padding: 0; /* 내부 content에서 조절 */
+  display: flex;
+}
+
+.bar-content {
+  flex: 1;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.bar-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.bar-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #333;
+}
+
+.bar-sub-info {
+  display: flex;
+  flex-direction: column; /* 날짜와 태스크 수를 세로로 배치 */
+  margin-top: 2px;
+}
+
+.bar-date-range, .bar-task-count {
+  font-size: 11px;
+  color: #3b82f6; /* 강조 파란색 (이미지 참고) */
+  line-height: 1.2;
+}
+
+.bar-task-count {
+  color: #9ca3af; /* 태스크 수는 회색으로 처리 */
+}
+
+.bar-color-indicator { width: 6px; height: 100%; margin-right: 12px; flex-shrink: 0; }
+.bar-label { font-size: 12px; font-weight: 700; color: #333; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-more-inline { background: none; border: none; color: #ccc; cursor: pointer; font-size: 14px; }
+
+/* 태스크 바 */
+.task-bar {
+  background: #10b981;
+  color: #fff;
+  height: 34px;
+  z-index: 2;
+  padding: 0 15px;
   display: flex;
   align-items: center;
-  padding: 0 12px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  justify-content: flex-start;
+  gap: 10px;
 }
-.project-bar { background: #fff; border: 1px solid #e5e7eb; z-index: 2; height: 50px; }
-.task-bar { background: #10b981; color: #fff; height: 30px; }
 
-.bar-label { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bar-date { font-size: 10px; margin-left: 8px; opacity: 0.9; }
+.task-label {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
 
-/* 오늘 날짜 수직선 */
-.today-line {
+.task-date {
+  font-size: 11px;
+  opacity: 0.9;
+  white-space: nowrap;
+}
+.today-line { position: absolute; top: 0; bottom: 0; width: 2px; background: #3b82f6; z-index: 10; pointer-events: none; }
+.today-line::before { content: ''; position: absolute; top: 0; left: -3px; width: 8px; height: 8px; background: #3b82f6; border-radius: 50%; }
+
+.view-selector-container {
+  position: relative;
+  width: 100%;
+}
+
+.view-selector-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 12px;
+  background: white;
+  border: 1px solid #333; /* 이미지처럼 선명한 테두리 */
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.view-btn-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.calendar-mini-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.chevron-down {
+  font-size: 10px;
+  color: #666;
+}
+
+/* 드롭다운 메뉴 스타일 */
+.view-dropdown-menu {
   position: absolute;
-  left: 45%;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: #3b82f6;
-  z-index: 5;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+.view-dropdown-menu li {
+  padding: 10px 16px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  text-align: left;
+}
+
+.view-dropdown-menu li:hover {
+  background-color: #f3f4f6;
 }
 </style>
