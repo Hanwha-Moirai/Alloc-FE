@@ -92,7 +92,7 @@
           <button class="search-btn">
             <img src="/search.png" class="search-icon" alt="검색" />
           </button>
-          <button class="add-event-btn">+ 일정 추가하기</button>
+          <button class="add-event-btn" @click="openModal">+ 일정 추가하기</button>
         </div>
       </header>
 
@@ -146,7 +146,8 @@
                     class="month-event-item"
                     :style="{ borderLeft: `3px solid ${event.borderColor}`, backgroundColor: event.color }"
                 >
-                  {{ event.title }}
+                  <span class="month-event-time">{{ event.startTime }}</span>
+                  <span class="month-event-title">{{ event.title }}</span>
                 </div>
                 <div v-if="day.events.length > 3" class="more-events">
                   +{{ day.events.length - 3 }} 더보기
@@ -157,6 +158,12 @@
         </template>
       </div>
     </main>
+
+    <CalendarAddModal
+        :is-open="isModalOpen"
+        @close="isModalOpen = false"
+        @add-event="saveNewEvent"
+    />
   </div>
 </template>
 
@@ -164,25 +171,89 @@
 import { ref, computed } from 'vue'
 import dayjs from 'dayjs'
 import 'dayjs/locale/ko'
+import CalendarAddModal from '@/components/common/CalendarAddModal.vue';
 
 dayjs.locale('ko')
 
-const viewMode = ref('week') // 'week' 또는 'month'
+// 상태 및 데이터 정의
+const viewMode = ref('week')
+const isModalOpen = ref(false);
+const selectedDate = ref(dayjs())
 
-// 보기 모드 변경 함수
+const eventItems = ref([
+  {
+    id: 1,
+    title: '주간 업무 보고',
+    date: dayjs().startOf('week').add(1, 'day').format('YYYY-MM-DD'),
+    startTime: '09:00',
+    duration: 2,
+    color: '#dcfce7',
+    borderColor: '#22c55e'
+  },
+  {
+    id: 2,
+    title: '프로젝트 운영 회의',
+    date: dayjs().startOf('week').add(3, 'day').format('YYYY-MM-DD'),
+    startTime: '13:00',
+    duration: 1.5,
+    color: '#dbeafe',
+    borderColor: '#3b82f6'
+  },
+  {
+    id: 3,
+    title: 'UI 디자인 검토',
+    date: dayjs().format('YYYY-MM-DD'),
+    startTime: '10:00',
+    duration: 3,
+    color: '#fee2e2',
+    borderColor: '#ef4444'
+  }
+])
+
+const dayLabels = ['일', '월', '화', '수', '목', '금', '토']
+const hours = Array.from({ length: 11 }, (_, i) => (i + 8).toString().padStart(2, '0'))
+
+// 모달 및 이벤트 관련 함수
+const openModal = () => {
+  isModalOpen.value = true;
+};
+
+const saveNewEvent = (eventData: any) => {
+  eventItems.value.push(eventData);
+  isModalOpen.value = false;
+};
+
 const setViewMode = (mode: string) => {
   viewMode.value = mode
 }
 
-// 월간 달력용 날짜 데이터 (6주치 계산)
+const moveWeek = (step: number) => {
+  if (viewMode.value === 'week') {
+    selectedDate.value = selectedDate.value.add(step, 'week')
+  } else {
+    selectedDate.value = selectedDate.value.add(step, 'month')
+  }
+}
+
+// 주간 보기 날짜 계산
+const weekDays = computed(() => {
+  const startOfWeek = selectedDate.value.startOf('week').add(1, 'day')
+  return Array.from({ length: 7 }, (_, i) => {
+    const date = startOfWeek.add(i, 'day')
+    return {
+      fullDate: date.format('YYYY-MM-DD'),
+      displayLabel: `${date.format('ddd')} (${date.date()})`,
+      isToday: date.isSame(dayjs(), 'day')
+    }
+  })
+})
+
+// 월간 보기 날짜 계산
 const monthCalendarDays = computed(() => {
   const startOfMonth = selectedDate.value.startOf('month')
-  const startDay = startOfMonth.startOf('week') // 일요일 시작 기준
-
+  const startDay = startOfMonth.startOf('week')
   const days = []
   let current = startDay
-
-  // 6주(42일) 데이터를 생성
   for (let i = 0; i < 42; i++) {
     days.push({
       fullDate: current.format('YYYY-MM-DD'),
@@ -196,30 +267,20 @@ const monthCalendarDays = computed(() => {
   return days
 })
 
-// 기준 날짜 상태 (현재는 오늘 기준)
-const selectedDate = ref(dayjs())
-
-// 한국어 요일 헤더 데이터
-const dayLabels = ['일', '월', '화', '수', '목', '금', '토']
-
-// 일요일 시작 기준 미니 달력 계산
+// 미니 달력용
 const miniMonthDays = computed(() => {
   const startOfMonth = selectedDate.value.startOf('month')
-
-  // startOfMonth.day()가 0(일요일)이면 0일 전부터, 1(월요일)이면 1일 전부터 시작
   const startDayOffset = startOfMonth.day()
   const calendarStart = startOfMonth.subtract(startDayOffset, 'day')
-
   const weeks = []
   let currentDay = calendarStart
-
   for (let i = 0; i < 6; i++) {
     const week = []
     for (let j = 0; j < 7; j++) {
       week.push({
         date: currentDay.date(),
         fullDate: currentDay.format('YYYY-MM-DD'),
-        dayOfWeek: currentDay.day(), // 0: 일, 6: 토
+        dayOfWeek: currentDay.day(),
         currentMonth: currentDay.isSame(selectedDate.value, 'month'),
         isToday: currentDay.isSame(dayjs(), 'day')
       })
@@ -230,26 +291,8 @@ const miniMonthDays = computed(() => {
   return weeks
 })
 
-// 현재 표시 중인 월
 const currentMonthName = computed(() => selectedDate.value.format('M월'))
 
-// 해당 주의 날짜들 계산 (7일 치 데이터)
-const weekDays = computed(() => {
-  // 월요일 시작 기준 (dayjs는 0이 일요일이므로 locale 설정을 따르거나 manual 조정)
-  const startOfWeek = selectedDate.value.startOf('week').add(1, 'day')
-
-  return Array.from({ length: 7 }, (_, i) => {
-    const date = startOfWeek.add(i, 'day')
-    return {
-      fullDate: date.format('YYYY-MM-DD'),
-      // 요일(날짜) 형식으로 미리 포맷팅
-      displayLabel: `${date.format('ddd')} (${date.date()})`,
-      isToday: date.isSame(dayjs(), 'day')
-    }
-  })
-})
-
-// 헤더에 표시될 주간 범위 텍스트
 const headerText = computed(() => {
   if (viewMode.value === 'month') {
     return selectedDate.value.format('YYYY년 M월')
@@ -259,55 +302,28 @@ const headerText = computed(() => {
   return `${dayjs(start).format('YYYY년 M월 D일')} - ${dayjs(end).format('D일')}`
 })
 
-// 시간축 생성
-const hours = Array.from({ length: 11 }, (_, i) => (i + 8).toString().padStart(2, '0'))
+// 사이드바 요약 일정
+const todaySchedules = computed(() => {
+  const today = dayjs().format('YYYY-MM-DD')
+  return eventItems.value
+      .filter(event => event.date === today)
+      .map(event => ({ name: event.title, time: event.startTime, color: event.borderColor }))
+})
 
-// 주 이동 함수 (이전 주, 다음 주 버튼 추가 시 사용)
-const moveWeek = (step: number) => {
-  selectedDate.value = selectedDate.value.add(step, 'week')
-}
+const tomorrowSchedules = computed(() => {
+  const tomorrow = dayjs().add(1, 'day').format('YYYY-MM-DD')
+  return eventItems.value
+      .filter(event => event.date === tomorrow)
+      .map(event => ({ name: event.title, time: event.startTime, color: event.borderColor }))
+})
 
-// 예시 일정 데이터
-const eventItems = ref([
-  {
-    id: 1,
-    title: '주간 업무 보고',
-    date: dayjs().startOf('week').add(1, 'day').format('YYYY-MM-DD'), // 이번주 월요일
-    startTime: '09:00',
-    duration: 2, // 2시간
-    color: '#dcfce7',
-    borderColor: '#22c55e'
-  },
-  {
-    id: 2,
-    title: '프로젝트 운영 회의',
-    date: dayjs().startOf('week').add(3, 'day').format('YYYY-MM-DD'), // 이번주 수요일
-    startTime: '13:00',
-    duration: 1.5, // 1시간 30분
-    color: '#dbeafe',
-    borderColor: '#3b82f6'
-  },
-  {
-    id: 3,
-    title: 'UI 디자인 검토',
-    date: dayjs().format('YYYY-MM-DD'), // 오늘
-    startTime: '10:00',
-    duration: 3,
-    color: '#fee2e2',
-    borderColor: '#ef4444'
-  }
-])
-
-// 이벤트 위치 계산 함수
+// 이벤트 스타일 계산
 const getEventStyle = (event: any) => {
   const eventDate = dayjs(event.date);
   const startOfWeek = selectedDate.value.startOf('week').add(1, 'day');
   const dayIndex = eventDate.diff(startOfWeek, 'day');
-
-  // 해당 주가 아니면 표시하지 않음
   if (dayIndex < 0 || dayIndex > 6) return { display: 'none' };
 
-  // 시간 계산
   const startHour = parseInt(event.startTime.split(':')[0]);
   const startMin = parseInt(event.startTime.split(':')[1]);
   const relativeStart = (startHour - 8) + (startMin / 60);
@@ -316,34 +332,12 @@ const getEventStyle = (event: any) => {
     left: `calc(60px + (${dayIndex} * (100% - 60px) / 7))`,
     top: `${relativeStart * 100}px`,
     height: `${event.duration * 100}px`,
-    width: `calc((100% - 60px) / 7 - 10px)`, // 셀 너비보다 약간 작게 설정
+    width: `calc((100% - 60px) / 7 - 10px)`,
     backgroundColor: event.color,
     borderLeft: `4px solid ${event.borderColor}`,
-    marginLeft: '5px' // 셀 안에서의 여백
+    marginLeft: '5px'
   };
 }
-
-const todaySchedules = computed(() => {
-  const today = dayjs().format('YYYY-MM-DD')
-  return eventItems.value
-      .filter(event => event.date === today)
-      .map(event => ({
-        name: event.title,
-        time: event.startTime,
-        color: event.borderColor // 또는 event.color
-      }))
-})
-
-const tomorrowSchedules = computed(() => {
-  const tomorrow = dayjs().add(1, 'day').format('YYYY-MM-DD')
-  return eventItems.value
-      .filter(event => event.date === tomorrow)
-      .map(event => ({
-        name: event.title,
-        time: event.startTime,
-        color: event.borderColor
-      }))
-})
 </script>
 
 <style scoped>
@@ -620,10 +614,24 @@ const tomorrowSchedules = computed(() => {
 .month-event-item {
   font-size: 11px;
   padding: 2px 4px;
+  display: flex; /* 가로로 배치 */
+  gap: 4px;      /* 시간과 제목 사이 간격 */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   border-radius: 2px;
+  margin-bottom: 2px;
+}
+
+.month-event-time {
+  font-weight: 700;
+  flex-shrink: 0;
+  color: #4b5563;
+}
+
+.month-event-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .more-events {
