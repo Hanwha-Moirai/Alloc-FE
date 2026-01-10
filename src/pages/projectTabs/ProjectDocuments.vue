@@ -94,18 +94,10 @@ const currentTab = ref('weekly');
 </script>
 
 <style scoped>
-/* 전체 컨테이너 */
-.document-container {
-  padding: 24px;
-  background-color: #f8f9fa;
-  font-family: 'Pretendard', sans-serif;
-}
-
-/* 토글 버튼 스타일 (이미지 기반) */
 .toggle-wrapper {
   display: flex;
   margin-bottom: 20px;
-  border: 1px solid #4ab8d8; /* 테두리 색상 */
+  border: 1px solid #4ab8d8;
   overflow: hidden;
   width: fit-content;
 }
@@ -149,7 +141,7 @@ const currentTab = ref('weekly');
 }
 
 .doc-table td {
-  padding: 16px;
+  padding: 14px;
   font-size: 14px;
   color: #333;
   border-bottom: 1px solid #f3f4f6;
