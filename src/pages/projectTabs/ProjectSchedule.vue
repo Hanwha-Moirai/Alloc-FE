@@ -92,13 +92,26 @@
     </div>
     <div v-if="activeMenuId !== null" class="context-menu" :style="menuPos">
       <ul>
-        <li @click="handleEdit(activeMenuId)">
-          <span>✏️</span> 수정하기
-        </li>
-        <li @click="handleDelete(activeMenuId)" class="delete">
-          <span>🗑️</span> 삭제하기
-        </li>
+        <li @click="handleEdit(activeMenuId)"><span>✏️</span> 수정하기</li>
+        <li @click="handleDelete(activeMenuId)" class="delete"><span>🗑️</span> 삭제하기</li>
       </ul>
+    </div>
+
+    <div class="gantt-wrapper">
+      <ScheduleEditModal
+          v-if="isEditModalOpen"
+          v-model="editingData"
+          @close="isEditModalOpen = false"
+          @save="saveEdit"
+      />
+    </div>
+
+    <div class="gantt-wrapper">
+      <ScheduleDeleteModal
+          v-if="isDeleteModalOpen"
+          @close="isDeleteModalOpen = false"
+          @confirm="confirmDelete"
+      />
     </div>
   </div>
 </template>
@@ -106,6 +119,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import dayjs from 'dayjs'
+import ScheduleEditModal from '@/components/common/ScheduleEditModal.vue'
+import ScheduleDeleteModal from '@/components/common/ScheduleDeleteModal.vue'
 
 //보기 모드 상태
 const isViewMenuOpen = ref(false)
@@ -240,16 +255,42 @@ const closeHandler = () => {
 };
 
 // 수정/삭제 핸들러
+const isEditModalOpen = ref(false);
+const editingData = ref({ id: 0, projectName: '', startDate: '', endDate: '' });
+
 const handleEdit = (id: number) => {
-  alert(`ID ${id} 마일스톤 수정창을 엽니다.`);
+  const target = scheduleData.value.find(item => item.id === id);
+  if (target) {
+    editingData.value = { ...target };
+    isEditModalOpen.value = true;
+  }
   activeMenuId.value = null;
 };
 
-const handleDelete = (id: number) => {
-  if (confirm("정말 삭제하시겠습니까?")) {
-    scheduleData.value = scheduleData.value.filter(item => item.id !== id);
+const saveEdit = () => {
+  const index = scheduleData.value.findIndex(item => item.id === editingData.value.id);
+  if (index !== -1) {
+    scheduleData.value[index] = { ...editingData.value };
+    isEditModalOpen.value = false;
   }
-  activeMenuId.value = null;
+};
+
+const isDeleteModalOpen = ref(false);
+const targetDeleteId = ref<number | null>(null);
+
+const handleDelete = (id: number) => {
+  targetDeleteId.value = id;
+  isDeleteModalOpen.value = true;
+  activeMenuId.value = null; // 메뉴 닫기
+};
+
+// 2. 삭제 모달에서 최종 확인 시
+const confirmDelete = () => {
+  if (targetDeleteId.value !== null) {
+    scheduleData.value = scheduleData.value.filter(item => item.id !== targetDeleteId.value);
+    isDeleteModalOpen.value = false;
+    targetDeleteId.value = null;
+  }
 };
 </script>
 
