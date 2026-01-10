@@ -72,8 +72,20 @@
         <h2 class="current-week">{{ weekRangeText }}</h2>
         <button class="menu-btn" @click="moveWeek(1)">▶</button>
 
-        <div class="view-selector">
-          <button class="select-btn">주간 보기 ▼</button>
+        <div class="view-toggle-container">
+          <div class="toggle-background" :class="viewMode">
+            <div class="toggle-slider"></div>
+            <button
+                class="toggle-btn"
+                :class="{ active: viewMode === 'week' }"
+                @click="setViewMode('week')"
+            >주간 보기</button>
+            <button
+                class="toggle-btn"
+                :class="{ active: viewMode === 'month' }"
+                @click="setViewMode('month')"
+            >월간 보기</button>
+          </div>
         </div>
 
         <div class="header-right">
@@ -85,34 +97,64 @@
       </header>
 
       <div class="timeline-grid">
-        <div class="grid-header">
-          <div class="time-column"></div>
-          <div
-              v-for="day in weekDays"
-              :key="day.fullDate"
-              class="day-column"
-              :class="{ 'today-highlight': day.isToday }"
-          >
-            {{ day.displayLabel }}
+        <template v-if="viewMode === 'week'">
+          <div class="grid-header">
+            <div class="time-column"></div>
+            <div
+                v-for="day in weekDays"
+                :key="day.fullDate"
+                class="day-column"
+                :class="{ 'today-highlight': day.isToday }"
+            >
+              {{ day.displayLabel }}
+            </div>
           </div>
-        </div>
+          <div class="grid-body">
+            <div v-for="hour in hours" :key="hour" class="hour-row">
+              <div class="time-label">{{ hour }}:00</div>
+              <div v-for="n in 7" :key="n" class="time-slot"></div>
+            </div>
 
-        <div class="grid-body">
-          <div v-for="hour in hours" :key="hour" class="hour-row">
-            <div class="time-label">{{ hour }}:00</div>
-            <div v-for="n in 7" :key="n" class="time-slot"></div>
+            <div
+                v-for="event in eventItems"
+                :key="event.id"
+                class="event-card"
+                :style="getEventStyle(event)"
+            >
+              <span class="event-title">{{ event.title }}</span>
+              <span class="event-time">{{ event.startTime }} - {{ dayjs(event.date + ' ' + event.startTime).add(event.duration, 'hour').format('HH:mm') }}</span>
+            </div>
           </div>
+        </template>
 
-          <div
-              v-for="event in eventItems"
-              :key="event.id"
-              class="event-card"
-              :style="getEventStyle(event)"
-          >
-            <span class="event-title">{{ event.title }}</span>
-            <span class="event-time">{{ event.startTime }} - {{ dayjs(event.date + ' ' + event.startTime).add(event.duration, 'hour').format('HH:mm') }}</span>
+        <template v-else>
+          <div class="month-grid-header">
+            <div v-for="label in dayLabels" :key="label" class="month-day-label">{{ label }}</div>
           </div>
-        </div>
+          <div class="month-grid-body">
+            <div
+                v-for="day in monthCalendarDays"
+                :key="day.fullDate"
+                class="month-day-cell"
+                :class="{ 'other-month': !day.isCurrentMonth }"
+            >
+              <span class="day-num" :class="{ 'today-circle': day.isToday }">{{ day.day }}</span>
+              <div class="month-event-list">
+                <div
+                    v-for="event in day.events.slice(0, 3)"
+                    :key="event.id"
+                    class="month-event-item"
+                    :style="{ borderLeft: `3px solid ${event.borderColor}`, backgroundColor: event.color }"
+                >
+                  {{ event.title }}
+                </div>
+                <div v-if="day.events.length > 3" class="more-events">
+                  +{{ day.events.length - 3 }} 더보기
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
       </div>
     </main>
   </div>
@@ -124,6 +166,35 @@ import dayjs from 'dayjs'
 import 'dayjs/locale/ko'
 
 dayjs.locale('ko')
+
+const viewMode = ref('week') // 'week' 또는 'month'
+
+// 보기 모드 변경 함수
+const setViewMode = (mode: string) => {
+  viewMode.value = mode
+}
+
+// 월간 달력용 날짜 데이터 (6주치 계산)
+const monthCalendarDays = computed(() => {
+  const startOfMonth = selectedDate.value.startOf('month')
+  const startDay = startOfMonth.startOf('week') // 일요일 시작 기준
+
+  const days = []
+  let current = startDay
+
+  // 6주(42일) 데이터를 생성
+  for (let i = 0; i < 42; i++) {
+    days.push({
+      fullDate: current.format('YYYY-MM-DD'),
+      day: current.date(),
+      isCurrentMonth: current.month() === selectedDate.value.month(),
+      isToday: current.isSame(dayjs(), 'day'),
+      events: eventItems.value.filter(e => e.date === current.format('YYYY-MM-DD'))
+    })
+    current = current.add(1, 'day')
+  }
+  return days
+})
 
 // 기준 날짜 상태 (현재는 오늘 기준)
 const selectedDate = ref(dayjs())
@@ -179,7 +250,10 @@ const weekDays = computed(() => {
 })
 
 // 헤더에 표시될 주간 범위 텍스트
-const weekRangeText = computed(() => {
+const headerText = computed(() => {
+  if (viewMode.value === 'month') {
+    return selectedDate.value.format('YYYY년 M월')
+  }
   const start = weekDays.value[0].fullDate
   const end = weekDays.value[6].fullDate
   return `${dayjs(start).format('YYYY년 M월 D일')} - ${dayjs(end).format('D일')}`
@@ -322,7 +396,48 @@ const tomorrowSchedules = computed(() => {
   display: flex; align-items: center; padding: 10px 20px; border-bottom: 1px solid #e5e7eb; gap: 15px;
 }
 .current-week { font-size: 18px; font-weight: 700; margin: 0; }
-.select-btn { padding: 4px 10px; border: 1px solid #4ab8d8; background: #fff; color: #4ab8d8; cursor: pointer; }
+.view-toggle-container {
+  background: #f1f3f5; /* 연회색 배경 */
+  border-radius: 20px;
+  padding: 4px;
+  display: flex;
+  position: relative;
+  width: 180px; /* 적절한 너비 조정 */
+}
+
+.toggle-slider {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  height: calc(100% - 8px);
+  background: #007bff; /* Cheese의 파란색 */
+  border-radius: 16px;
+  transition: transform 0.3s ease;
+  z-index: 1;
+}
+
+/* 월간 모드일 때 슬라이더 이동 */
+.toggle-background.month .toggle-slider {
+  transform: translateX(100%);
+}
+
+.toggle-btn {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 6px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #868e96;
+  z-index: 2;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+.toggle-btn.active {
+  color: #ffffff; /* 선택된 글자는 흰색 */
+}
 .header-right { margin-left: auto; display: flex; gap: 10px; }
 .search-btn {
   background: none;
@@ -429,5 +544,77 @@ const tomorrowSchedules = computed(() => {
 }
 .time-slot { flex: 1; border-left: 1px solid #f3f4f6; }
 
+/* 월간 그리드 스타일 */
+.month-grid-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+.month-day-label {
+  padding: 10px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 13px;
+}
 
+.month-grid-body {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(6, 1fr); /* 6주 고정 */
+  flex: 1;
+  overflow-y: auto;
+}
+
+.month-day-cell {
+  border-right: 1px solid #f3f4f6;
+  border-bottom: 1px solid #f3f4f6;
+  min-height: 120px;
+  padding: 5px;
+  background: #fff;
+}
+
+.month-day-cell.other-month {
+  background: #fafafa;
+  color: #d1d5db;
+}
+
+.day-num {
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 5px;
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  text-align: center;
+  line-height: 20px;
+}
+
+.today-circle {
+  background: #4ab8d8;
+  color: #fff;
+  border-radius: 50%;
+}
+
+.month-event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.month-event-item {
+  font-size: 11px;
+  padding: 2px 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-radius: 2px;
+}
+
+.more-events {
+  font-size: 10px;
+  color: #3b82f6;
+  padding-left: 4px;
+  font-weight: 600;
+}
 </style>
