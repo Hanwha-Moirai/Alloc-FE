@@ -69,7 +69,7 @@
     <main class="calendar-main">
       <header class="timeline-header">
         <button class="menu-btn" @click="moveWeek(-1)">◀</button>
-        <h2 class="current-week">{{ weekRangeText }}</h2>
+        <h2 class="current-week">{{ headerText }}</h2>
         <button class="menu-btn" @click="moveWeek(1)">▶</button>
 
         <div class="view-toggle-container">
@@ -396,13 +396,23 @@ const tomorrowSchedules = computed(() => {
   display: flex; align-items: center; padding: 10px 20px; border-bottom: 1px solid #e5e7eb; gap: 15px;
 }
 .current-week { font-size: 18px; font-weight: 700; margin: 0; }
+
+/* 주간보기/월간보기 토글 */
 .view-toggle-container {
-  background: #f1f3f5; /* 연회색 배경 */
+  background: #f1f3f5;
   border-radius: 20px;
-  padding: 4px;
   display: flex;
   position: relative;
-  width: 180px; /* 적절한 너비 조정 */
+  width: 180px;
+}
+
+.toggle-background {
+  display: flex;
+  position: relative;
+  width: 180px;
+  background: #f1f3f5;
+  border-radius: 5px;
+  cursor: pointer;
 }
 
 .toggle-slider {
@@ -411,13 +421,16 @@ const tomorrowSchedules = computed(() => {
   left: 4px;
   width: calc(50% - 4px);
   height: calc(100% - 8px);
-  background: #007bff; /* Cheese의 파란색 */
-  border-radius: 16px;
+  background: #4ab8d8;
+  border-radius: 5px;
   transition: transform 0.3s ease;
   z-index: 1;
 }
 
-/* 월간 모드일 때 슬라이더 이동 */
+.toggle-background.week .toggle-slider {
+  transform: translateX(0);
+}
+
 .toggle-background.month .toggle-slider {
   transform: translateX(100%);
 }
@@ -426,18 +439,20 @@ const tomorrowSchedules = computed(() => {
   flex: 1;
   border: none;
   background: none;
-  padding: 6px 0;
+  padding: 8px 0;
   font-size: 13px;
   font-weight: 600;
   color: #868e96;
   z-index: 2;
   cursor: pointer;
   transition: color 0.3s;
+  position: relative;
 }
 
 .toggle-btn.active {
-  color: #ffffff; /* 선택된 글자는 흰색 */
+  color: #ffffff;
 }
+
 .header-right { margin-left: auto; display: flex; gap: 10px; }
 .search-btn {
   background: none;
