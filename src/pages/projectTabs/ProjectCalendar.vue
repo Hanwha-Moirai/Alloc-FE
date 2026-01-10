@@ -359,7 +359,12 @@ const tomorrowSchedules = computed(() => {
 }
 
 .timeline-grid { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-.grid-header { display: flex; border-bottom: 1px solid #e5e7eb; background: #fefefe; }
+.grid-header {
+  display: flex;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fefefe;
+  padding-right: 16px;
+}
 .time-column { width: 60px; }
 .day-column {
   flex: 1;
