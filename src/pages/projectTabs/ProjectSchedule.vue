@@ -325,7 +325,6 @@ const confirmDelete = () => {
 .gantt-chart-container { flex: 1; overflow-x: auto; position: relative; background-color: #fff; }
 .chart-content { position: relative; }
 
-/* 캘린더 배경 그리드 (이미지처럼 배경색 번갈아 가기) */
 .chart-grid-background {
   position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; pointer-events: none;
 }
@@ -335,7 +334,6 @@ const confirmDelete = () => {
   position: relative;
 }
 
-/* 일간 보기일 때 날짜별로 아주 연한 세로 가이드라인 추가 */
 .grid-month-col::after {
   content: '';
   position: absolute;
