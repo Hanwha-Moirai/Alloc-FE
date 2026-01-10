@@ -69,10 +69,10 @@ const router = createRouter({
                             path: 'calendar',
                             component: () => import('@/pages/projectTabs/ProjectCalendar.vue'),
                         },
-                        // {
-                        //     path: 'docs',
-                        //     component: () => import('@/pages/projectTabs/ProjectDocs.vue'),
-                        // },
+                        {
+                            path: 'docs',
+                            component: () => import('@/pages/projectTabs/ProjectDocuments.vue'),
+                        },
                         // {
                         //     path: 'members',
                         //     component: () => import('@/pages/projectTabs/ProjectMembers.vue'),

@@ -44,7 +44,7 @@
             :class="{ active: isActive('docs') }"
             @click="goTab('docs')"
         >
-          문서 <span class="count">2</span>
+          문서
         </button>
 
         <button
@@ -88,6 +88,15 @@
         >
           <button class="add-btn" @click="showMilestoneAddModal = true">
             + 마일스톤 추가하기
+          </button>
+        </div>
+
+        <!-- 문서 탭 -->
+        <div
+            v-if="isActive('docs')"
+        >
+          <button class="add-btn btn-gradient">
+          + 주간보고/회의록 생성
           </button>
         </div>
 
@@ -264,4 +273,9 @@ const isActive = (tab: string) => {
   opacity: 0.6;
 }
 
+/* 주간보고 버튼 */
+.btn-gradient {
+  background: linear-gradient(90deg, #38b6ff 0%, #a450cf 50%, #e94e96 100%);
+  background-size: 200% auto;
+}
 </style>
