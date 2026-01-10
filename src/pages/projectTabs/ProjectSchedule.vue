@@ -29,7 +29,8 @@
                 <p class="period">{{ group.startDate }} - {{ group.endDate }}</p>
                 <p class="count">{{ group.tasks.length }} 태스크</p>
               </div>
-              <button class="more-btn" @click.stop>⋮</button>
+              <button class="bar-more-inline" @click.stop="openMilestoneMenu($event, group)">⋮</button>
+
             </div>
           </div>
 
@@ -67,7 +68,7 @@
                 <div class="bar-content">
                   <div class="bar-title-row">
                     <span class="bar-label">{{ group.projectName }}</span>
-                    <button class="bar-more-inline">⋮</button>
+                    <button class="bar-more-inline" @click.stop="openMilestoneMenu($event, group)">⋮</button>
                   </div>
                   <div class="bar-sub-info">
                     <span class="bar-date-range">{{ group.startDate }} - {{ group.endDate }}</span>
@@ -88,6 +89,16 @@
           </div>
         </div>
       </div>
+    </div>
+    <div v-if="activeMenuId !== null" class="context-menu" :style="menuPos">
+      <ul>
+        <li @click="handleEdit(activeMenuId)">
+          <span>✏️</span> 수정하기
+        </li>
+        <li @click="handleDelete(activeMenuId)" class="delete">
+          <span>🗑️</span> 삭제하기
+        </li>
+      </ul>
     </div>
   </div>
 </template>
@@ -201,6 +212,45 @@ const todayPos = computed(() => {
   const diff = today.diff(startOfYear, 'day');
   return { left: `${diff * pixelPerDay.value}px`, display: 'block' };
 });
+
+// --- 메뉴 상태 관리 ---
+const activeMenuId = ref<number | null>(null);
+const menuPos = ref({ top: '0px', left: '0px' });
+
+// 메뉴 열기
+const openMilestoneMenu = (event: MouseEvent, group: any) => {
+  activeMenuId.value = group.id;
+
+  // 클릭한 버튼의 위치를 기준으로 메뉴 위치 설정
+  // fixed 포지션이므로 뷰포트 좌표(client)를 그대로 사용합니다.
+  menuPos.value = {
+    top: `${event.clientY + 5}px`,
+    left: `${event.clientX - 100}px`
+  };
+
+  // 버블링 방지 및 즉시 닫기 방지를 위해 setTimeout 사용
+  setTimeout(() => {
+    window.addEventListener('click', closeHandler);
+  }, 0);
+};
+
+const closeHandler = () => {
+  activeMenuId.value = null;
+  window.removeEventListener('click', closeHandler);
+};
+
+// 수정/삭제 핸들러
+const handleEdit = (id: number) => {
+  alert(`ID ${id} 마일스톤 수정창을 엽니다.`);
+  activeMenuId.value = null;
+};
+
+const handleDelete = (id: number) => {
+  if (confirm("정말 삭제하시겠습니까?")) {
+    scheduleData.value = scheduleData.value.filter(item => item.id !== id);
+  }
+  activeMenuId.value = null;
+};
 </script>
 
 <style scoped>
@@ -435,5 +485,53 @@ const todayPos = computed(() => {
 
 .view-dropdown-menu li:hover {
   background-color: #f3f4f6;
+}
+
+/* 컨텍스트 메뉴 스타일 */
+.context-menu {
+  position: fixed; /* 차트 스크롤에 상관없이 화면 기준 배치 */
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 9999; /* 모든 요소보다 위에 표시 */
+  width: 140px;
+  padding: 6px 0;
+  animation: fadeIn 0.1s ease-out;
+}
+
+.context-menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.context-menu li {
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.2s;
+}
+
+.context-menu li:hover {
+  background-color: #f3f4f6;
+}
+
+.context-menu li.delete {
+  color: #ef4444; /* 삭제 버튼 강조 */
+}
+
+.context-menu li span {
+  font-size: 14px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>
