@@ -3,27 +3,18 @@
     <div v-if="show" class="modal-overlay" @click.self="$emit('close')">
       <div class="modal-window">
         <div class="modal-header">
-          <h2 class="title">기술스택 {{ isEdit ? '수정' : '등록' }}</h2>
+          <h2 class="title">직군 {{ isEdit ? '수정' : '등록' }}</h2>
           <button class="close-btn" @click="$emit('close')">&times;</button>
         </div>
-
         <div class="modal-body">
-          <label class="input-label">기술스택명</label>
+          <label class="input-label">직군명</label>
           <div class="input-wrapper">
-            <input
-                type="text"
-                v-model="techName"
-                placeholder="기술스택 입력"
-                class="tech-input"
-            />
+            <input type="text" v-model="jobName" placeholder="직군 입력" class="tech-input" />
           </div>
         </div>
-
         <div class="modal-footer">
           <button class="btn btn-cancel" @click="$emit('close')">취소</button>
-          <button class="btn btn-submit" @click="handleConfirm">
-            {{ isEdit ? '저장' : '등록' }}
-          </button>
+          <button class="btn btn-submit" @click="handleConfirm">{{ isEdit ? '저장' : '등록' }}</button>
         </div>
       </div>
     </div>
@@ -32,30 +23,15 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-
-const props = defineProps<{
-  show: boolean;
-  isEdit: boolean;
-  initialName?: string;
-}>();
-
+const props = defineProps<{ show: boolean; isEdit: boolean; initialName?: string; }>();
 const emit = defineEmits(['close', 'confirm']);
-
-const techName = ref('');
-
-// 모달이 열릴 때마다 이름 초기화 (수정 시에는 기존값 노출)
+const jobName = ref('');
 watch(() => props.show, (newVal) => {
-  if (newVal) {
-    techName.value = props.isEdit ? (props.initialName || '') : '';
-  }
+  if (newVal) jobName.value = props.isEdit ? (props.initialName || '') : '';
 });
-
 const handleConfirm = () => {
-  if (!techName.value.trim()) {
-    alert('기술스택명을 입력해주세요.');
-    return;
-  }
-  emit('confirm', techName.value);
+  if (!jobName.value.trim()) return alert('직군명을 입력해주세요.');
+  emit('confirm', jobName.value);
 };
 </script>
 
