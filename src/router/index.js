@@ -131,11 +131,11 @@ const router = createRouter({
                 //     name: 'AdminAudit',
                 //     component: () => import('@/pages/admin/AuditReport.vue'),
                 // },
-                // {
-                //     path: 'ranks',
-                //     name: 'AdminRanks',
-                //     component: () => import('@/pages/admin/RankManagement.vue'),
-                // },
+                {
+                    path: 'ranks',
+                    name: 'AdminRanks',
+                    component: () => import('@/pages/admin/RankManagement.vue'),
+                },
             ],
         },
     ],
