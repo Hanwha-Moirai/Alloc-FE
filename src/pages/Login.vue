@@ -1,6 +1,6 @@
 <template>
   <div class="login-page">
-    <div class="login-card">
+    <form class="login-card" @submit.prevent="login">
       <!-- 로고 -->
       <img src="/alloc-logo.png" alt="ALLOC" class="logo" />
 
@@ -14,6 +14,7 @@
             type="text"
             v-model="username"
             placeholder="아이디를 입력해주세요."
+            autocomplete="username"
         />
       </div>
 
@@ -24,6 +25,7 @@
             type="password"
             v-model="password"
             placeholder="비밀번호를 입력해주세요."
+            autocomplete="current-password"
         />
       </div>
 
@@ -35,7 +37,7 @@
       </div>
 
       <!-- 로그인 버튼 -->
-      <button class="login-btn" @click="login">
+      <button class="login-btn" type="submit">
         로그인
       </button>
 
@@ -45,7 +47,7 @@
           관리자 로그인
         </RouterLink>
       </div>
-    </div>
+    </form>
   </div>
 </template>
 
@@ -53,13 +55,12 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from '@/lib/axios'
+import { jwtDecode } from 'jwt-decode'
 
 const router = useRouter()
 
 const username = ref('')
 const password = ref('')
-
-import { jwtDecode } from 'jwt-decode'
 
 const login = async () => {
   try {
@@ -68,31 +69,21 @@ const login = async () => {
       password: password.value
     })
 
-    // 💡 중요: 백엔드 응답 구조가 ApiResponse<AuthResponse>이므로 .data를 두 번 거쳐야 합니다.
-    // res.data는 ApiResponse 객체, res.data.data는 실제 AuthResponse 객체입니다.
-    const responseData = res.data.data;
+    const responseData = res.data.data
+    const accessToken = responseData.accessToken
 
-    if (responseData && responseData.accessToken) {
-      const accessToken = responseData.accessToken;
-      localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('accessToken', accessToken)
 
-      // JWT에서 role 추출
-      const payload: any = jwtDecode(accessToken);
-      const role = payload.role; // 백엔드 로그상 "PM" 확인됨
+    const payload: any = jwtDecode(accessToken)
+    const role = payload.role
 
-      // 역할별 이동
-      if (role === 'PM') {
-        router.push('/pmhome');
-      } else {
-        router.push('/home');
-      }
+    if (role === 'PM') {
+      router.push('/pmhome')
     } else {
-      console.error('응답 데이터 구조가 예상과 다릅니다:', res.data);
+      router.push('/home')
     }
-
-  } catch (e: any) {
-    console.error('Login Error:', e);
-    alert('로그인 처리 중 오류가 발생했습니다.');
+  } catch (e) {
+    alert('아이디 또는 비밀번호가 올바르지 않습니다.')
   }
 }
 </script>
