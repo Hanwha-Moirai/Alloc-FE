@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 // 레이아웃
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
+import AdminLayout from "@/layouts/AdminLayout.vue";
 
 const router = createRouter({
     history: createWebHistory(),
@@ -84,12 +85,56 @@ const router = createRouter({
                             path: 'members',
                             component: () => import('@/pages/projectTabs/ProjectMembers.vue'),
                         },
+                        {
+                            path: 'recommend',
+                            name: 'ProjectRecommend',
+                            component: () => import('@/pages/RecommendResultView.vue'),
+                            props: true
+                        },
                     ],
                 },
                 {
-                    path: '/projects/recommend',
-                    name: 'ProjectRecommend',
-                    component: () => import('@/pages/RecommendResultView.vue'),
+                    path: '/documents',
+                    name: 'Documents',
+                    component: () => import('@/pages/DocumentMain.vue'),
+                },
+                {
+                    path: '/talent',
+                    name: 'TalentSearch',
+                    component: () => import('@/pages/TalentSearchView.vue'),
+                },
+            ],
+        },
+
+        /* 관리자 서비스 영역 */
+        {
+            path: '/admin',
+            component: AdminLayout,
+            children: [
+                {
+                    path: 'tech-stack',
+                    name: 'AdminTechStack',
+                    component: () => import('@/pages/admin/TechStackManagement.vue'),
+                },
+                {
+                    path: 'jobs',
+                    name: 'AdminJobs',
+                    component: () => import('@/pages/admin/JobManagement.vue'),
+                },
+                {
+                    path: 'users',
+                    name: 'AdminUsers',
+                    component: () => import('@/pages/admin/UserManagement.vue'),
+                },
+                {
+                    path: 'audit',
+                    name: 'AdminAudit',
+                    component: () => import('@/pages/admin/AuditReport.vue'),
+                },
+                {
+                    path: 'ranks',
+                    name: 'AdminRanks',
+                    component: () => import('@/pages/admin/RankManagement.vue'),
                 },
             ],
         },

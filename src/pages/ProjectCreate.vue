@@ -227,14 +227,36 @@ const handleSave = () => {
 }
 
 // 인재 추천 버튼 클릭 핸들러 수정
-const handleRecommend = () => {
-  showRecommendModal.value = true // 1. 먼저 모달을 띄웁니다.
+const handleRecommend = async () => {
+  // 1. 유효성 검사 (필요 시)
+  if (!project.value.name) {
+    alert('프로젝트명을 입력해주세요.');
+    return;
+  }
 
-  // 2. 3초(GIF가 충분히 보일 시간) 뒤에 페이지를 이동합니다.
-  setTimeout(() => {
-    showRecommendModal.value = false // 모달 닫기
-    router.push('/projects/recommend') // 인재 추천 결과 페이지 경로로 이동
-  }, 3000)
+  // 2. 로딩 모달(GIF) 표시
+  showRecommendModal.value = true;
+
+  try {
+    // 3. 실제 DB에 저장하고 ID를 받아오는 로직 (예시 API 호출)
+    // const response = await api.post('/projects', project.value);
+    // const newProjectId = response.data.id;
+
+    // 테스트용 임시 ID (실제 연동 시 위 API 결과값 사용)
+    const tempId = 1;
+
+    // 4. GIF가 충분히 보일 시간(3초) 대기
+    setTimeout(() => {
+      showRecommendModal.value = false;
+
+      router.push(`/projects/${tempId}/recommend`);
+    }, 3000);
+
+  } catch (error) {
+    console.error('저장 실패:', error);
+    showRecommendModal.value = false;
+    alert('프로젝트 저장 중 오류가 발생했습니다.');
+  }
 }
 </script>
 

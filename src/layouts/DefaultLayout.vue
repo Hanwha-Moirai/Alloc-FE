@@ -32,12 +32,6 @@ import Sidebar from '@/components/common/Sidebar.vue'
   overflow: hidden;
 }
 
-/* 사이드바 */
-.sidebar {
-  width: 50px;
-  flex-shrink: 0;
-}
-
 /* 서비스 영역 기준 통일 */
 .content {
   flex: 1;
