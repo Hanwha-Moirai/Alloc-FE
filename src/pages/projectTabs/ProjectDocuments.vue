@@ -129,9 +129,8 @@ const currentTab = ref('weekly');
   border-collapse: collapse;
 }
 
-/* 모든 헤더와 셀 가운데 정렬 */
 .doc-table th {
-  background-color: #f1f3f6; /* 이미지 헤더 배경색 */
+  background-color: #f1f3f6;
   padding: 14px;
   font-size: 13px;
   font-weight: 600;

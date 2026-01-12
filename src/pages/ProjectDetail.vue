@@ -39,11 +39,37 @@
 
     <router-view :is-editing="isEditing" />
 
+    <TaskAddModal
+        v-if="showAddModal"
+        :is-open="showAddModal"
+        @close="showAddModal = false"
+        @add="handleAddTask"
+    />
+
+    <TaskFilterDrawer
+        :is-open="isFilterOpen"
+        @close="isFilterOpen = false"
+        @filter="handleFilter"
+    />
+
+    <ScheduleAddModal
+        v-if="showMilestoneAddModal"
+        :is-open="showMilestoneAddModal"
+        @close="showMilestoneAddModal = false"
+        @add="handleAddMilestone"
+    />
+
+    <DocCreateModal
+        :is-open="showDocModal"
+        @close="showDocModal = false"
+        @create="handleCreateDoc"
+    />
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue' // 🔥 computed 추가
+import { ref, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import TaskAddModal from '@/components/common/TaskAddModal.vue'
@@ -62,14 +88,12 @@ const showDocModal = ref(false)
 const isEditing = ref(false)
 const isFilterOpen = ref(false)
 
-// 🔥 [추가] 현재 경로가 '인재 추천' 페이지인지 판별하는 로직
-// URL에 'recommend'가 포함되어 있으면 true를 반환하여 template의 UI를 숨깁니다.
+// URL에 'recommend'가 포함되어 있으면 true를 반환하여 template의 UI를 숨김
 const isRecommendPage = computed(() => {
   return route.path.includes('recommend')
 })
 
 // --- Watchers ---
-// 탭이 바뀌면 수정 모드 해제
 watch(() => route.path, () => {
   isEditing.value = false
 })
@@ -113,6 +137,12 @@ const isActive = (tab: string) => {
     return path === `/projects/${projectId}` || path === `/projects/${projectId}/`
   }
 
+  // URL에 /docs/ 가 포함되어 있거나, docs로 끝나는 경우 모두 활성화
+  if (tab === 'docs') {
+    return path.includes(`/projects/${projectId}/docs`)
+  }
+
+  // 기타 탭
   return path.includes(`/projects/${projectId}/${tab}`)
 }
 </script>
