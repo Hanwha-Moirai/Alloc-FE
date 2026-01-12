@@ -1,7 +1,8 @@
 <template>
-  <div class="search-container">
+  <div class="search-container" :class="{ 'is-searched': isSearched }">
     <div class="search-wrapper">
-      <h1 class="search-title">어떤 인재를 추천해드릴까요?</h1>
+
+      <h1 v-if="!isSearched" class="search-title">어떤 인재를 추천해드릴까요?</h1>
 
       <div class="search-box-container">
         <input
@@ -18,15 +19,59 @@
         </button>
       </div>
 
-      <div class="suggest-tags">
+      <div v-if="!isSearched" class="suggest-tags">
         <button v-for="tag in suggestTags" :key="tag" class="tag-btn">
           {{ tag }}
         </button>
         <button class="tag-btn suggest-more">Suggest something</button>
       </div>
+
+      <div v-if="isSearched" class="result-area">
+        <div class="result-header">
+          <div class="ai-summary">총 2명이 검색되었습니다.</div>
+          <div class="ai-filter-tags">백엔드 개발자, Spring 숙련, 현재 프로젝트 1개 이하</div>
+        </div>
+
+        <div class="result-table-wrapper">
+          <table class="result-table">
+            <thead>
+            <tr>
+              <th width="40"><input type="checkbox" /></th>
+              <th>이름 <span style="font-size: 10px">↓</span></th>
+              <th>직군</th>
+              <th>주력 기술</th>
+              <th>현재 투입 상태</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+              <td><input type="checkbox" checked /></td>
+              <td class="user-info">👤 홍길동</td>
+              <td>백엔드 엔지니어</td>
+              <td><span class="tech-badge">Spring Boot</span></td>
+              <td><span class="status-dot">●</span> 대기중</td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+
+const searchQuery = ref('')
+const isSearched = ref(false) // 검색 여부를 판단하는 상태값
+const suggestTags = ['직무', '기술', '숙련도', '투입 중 프로젝트 수', '부서', '재직 유형']
+
+const handleSearch = () => {
+  if (!searchQuery.value.trim()) return
+  // 검색 버튼을 누르거나 엔터를 치면 true로 변경되어 레이아웃이 전환됨
+  isSearched.value = true
+}
+</script>
 
 <style scoped>
 .search-container {
@@ -34,6 +79,12 @@
   justify-content: center;
   align-items: center;
   min-height: 80vh;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.search-container.is-searched {
+  align-items: flex-start;
+  padding-top: 40px;
 }
 
 .search-wrapper {
@@ -45,6 +96,11 @@
   align-items: center;
   gap: 48px;
   padding: 0 40px;
+  transition: all 0.5s ease;
+}
+
+.is-searched .search-wrapper {
+  align-items: flex-start;
 }
 
 .search-title {
@@ -126,5 +182,63 @@
 .suggest-more {
   border-style: dashed;
   color: #94a3b8;
+}
+
+.result-area {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: fadeIn 0.6s ease;
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ai-summary {
+  background: white;
+  padding: 10px 20px;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  font-size: 14px;
+}
+
+.ai-filter-tags {
+  background: #3e3852;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+}
+
+.result-table-wrapper {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #eee;
+  overflow: hidden;
+}
+
+.result-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.result-table th, .result-table td {
+  padding: 14px;
+  border-bottom: 1px solid #f5f5f5;
+  font-size: 14px;
+}
+
+.result-table th { background: #f8fafc; color: #64748b; text-align: left; }
+.tech-badge { background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-size: 12px; }
+.status-dot { color: #22c55e; margin-right: 4px; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>
