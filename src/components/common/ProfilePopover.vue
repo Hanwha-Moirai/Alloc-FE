@@ -5,16 +5,16 @@
       <div class="avatar">
         <img src="/user.png" alt="profile" />
       </div>
-      <div class="name">홍길동</div>
-      <div class="role">Frontend Developer</div>
+      <div class="name">{{ displayName }}</div>
+      <div class="role">{{ displayRole }}</div>
     </div>
 
     <!-- 버튼 영역 -->
     <div class="actions">
-      <button class="outline" @click="$emit('goProfile')">
+      <button class="outline" @click="goProfile">
         기본정보
       </button>
-      <button class="primary" @click="$emit('logout')">
+      <button class="primary" @click="logout">
         로그아웃
       </button>
     </div>
@@ -22,7 +22,46 @@
 </template>
 
 <script setup lang="ts">
-defineEmits(['logout'])
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { jwtDecode } from 'jwt-decode'
+
+const router = useRouter()
+
+/* ===== JWT 파싱 ===== */
+const token = localStorage.getItem('accessToken')
+
+let payload: any = null
+if (token) {
+  try {
+    payload = jwtDecode(token)
+  } catch (e) {
+    console.error('JWT decode failed', e)
+  }
+}
+
+/* ===== 표시용 데이터 ===== */
+const displayName = computed(() => {
+  // name 없으니 email 또는 userId 사용
+  return payload?.email ?? `USER-${payload?.sub ?? ''}`
+})
+
+const displayRole = computed(() => {
+  if (payload?.role === 'PM') return 'Project Manager'
+  if (payload?.role === 'USER') return 'Member'
+  return payload?.role ?? ''
+})
+
+/* ===== 액션 ===== */
+const goProfile = () => {
+  if (!payload?.sub) return
+  router.push(`/profile/${payload.sub}`)
+}
+
+const logout = () => {
+  localStorage.removeItem('accessToken')
+  router.push('/login')
+}
 </script>
 
 <style scoped>
@@ -79,7 +118,6 @@ defineEmits(['logout'])
 .actions button {
   flex: 1;
   height: 40px;
-  //border-radius: 6px;
   font-size: 14px;
   cursor: pointer;
 }
