@@ -5,27 +5,33 @@
     <div class="top-info-grid">
       <div class="info-card wide">
         <span class="label">프로젝트명</span>
-        <div class="value">트래픽 모니터링 및 장애 대응 고도화</div>
+        <input v-if="isEditing" v-model="form.projectName" class="edit-input" />
+        <div v-else class="value">{{ form.projectName }}</div>
       </div>
       <div class="info-card">
         <span class="label">프로젝트 기간</span>
-        <div class="value">2026.01.06 - 2026.01.25</div>
+        <input v-if="isEditing" v-model="form.period" class="edit-input" />
+        <div v-else class="value">{{ form.period }}</div>
       </div>
       <div class="info-card">
         <span class="label">고객/협력사</span>
-        <div class="value">삼성전자</div>
+        <input v-if="isEditing" v-model="form.client" class="edit-input" />
+        <div v-else class="value">{{ form.client }}</div>
       </div>
       <div class="info-card">
         <span class="label">담당자</span>
-        <div class="value">김현수</div>
+        <input v-if="isEditing" v-model="form.manager" class="edit-input" />
+        <div v-else class="value">{{ form.manager }}</div>
       </div>
       <div class="info-card">
         <span class="label">주차</span>
-        <div class="value">2025 FEB 12</div>
+        <input v-if="isEditing" v-model="form.week" class="edit-input" />
+        <div v-else class="value">{{ form.week }}</div>
       </div>
       <div class="info-card">
         <span class="label">보고자</span>
-        <div class="value">김현수</div>
+        <input v-if="isEditing" v-model="form.reporter" class="edit-input" />
+        <div v-else class="value">{{ form.reporter }}</div>
       </div>
     </div>
 
@@ -36,8 +42,11 @@
         <span class="dot pending"></span> 미완
       </div>
       <div class="chart-container">
-        <div class="progress-circle" style="--p:67; --c:#23cc66;">
-          <span class="percent">67%</span>
+        <div class="progress-circle" :style="`--p:${form.progress}; --c:#23cc66;`">
+          <div v-if="isEditing" class="edit-progress-box">
+            <input v-model="form.progress" type="number" class="percent-input" /> %
+          </div>
+          <span v-else class="percent">{{ form.progress }}%</span>
         </div>
       </div>
     </div>
@@ -54,11 +63,23 @@
         </tr>
         </thead>
         <tbody>
-        <tr>
-          <td class="text-left">로그 기반 이상 트래픽 자동 감지 알림 시스...</td>
-          <td>김현수</td>
-          <td>개발</td>
-          <td>log 변경됨</td>
+        <tr v-for="(task, idx) in completedTasks" :key="idx">
+          <td class="text-left">
+            <input v-if="isEditing" v-model="task.name" class="edit-input-table" />
+            <span v-else>{{ task.name }}</span>
+          </td>
+          <td>
+            <input v-if="isEditing" v-model="task.manager" class="edit-input-table" />
+            <span v-else>{{ task.manager }}</span>
+          </td>
+          <td>
+            <input v-if="isEditing" v-model="task.type" class="edit-input-table" />
+            <span v-else>{{ task.type }}</span>
+          </td>
+          <td>
+            <input v-if="isEditing" v-model="task.note" class="edit-input-table" />
+            <span v-else>{{ task.note }}</span>
+          </td>
         </tr>
         </tbody>
       </table>
@@ -78,15 +99,23 @@
         </thead>
         <tbody>
         <template v-for="(item, index) in uncompletedTasks" :key="index">
-          <tr
-              class="clickable-row"
-              :class="{ 'active-row': expandedRow === index }"
-              @click="toggleRow(index)"
-          >
-            <td class="text-left">{{ item.name }}</td>
-            <td>{{ item.manager }}</td>
-            <td>{{ item.type }}</td>
-            <td>{{ item.delay }}</td>
+          <tr class="clickable-row" :class="{ 'active-row': expandedRow === index }" @click="toggleRow(index)">
+            <td class="text-left">
+              <input v-if="isEditing" v-model="item.name" class="edit-input-table" @click.stop />
+              <span v-else>{{ item.name }}</span>
+            </td>
+            <td>
+              <input v-if="isEditing" v-model="item.manager" class="edit-input-table" @click.stop />
+              <span v-else>{{ item.manager }}</span>
+            </td>
+            <td>
+              <input v-if="isEditing" v-model="item.type" class="edit-input-table" @click.stop />
+              <span v-else>{{ item.type }}</span>
+            </td>
+            <td>
+              <input v-if="isEditing" v-model="item.delay" class="edit-input-table" @click.stop />
+              <span v-else>{{ item.delay }}</span>
+            </td>
             <td class="text-left">
               <div class="reason-ellipsis" v-if="expandedRow !== index">
                 {{ item.reason }}
@@ -99,7 +128,8 @@
               <div class="detail-content">
                 <div class="detail-item">
                   <span class="detail-label">지연 사유 전문</span>
-                  <p class="detail-text">{{ item.reason }}</p>
+                  <textarea v-if="isEditing" v-model="item.reason" class="edit-textarea"></textarea>
+                  <p v-else class="detail-text">{{ item.reason }}</p>
                 </div>
               </div>
             </td>
@@ -119,17 +149,30 @@
           <th>지연 경과</th>
           <th>생성 날짜</th>
           <th>최신 수정 날짜</th>
-          <th style="width: 40px">+</th>
         </tr>
         </thead>
         <tbody>
-        <tr>
-          <td class="text-left">로그 기반 이상 트래픽 자동 감지 알림 시스...</td>
-          <td>2025. 12. 24</td>
-          <td>506543</td>
-          <td>2025. 12. 24</td>
-          <td>2025. 12. 31</td>
-          <td></td>
+        <tr v-for="(next, idx) in nextWeekTasks" :key="idx">
+          <td class="text-left">
+            <input v-if="isEditing" v-model="next.name" class="edit-input-table" />
+            <span v-else>{{ next.name }}</span>
+          </td>
+          <td>
+            <input v-if="isEditing" v-model="next.manager" class="edit-input-table" />
+            <span v-else>{{ next.manager }}</span>
+          </td>
+          <td>
+            <input v-if="isEditing" v-model="next.delay" class="edit-input-table" />
+            <span v-else>{{ next.delay }}</span>
+          </td>
+          <td>
+            <input v-if="isEditing" v-model="next.created" class="edit-input-table" />
+            <span v-else>{{ next.created }}</span>
+          </td>
+          <td>
+            <input v-if="isEditing" v-model="next.updated" class="edit-input-table" />
+            <span v-else>{{ next.updated }}</span>
+          </td>
         </tr>
         </tbody>
       </table>
@@ -152,7 +195,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, reactive, computed } from 'vue';
 import { useRoute } from 'vue-router';
 
 const route = useRoute();
@@ -162,56 +205,87 @@ const pageTitle = computed(() => {
   return type === 'weekly' ? '주간보고 상세' : '회의록 상세';
 });
 
+// 1. 공통 정보 데이터 (form)
+const form = reactive({
+  projectName: '트래픽 모니터링 및 장애 대응 고도화',
+  period: '2026.01.06 - 2026.01.25',
+  client: '삼성전자',
+  manager: '김현수',
+  week: '2025 FEB 12',
+  reporter: '김현수',
+  progress: 67
+});
+
+// 2. 완수 태스크 데이터
+const completedTasks = ref([
+  { name: '로그 기반 이상 트래픽 자동 감지 알림 시스...', manager: '김현수', type: '개발', note: 'log 변경됨' }
+]);
+
+// 3. 미완수 태스크 데이터
 const uncompletedTasks = ref([
   {
     name: '로그 기반 이상 트래픽 자동 감지 알림 시스...',
     manager: '김현수',
     type: '개발',
     delay: '3일',
-    reason: '초기 기획 단계에서 정의된 로그 수집 방식과 현재 시스템의 로그 포맷이 상이하여 정규식 재설계가 필요함. 이로 인해 분석 엔진 적용이 약 3일간 지연되었습니다.'
-  },
+    reason: '초기 기획 단계에서 정의된 로그 수집 방식과 현재 시스템의 로그 포맷이 상이하여 정규식 재설계가 필요함.'
+  }
+]);
+
+// 4. 다음주 진행사항 데이터
+const nextWeekTasks = ref([
   {
-    name: 'DB 클러스터링 모니터링 모듈 통합 테스트',
-    manager: '이민아',
-    type: '테스트',
-    delay: '1일',
-    reason: '스테이징 환경에서의 네트워크 순회 지연 문제로 인해 동기화 테스트가 예정보다 늦게 시작되었습니다.'
+    name: '로그 기반 이상 트래픽 자동 감지 알림 시스...',
+    manager: '2025. 12. 24',
+    delay: '506543',
+    created: '2025. 12. 24',
+    updated: '2025. 12. 31'
   }
 ]);
 
 const expandedRow = ref<number | null>(null);
+const isEditing = ref(false);
 
 const toggleRow = (index: number) => {
+  if (isEditing.value) return; // 수정 중에는 토글 방지 (선택 사항)
   expandedRow.value = expandedRow.value === index ? null : index;
 };
 
-const isEditing = ref(false); // 초기값은 '보기 모드'
-
-const toggleEditMode = () => {
-  isEditing.value = !isEditing.value;
-};
-
+const toggleEditMode = () => { isEditing.value = true; };
 const handleSave = () => {
-  // 여기서 서버 저장 로직 수행 (API 호출 등)
-  alert('저장되었습니다.');
-  isEditing.value = false; // 저장 후 다시 '보기 모드'로 전환
+  alert('성공적으로 저장되었습니다.');
+  isEditing.value = false;
 };
 </script>
 
 <style scoped>
-.page-title { font-size: 22px; font-weight: 700; margin-bottom: 20px; }
+/* 입력창 디자인 스타일 */
+.edit-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #4ab8d8;
+  padding: 6px 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #333;
+  margin-top: 4px;
+  outline: none;
+}
+.edit-input-table { width: 95%; border: 1px solid #4ab8d8; padding: 4px; font-size: 12px; text-align: center; }
+.edit-textarea { width: 100%; height: 80px; border: 1px solid #4ab8d8; padding: 10px; font-size: 12px; resize: none; border-radius: 4px; }
+.edit-progress-box { display: flex; align-items: center; gap: 4px; font-weight: 800; color: #555; }
+.percent-input { width: 50px; text-align: center; border: 1px solid #4ab8d8; font-size: 18px; font-weight: 800; }
 
-/* 상단 정보 카드 그리드 */
+/* 레이아웃 & 공통 스타일 */
+.page-title { font-size: 22px; font-weight: 700; margin-bottom: 20px; }
 .top-info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
-.info-card { background: white; border: 1px solid #e5e7eb; padding: 12px 16px; }
-.info-card .label { display: block; font-size: 11px; color: #9ca3af; margin-bottom: 4px; }
+.info-card { background: white; border: 1px solid #e5e7eb; padding: 5px 16px; min-height: 60px; display: flex; flex-direction: column; justify-content: center; }
+.info-card .label { display: block; font-size: 12px; color: #9ca3af; margin-bottom: 4px; }
 .info-card .value { font-size: 14px; font-weight: 700; color: #333; }
 
-/* 섹션 공통 */
 .section-card { background: white; border: 1px solid #e5e7eb; padding: 20px; margin-bottom: 24px; }
 .section-title { font-size: 14px; font-weight: 700; margin: 0 0 16px 0; color: #333; }
 
-/* 차트 영역 */
 .chart-section { position: relative; text-align: center; }
 .chart-legend { position: absolute; top: 20px; left: 20px; font-size: 12px; color: #666; }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
@@ -226,44 +300,21 @@ const handleSave = () => {
 }
 .progress-circle .percent { font-size: 24px; font-weight: 800; color: #555; }
 
-/* 테이블 스타일 */
 .task-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
 .task-table th { background: #f1f3f6; padding: 10px; border-bottom: 1px solid #e5e7eb; color: #4b5563; }
-.task-table td { padding: 12px 10px; border-bottom: 1px solid #f3f4f6; text-align: center; color: #333; }
+.task-table td { padding: 12px 10px; border-bottom: 1px solid #f3f4f6; text-align: center; color: #333; overflow: hidden; }
 .text-left { text-align: left !important; }
 
-/* 지연 사유 말줄임 처리 핵심 CSS */
-.reason-ellipsis {
-  white-space: nowrap;      /* 줄바꿈 금지 */
-  overflow: hidden;         /* 넘치는 부분 숨김 */
-  text-overflow: ellipsis;  /* ... 표시 */
-  max-width: 230px;         /* 너비 제한 (th 너비에 맞춰 조정) */
-  color: #666;
-}
-
-.status-text {
-  color: #4ab8d8;
-  font-size: 11px;
-  text-align: center;
-  display: block;
-  width: 100%;
-}
-
-/* 아코디언 스타일 */
+.reason-ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 230px; color: #666; }
+.status-text { color: #4ab8d8; font-size: 11px; text-align: center; display: block; width: 100%; }
 .clickable-row { cursor: pointer; transition: background-color 0.2s; }
-.clickable-row:hover { background-color: #f9fafb; }
 .active-row { background-color: #f0f9ff !important; }
 
 .detail-row td { padding: 0 !important; border-bottom: 1px solid #e5e7eb; }
-.detail-content {
-  background-color: #fcfcfc;
-  padding: 16px 20px;
-  border-left: 4px solid #4ab8d8;
-}
+.detail-content { background-color: #fcfcfc; padding: 16px 20px; border-left: 4px solid #4ab8d8; }
 .detail-label { display: block; font-weight: 700; color: #333; margin-bottom: 10px; font-size: 12px; }
 .detail-text { color: #666; line-height: 1.6; margin: 0; text-align: left; white-space: normal; }
 
-/* 하단 버튼 */
 .bottom-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
 .bottom-actions button { padding: 8px 18px; font-size: 13px; cursor: pointer; }
 .btn-grey { background: #9ca3af; color: white; border: none; }
