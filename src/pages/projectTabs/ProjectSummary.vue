@@ -5,27 +5,45 @@
     <div class="info-grid">
       <div class="info-box wide">
         <label>프로젝트명</label>
-        <strong>트래픽 모니터링 및 장애 대응 고도화</strong>
+        <input v-if="isEditing" v-model="form.projectName" class="edit-input" />
+        <strong v-else>{{ form.projectName }}</strong>
       </div>
 
       <div class="info-box">
         <label>프로젝트 상태</label>
-        <span class="badge active">ACTIVE</span>
+        <select v-if="isEditing" v-model="form.status" class="edit-select">
+          <option value="DRAFT">DRAFT</option>
+          <option value="ACTIVE">ACTIVE</option>
+          <option value="CLOSED">CLOSED</option>
+          <option value="HOLD">HOLD</option>
+        </select>
+        <span v-else class="badge active">{{ form.status }}</span>
       </div>
 
       <div class="info-box">
         <label>프로젝트 유형</label>
-        <span class="badge operation">OPERATION</span>
+        <select v-if="isEditing" v-model="form.type" class="edit-select">
+          <option value="NEW">NEW</option>
+          <option value="OPERATION">OPERATION</option>
+          <option value="MAINTENANCE">MAINTENANCE</option>
+        </select>
+        <span v-else class="badge operation">{{ form.type }}</span>
       </div>
 
       <div class="info-box">
         <label>프로젝트 기간</label>
-        <strong>2025.01.03 ~ 2025.12.31</strong>
+        <div v-if="isEditing" class="date-edit-group">
+          <input type="date" v-model="form.startDate" class="edit-date" />
+          ~
+          <input type="date" v-model="form.endDate" class="edit-date" />
+        </div>
+        <strong v-else>{{ form.startDate }} ~ {{ form.endDate }}</strong>
       </div>
 
       <div class="info-box">
         <label>고객/협력사</label>
-        <strong>삼성전자</strong>
+        <input v-if="isEditing" v-model="form.client" class="edit-input" />
+        <strong v-else>{{ form.client }}</strong>
       </div>
     </div>
 
@@ -33,19 +51,19 @@
     <div class="info-grid bottom">
       <div class="description-box">
         <label>프로젝트 설명</label>
-        <p>
-          기존 서비스의 트래픽 모니터링 체계를 개선하고, 장애 발생 시 원인 파악과
-          대응 시간을 단축하기 위한 운영 중심의 모니터링 및 알림 기능을 고도화한다.
-          주요 API 구간의 트래픽 이상 징후를 사전에 감지하고, 장애 발생 시 관련 지표와
-          로그를 한 화면에서 확인할 수 있도록 개선한다.
-        </p>
+        <textarea v-if="isEditing" v-model="form.description" class="edit-textarea"></textarea>
+        <p v-else>{{ form.description }}</p>
       </div>
 
       <div class="info-box budget">
         <label>예산</label>
-        <strong class="value">
-          ₩180,000,000
-          <span class="sub">(1억 8천만 원)</span>
+        <div v-if="isEditing" class="budget-edit-group">
+          <span class="unit">₩</span>
+          <input type="number" v-model="form.budget" class="edit-input-budget" />
+        </div>
+        <strong v-else class="value">
+          ₩{{ Number(form.budget).toLocaleString() }}
+          <span class="sub">({{ convertToKoreanWon(form.budget) }})</span>
         </strong>
       </div>
     </div>
@@ -130,13 +148,37 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, reactive } from 'vue'
 import { Chart, ArcElement, Tooltip, DoughnutController } from 'chart.js'
 
 Chart.register(ArcElement, Tooltip, DoughnutController)
 
 const progressChart = ref<HTMLCanvasElement | null>(null)
 const riskChart = ref<HTMLCanvasElement | null>(null)
+const props = defineProps({
+  isEditing: {
+    type: Boolean,
+    default: false
+  }
+});
+
+const form = reactive({
+  projectName: '트래픽 모니터링 및 장애 대응 고도화',
+  status: 'ACTIVE', // ENUM: DRAFT, ACTIVE, CLOSED, HOLD
+  type: 'OPERATION', // ENUM: NEW, OPERATION, MAINTENANCE
+  startDate: '2025-01-03',
+  endDate: '2025-12-31',
+  client: '삼성전자',
+  description: '기존 서비스의 트래픽 모니터링 체계를 개선하고, 장애 발생 시 원인 파악과 대응 시간을 단축하기 위한 운영 중심의 알림 기능을 고도화합니다. 주요 API 구간의 이상 징후를 사전에 감지하여 서비스 가용성을 확보하고, 장애 지표를 통합 시각화하여 운영 효율성을 높이는 것을 목표로 합니다.',
+  budget: 180000000
+})
+
+// 예산 숫자를 한글 읽기로 변환 (예: 1억 8천만 원)
+const convertToKoreanWon = (num: number) => {
+  if (!num) return '0원';
+  const won = num / 100000000;
+  return won >= 1 ? `${won.toLocaleString(undefined, { maximumFractionDigits: 1 })}억 원` : `${(num / 10000).toLocaleString()}만 원`;
+}
 
 onMounted(() => {
   if (progressChart.value) {
@@ -447,5 +489,54 @@ canvas {
 .schedule-box li {
   font-size: 13px;
   margin-bottom: 6px;
+}
+
+/* 수정 */
+.edit-input,
+.edit-select,
+.edit-textarea,
+.edit-date,
+.edit-input-budget {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #4ab8d8;
+  padding: 6px 8px;
+  font-size: 13px;
+  outline: none;
+  background: #fff;
+  margin-top: 4px;
+}
+
+.edit-textarea {
+  height: 100px;
+  resize: none;
+  line-height: 1.5;
+  display: block;
+}
+
+.date-edit-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.edit-date {
+  flex: 1;
+  font-size: 12px;
+  padding: 4px;
+}
+
+.budget-edit-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.edit-input-budget {
+  margin-top: 0;
+  font-weight: 700;
+  text-align: right;
 }
 </style>
