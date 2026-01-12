@@ -171,8 +171,14 @@ const goTab = (tab: string) => {
 }
 
 const isActive = (tab: string) => {
-  return route.path.endsWith(`/projects/${projectId}/${tab}`) ||
-      (tab === '' && route.path === `/projects/${projectId}`)
+  const path = route.path;
+
+  if (tab === '') {
+    return path === `/projects/${projectId}`;
+  }
+
+  // 문서 탭의 경우: /projects/1/docs 로 시작하는 모든 하위 경로를 포함
+  return path.includes(`/projects/${projectId}/${tab}`);
 }
 
 const handleCreateDoc = (data: any) => {

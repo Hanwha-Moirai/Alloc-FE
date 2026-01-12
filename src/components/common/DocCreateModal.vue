@@ -47,6 +47,8 @@
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue';
+import { useRouter } from 'vue-router';
+const router = useRouter();
 
 const props = defineProps<{ isOpen: boolean }>();
 const emit = defineEmits(['close', 'create']);
@@ -63,11 +65,14 @@ const form = reactive({
 });
 
 const handleCreate = () => {
-  if (!form.projectId) {
-    alert('프로젝트를 선택해주세요.');
-    return;
-  }
-  emit('create', { ...form });
+  if (!form.projectId) return alert('프로젝트를 선택해주세요.');
+
+  // 실제로는 API 호출을 통해 새 문서 ID를 받아와야 합니다.
+  const tempDocId = Date.now(); // 임시 ID 생성 예시
+
+  // 이동 예시: /projects/1/docs/weekly/1705012345
+  router.push(`/projects/${form.projectId}/docs/${form.docType}/${tempDocId}`);
+
   emit('close');
 };
 </script>
