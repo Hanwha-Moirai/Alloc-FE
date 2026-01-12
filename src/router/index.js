@@ -38,7 +38,7 @@ const router = createRouter({
                     component: () => import('@/pages/Dashboard.vue'),
                 },
                 {
-                    path: '/pm',
+                    path: '/pmhome',
                     component: () => import('@/pages/PmDashboard.vue'),
                 },
                 {

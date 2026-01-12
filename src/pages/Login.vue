@@ -12,6 +12,7 @@
         <label>아이디</label>
         <input
             type="text"
+            v-model="username"
             placeholder="아이디를 입력해주세요."
         />
       </div>
@@ -21,6 +22,7 @@
         <label>비밀번호</label>
         <input
             type="password"
+            v-model="password"
             placeholder="비밀번호를 입력해주세요."
         />
       </div>
@@ -33,7 +35,9 @@
       </div>
 
       <!-- 로그인 버튼 -->
-      <button class="login-btn">로그인</button>
+      <button class="login-btn" @click="login">
+        로그인
+      </button>
 
       <!-- 관리자 로그인 -->
       <div class="admin">
@@ -46,8 +50,53 @@
 </template>
 
 <script setup lang="ts">
-// 👉 나중에 v-model, submit 로직 추가
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import axios from '@/lib/axios'
+
+const router = useRouter()
+
+const username = ref('')
+const password = ref('')
+
+import { jwtDecode } from 'jwt-decode'
+
+const login = async () => {
+  try {
+    const res = await axios.post('/auth/login', {
+      loginId: username.value,
+      password: password.value
+    })
+
+    // 💡 중요: 백엔드 응답 구조가 ApiResponse<AuthResponse>이므로 .data를 두 번 거쳐야 합니다.
+    // res.data는 ApiResponse 객체, res.data.data는 실제 AuthResponse 객체입니다.
+    const responseData = res.data.data;
+
+    if (responseData && responseData.accessToken) {
+      const accessToken = responseData.accessToken;
+      localStorage.setItem('accessToken', accessToken);
+
+      // JWT에서 role 추출
+      const payload: any = jwtDecode(accessToken);
+      const role = payload.role; // 백엔드 로그상 "PM" 확인됨
+
+      // 역할별 이동
+      if (role === 'PM') {
+        router.push('/pmhome');
+      } else {
+        router.push('/home');
+      }
+    } else {
+      console.error('응답 데이터 구조가 예상과 다릅니다:', res.data);
+    }
+
+  } catch (e: any) {
+    console.error('Login Error:', e);
+    alert('로그인 처리 중 오류가 발생했습니다.');
+  }
+}
 </script>
+
 
 <style scoped>
 /* 전체 배경 */
