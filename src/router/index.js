@@ -126,11 +126,11 @@ const router = createRouter({
                     name: 'AdminUsers',
                     component: () => import('@/pages/admin/UserManagement.vue'),
                 },
-                // {
-                //     path: 'audit',
-                //     name: 'AdminAudit',
-                //     component: () => import('@/pages/admin/AuditReport.vue'),
-                // },
+                {
+                    path: 'audit',
+                    name: 'AdminAudit',
+                    component: () => import('@/pages/admin/AuditReport.vue'),
+                },
                 {
                     path: 'ranks',
                     name: 'AdminRanks',
