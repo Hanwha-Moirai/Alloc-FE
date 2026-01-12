@@ -44,7 +44,7 @@
             :class="{ active: isActive('docs') }"
             @click="goTab('docs')"
         >
-          문서 <span class="count">2</span>
+          문서
         </button>
 
         <button
@@ -60,12 +60,15 @@
       <div class="header-actions">
 
         <!-- 요약 탭 -->
-        <button
-            v-if="isActive('')"
-            class="edit-btn"
-        >
-          수정
-        </button>
+        <template v-if="isActive('')">
+          <button
+              class="edit-btn"
+              :class="{ 'save-mode': isEditing }"
+              @click="toggleEdit"
+          >
+            {{ isEditing ? '저장' : '수정' }}
+          </button>
+        </template>
 
         <!-- 태스크 탭 -->
         <div
@@ -86,8 +89,17 @@
             v-if="isActive('schedule')"
             class="schedule-actions"
         >
-          <button class="add-btn">
+          <button class="add-btn" @click="showMilestoneAddModal = true">
             + 마일스톤 추가하기
+          </button>
+        </div>
+
+        <!-- 문서 탭 -->
+        <div
+            v-if="isActive('docs')"
+        >
+          <button class="add-btn btn-gradient" @click="showDocModal = true">
+          + 주간보고/회의록 생성
           </button>
         </div>
 
@@ -96,7 +108,7 @@
 
     </div>
 
-    <router-view />
+    <router-view :is-editing="isEditing" />
 
     <TaskAddModal
         v-if="showAddModal"
@@ -109,21 +121,52 @@
         @close="isFilterOpen = false"
         @filter="handleFilter"
     />
+
+    <ScheduleAddModal
+        v-if="showMilestoneAddModal"
+        @close="showMilestoneAddModal = false"
+        @add="handleAddMilestone"
+    />
+
+    <DocCreateModal
+        :isOpen="showDocModal"
+        @close="showDocModal = false"
+        @create="handleCreateDoc"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import TaskAddModal from '@/components/common/TaskAddModal.vue'
 import TaskFilterDrawer from '@/components/common/TaskFilterDrawer.vue'
+import ScheduleAddModal from '@/components/common/ScheduleAddModal.vue'
+import DocCreateModal from '@/components/common/DocCreateModal.vue'
 
 const route = useRoute()
 const router = useRouter()
 const projectId = route.params.projectId
 
 const showAddModal = ref(false)
+const showMilestoneAddModal = ref(false)
+const showDocModal = ref(false);
+
+const isEditing = ref(false)
+
+// 탭이 바뀌면 수정 모드 해제
+watch(() => route.path, () => {
+  isEditing.value = false
+})
+
+const toggleEdit = () => {
+  if (isEditing.value) {
+    // 저장 로직 (필요 시 API 호출)
+    alert('저장되었습니다.')
+  }
+  isEditing.value = !isEditing.value
+}
 
 const handleAddTask = (newTask: any) => {
   console.log('새로운 태스크 데이터:', newTask)
@@ -136,14 +179,28 @@ const handleFilter = (filterData: any) => {
   console.log('적용할 필터:', filterData)
 }
 
+const handleAddMilestone = (newMilestone: any) => {
+  console.log('새로운 마일스톤 데이터:', newMilestone)
+  showMilestoneAddModal.value = false
+}
+
 const goTab = (tab: string) => {
   router.push(`/projects/${projectId}/${tab}`)
 }
 
 const isActive = (tab: string) => {
-  return route.path.endsWith(`/projects/${projectId}/${tab}`) ||
-      (tab === '' && route.path === `/projects/${projectId}`)
+  const path = route.path;
+
+  if (tab === '') {
+    return path === `/projects/${projectId}` || path === `/projects/${projectId}/`;
+  }
+
+  return path.includes(`/projects/${projectId}/${tab}`);
 }
+
+const handleCreateDoc = (data: any) => {
+  console.log('생성 데이터:', data);
+};
 </script>
 
 <style scoped>
@@ -195,6 +252,13 @@ const isActive = (tab: string) => {
   color: #4ab8d8;
   height: 36px;
   cursor: pointer;
+}
+
+/* 저장 버튼으로 변했을 때의 스타일 */
+.edit-btn.save-mode {
+  background: #4ab8d8;
+  color: #fff;
+  border-color: #3aa7c7;
 }
 
 .header-actions {
@@ -251,4 +315,9 @@ const isActive = (tab: string) => {
   opacity: 0.6;
 }
 
+/* 주간보고 버튼 */
+.btn-gradient {
+  background: linear-gradient(90deg, #38b6ff 0%, #a450cf 50%, #e94e96 100%);
+  background-size: 200% auto;
+}
 </style>

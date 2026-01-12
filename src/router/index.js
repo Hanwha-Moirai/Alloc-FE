@@ -38,7 +38,7 @@ const router = createRouter({
                     component: () => import('@/pages/Dashboard.vue'),
                 },
                 {
-                    path: '/pm',
+                    path: '/pmhome',
                     component: () => import('@/pages/PmDashboard.vue'),
                 },
                 {
@@ -65,18 +65,25 @@ const router = createRouter({
                             path: 'schedule',
                             component: () => import('@/pages/projectTabs/ProjectSchedule.vue'),
                         },
-                        // {
-                        //     path: 'calendar',
-                        //     component: () => import('@/pages/projectTabs/ProjectCalendar.vue'),
-                        // },
-                        // {
-                        //     path: 'docs',
-                        //     component: () => import('@/pages/projectTabs/ProjectDocs.vue'),
-                        // },
-                        // {
-                        //     path: 'members',
-                        //     component: () => import('@/pages/projectTabs/ProjectMembers.vue'),
-                        // },
+                        {
+                            path: 'calendar',
+                            component: () => import('@/pages/projectTabs/ProjectCalendar.vue'),
+                        },
+                        {
+                            path: 'docs',
+                            component: () => import('@/pages/projectTabs/ProjectDocuments.vue'),
+                        },
+                        {
+                            path: 'docs/:type/:docId',
+                            name: 'ProjectDocDetail',
+                            // 동적 함수 방식 대신, 컨테이너 컴포넌트를 바로 로드
+                            component: () => import('@/pages/projectTabs/DocDetailContainer.vue'),
+                            props: true
+                        },
+                        {
+                            path: 'members',
+                            component: () => import('@/pages/projectTabs/ProjectMembers.vue'),
+                        },
                     ],
                 },
                 {

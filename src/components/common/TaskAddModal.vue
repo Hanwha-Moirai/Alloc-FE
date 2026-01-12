@@ -113,7 +113,7 @@ const handleSubmit = () => {
 .modal-box {
   width: 440px;
   background: #fff;
-  border-radius: 4px;
+  border-radius: 2px;
   padding: 24px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
 }
@@ -156,7 +156,7 @@ const handleSubmit = () => {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid #d1d5db;
-  border-radius: 4px;
+  border-radius: 2px;
   font-size: 14px;
   box-sizing: border-box;
   outline-color: #4ab8d8;
@@ -186,7 +186,7 @@ const handleSubmit = () => {
   height: 40px;
   padding: 8px 10px;
   border: 1px solid #d1d5db;
-  border-radius: 4px;
+  border-radius: 2px;
   font-size: 13px;
   box-sizing: border-box;
   background-color: #f9fafb;

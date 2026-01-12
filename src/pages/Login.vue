@@ -1,6 +1,6 @@
 <template>
   <div class="login-page">
-    <div class="login-card">
+    <form class="login-card" @submit.prevent="login">
       <!-- 로고 -->
       <img src="/alloc-logo.png" alt="ALLOC" class="logo" />
 
@@ -12,7 +12,9 @@
         <label>아이디</label>
         <input
             type="text"
+            v-model="username"
             placeholder="아이디를 입력해주세요."
+            autocomplete="username"
         />
       </div>
 
@@ -21,7 +23,9 @@
         <label>비밀번호</label>
         <input
             type="password"
+            v-model="password"
             placeholder="비밀번호를 입력해주세요."
+            autocomplete="current-password"
         />
       </div>
 
@@ -33,7 +37,9 @@
       </div>
 
       <!-- 로그인 버튼 -->
-      <button class="login-btn">로그인</button>
+      <button class="login-btn" type="submit">
+        로그인
+      </button>
 
       <!-- 관리자 로그인 -->
       <div class="admin">
@@ -41,13 +47,47 @@
           관리자 로그인
         </RouterLink>
       </div>
-    </div>
+    </form>
   </div>
 </template>
 
 <script setup lang="ts">
-// 👉 나중에 v-model, submit 로직 추가
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import axios from '@/lib/axios'
+import { jwtDecode } from 'jwt-decode'
+
+const router = useRouter()
+
+const username = ref('')
+const password = ref('')
+
+const login = async () => {
+  try {
+    const res = await axios.post('/auth/login', {
+      loginId: username.value,
+      password: password.value
+    })
+
+    const responseData = res.data.data
+    const accessToken = responseData.accessToken
+
+    localStorage.setItem('accessToken', accessToken)
+
+    const payload: any = jwtDecode(accessToken)
+    const role = payload.role
+
+    if (role === 'PM') {
+      router.push('/pmhome')
+    } else {
+      router.push('/home')
+    }
+  } catch (e) {
+    alert('아이디 또는 비밀번호가 올바르지 않습니다.')
+  }
+}
 </script>
+
 
 <style scoped>
 /* 전체 배경 */

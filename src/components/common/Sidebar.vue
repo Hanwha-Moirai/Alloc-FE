@@ -17,18 +17,56 @@
 </template>
 
 <script setup lang="ts">
-const menu = [
-  { path: '/', icon: '/icons/home.png', label: '홈' },
-  { path: '/projects', icon: '/icons/project.png', label: '프로젝트' },
-  { path: '/talent', icon: '/icons/group.png', label: '인력' },
-  { path: '/reports', icon: '/icons/report.png', label: '문서' },
-]
+import { computed } from 'vue'
+import { jwtDecode } from 'jwt-decode'
+
+type JwtPayload = {
+  role?: 'PM' | 'USER'
+}
+
+/* 🔐 현재 사용자 role 판별 */
+const getHomePath = () => {
+  const token = localStorage.getItem('accessToken')
+  if (!token) return '/home'
+
+  try {
+    const payload = jwtDecode<JwtPayload>(token)
+    return payload.role === 'PM' ? '/pmhome' : '/home'
+  } catch (e) {
+    console.error('JWT decode 실패', e)
+    return '/home'
+  }
+}
+
+/* 📌 메뉴 정의 (Home만 동적) */
+const menu = computed(() => [
+  {
+    path: getHomePath(),
+    icon: '/icons/home.png',
+    label: '홈',
+  },
+  {
+    path: '/projects',
+    icon: '/icons/project.png',
+    label: '프로젝트',
+  },
+  {
+    path: '/talent',
+    icon: '/icons/group.png',
+    label: '인력',
+  },
+  {
+    path: '/reports',
+    icon: '/icons/report.png',
+    label: '문서',
+  },
+])
 </script>
 
 <style scoped>
 .sidebar {
   width: 50px;
-  background-color: #4ab8d8; /* 피그마 톤 */
+  background-color: #4ab8d8;
   display: flex;
   justify-content: center;
 }
@@ -40,7 +78,6 @@ const menu = [
   gap: 8px;
 }
 
-/* 메뉴 아이템 */
 .menu-item {
   width: 100%;
   padding: 8px 0;
@@ -51,40 +88,32 @@ const menu = [
   flex-direction: column;
   align-items: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-
   opacity: 0.8;
 }
 
-/* 마지막 메뉴는 선 제거 */
 .menu-item:last-child {
   border-bottom: none;
 }
 
-/* hover */
 .menu-item:hover {
   background-color: rgba(255, 255, 255, 0.15);
   opacity: 1;
   border-radius: 5px;
 }
 
-/* 활성 */
 .menu-item.active {
   background-color: rgba(255, 255, 255, 0.25);
   opacity: 1;
   border-radius: 5px;
 }
 
-/* 아이콘 */
 .icon {
   width: 20px;
   height: 20px;
   object-fit: contain;
-
-  /* PNG를 흰색처럼 보이게 */
   filter: brightness(0) invert(1);
 }
 
-/* 텍스트 */
 .label {
   margin-top: 5px;
   font-size: 10px;
