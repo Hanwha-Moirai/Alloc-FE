@@ -121,11 +121,11 @@ const router = createRouter({
                     name: 'AdminJobs',
                     component: () => import('@/pages/admin/JobManagement.vue'),
                 },
-                // {
-                //     path: 'users',
-                //     name: 'AdminUsers',
-                //     component: () => import('@/pages/admin/UserManagement.vue'),
-                // },
+                {
+                    path: 'users',
+                    name: 'AdminUsers',
+                    component: () => import('@/pages/admin/UserManagement.vue'),
+                },
                 // {
                 //     path: 'audit',
                 //     name: 'AdminAudit',
