@@ -30,6 +30,7 @@
   padding: 30px 20px 20px;
   text-align: center;
   position: relative;
+  border-radius: 2px;
 }
 
 .close-x {
