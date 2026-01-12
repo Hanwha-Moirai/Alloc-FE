@@ -97,6 +97,11 @@ const router = createRouter({
                     name: 'Documents',
                     component: () => import('@/pages/DocumentMain.vue'),
                 },
+                {
+                    path: '/talent',
+                    name: 'TalentSearch',
+                    component: () => import('@/pages/TalentSearchView.vue'),
+                },
             ],
         },
     ],

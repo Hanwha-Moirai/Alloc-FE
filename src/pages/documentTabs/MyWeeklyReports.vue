@@ -62,8 +62,6 @@ const goToDetail = (id: number) => {
 <style scoped>
 .table-container { background: #fff; border: 1px solid #e1e4e8; border-radius: 4px; overflow: hidden; }
 .doc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-
-/* 🔥 헤더 배경색 프로젝트 목록과 동일하게 변경 */
 .doc-table th { background: #f2f4f8; padding: 12px; color: #333; font-weight: 600; border-bottom: 1px solid #e1e4e8; }
 .doc-table td { padding: 14px 12px; text-align: center; border-bottom: 1px solid #f1f5f9; color: #334155; }
 .text-left { text-align: left !important; padding-left: 20px; }

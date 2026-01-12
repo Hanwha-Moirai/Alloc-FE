@@ -233,6 +233,15 @@ const goDetail = (id: number) => {
   font-weight: 600;
 }
 
+.project-table tbody tr {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.project-table tbody tr:hover {
+  background-color: #f8fafc;
+}
+
 /* ================= 배지 ================= */
 .badge {
   font-size: 11px;
