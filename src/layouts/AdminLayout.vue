@@ -35,6 +35,6 @@ import AdminSidebar from '@/components/common/AdminSidebar.vue'
 .admin-content {
   flex: 1;
   overflow-y: auto;
-  padding: 40px;
+  padding: 30px;
 }
 </style>
