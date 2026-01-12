@@ -183,7 +183,6 @@ const memberList = ref([
   background: #fff;
   color: #4ab8d8;
   cursor: pointer;
-  border-radius: 2px;
 }
 
 .btn-primary {
@@ -192,7 +191,6 @@ const memberList = ref([
   background: #00bcd4;
   color: #fff;
   cursor: pointer;
-  border-radius: 2px;
 }
 
 /* 테이블 */

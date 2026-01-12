@@ -95,7 +95,7 @@
         <div
             v-if="isActive('docs')"
         >
-          <button class="add-btn btn-gradient">
+          <button class="add-btn btn-gradient" @click="showDocModal = true">
           + 주간보고/회의록 생성
           </button>
         </div>
@@ -124,6 +124,12 @@
         @close="showMilestoneAddModal = false"
         @add="handleAddMilestone"
     />
+
+    <DocCreateModal
+        :isOpen="showDocModal"
+        @close="showDocModal = false"
+        @create="handleCreateDoc"
+    />
   </div>
 </template>
 
@@ -134,6 +140,7 @@ import { useRoute, useRouter } from 'vue-router'
 import TaskAddModal from '@/components/common/TaskAddModal.vue'
 import TaskFilterDrawer from '@/components/common/TaskFilterDrawer.vue'
 import ScheduleAddModal from '@/components/common/ScheduleAddModal.vue'
+import DocCreateModal from '@/components/common/DocCreateModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -141,6 +148,7 @@ const projectId = route.params.projectId
 
 const showAddModal = ref(false)
 const showMilestoneAddModal = ref(false)
+const showDocModal = ref(false);
 
 const handleAddTask = (newTask: any) => {
   console.log('새로운 태스크 데이터:', newTask)
@@ -166,6 +174,10 @@ const isActive = (tab: string) => {
   return route.path.endsWith(`/projects/${projectId}/${tab}`) ||
       (tab === '' && route.path === `/projects/${projectId}`)
 }
+
+const handleCreateDoc = (data: any) => {
+  console.log('생성 데이터:', data);
+};
 </script>
 
 <style scoped>
