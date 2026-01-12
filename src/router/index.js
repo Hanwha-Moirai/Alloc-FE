@@ -76,7 +76,8 @@ const router = createRouter({
                         {
                             path: 'docs/:type/:docId',
                             name: 'ProjectDocDetail',
-                            component: () => import('@/pages/projectTabs/DocDetailView.vue'),
+                            // 동적 함수 방식 대신, 컨테이너 컴포넌트를 바로 로드
+                            component: () => import('@/pages/projectTabs/DocDetailContainer.vue'),
                             props: true
                         },
                         {

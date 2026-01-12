@@ -174,10 +174,9 @@ const isActive = (tab: string) => {
   const path = route.path;
 
   if (tab === '') {
-    return path === `/projects/${projectId}`;
+    return path === `/projects/${projectId}` || path === `/projects/${projectId}/`;
   }
 
-  // 문서 탭의 경우: /projects/1/docs 로 시작하는 모든 하위 경로를 포함
   return path.includes(`/projects/${projectId}/${tab}`);
 }
 

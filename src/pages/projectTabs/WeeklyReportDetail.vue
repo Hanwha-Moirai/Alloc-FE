@@ -279,7 +279,7 @@ const handleSave = () => {
 /* 레이아웃 & 공통 스타일 */
 .page-title { font-size: 22px; font-weight: 700; margin-bottom: 20px; }
 .top-info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
-.info-card { background: white; border: 1px solid #e5e7eb; padding: 5px 16px; min-height: 60px; display: flex; flex-direction: column; justify-content: center; }
+.info-card { background: white; border: 1px solid #e5e7eb; padding: 12px 16px; display: flex; flex-direction: column; justify-content: center; }
 .info-card .label { display: block; font-size: 12px; color: #9ca3af; margin-bottom: 4px; }
 .info-card .value { font-size: 14px; font-weight: 700; color: #333; }
 

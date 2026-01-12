@@ -3,7 +3,7 @@
     <div v-if="isOpen" class="modal-overlay" @click.self="$emit('close')">
       <div class="modal-content">
         <header class="modal-header">
-          <h2 class="modal-title">주간보고/회의록 생성하기</h2>
+          <h2 class="modal-title">{{ modalTitle }}</h2>
           <button class="close-x-btn" @click="$emit('close')">✕</button>
         </header>
 
@@ -38,7 +38,9 @@
         </div>
 
         <footer class="modal-footer">
-          <button class="btn-submit" @click="handleCreate">초안 생성</button>
+          <button class="btn-submit" @click="handleCreate">
+            {{ submitBtnText }}
+          </button>
         </footer>
       </div>
     </div>
@@ -46,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
+import { ref, reactive, computed } from 'vue';
 import { useRouter } from 'vue-router';
 const router = useRouter();
 
@@ -67,14 +69,21 @@ const form = reactive({
 const handleCreate = () => {
   if (!form.projectId) return alert('프로젝트를 선택해주세요.');
 
-  // 실제로는 API 호출을 통해 새 문서 ID를 받아와야 합니다.
-  const tempDocId = Date.now(); // 임시 ID 생성 예시
-
-  // 이동 예시: /projects/1/docs/weekly/1705012345
+  const tempDocId = Date.now();
   router.push(`/projects/${form.projectId}/docs/${form.docType}/${tempDocId}`);
 
   emit('close');
 };
+
+// 제목 동적 처리
+const modalTitle = computed(() =>
+    form.docType === 'weekly' ? '주간보고 생성' : '회의록 생성'
+);
+
+// 버튼 문구 동적 처리
+const submitBtnText = computed(() =>
+    form.docType === 'weekly' ? '주간보고 초안 생성' : '회의록 초안 생성'
+);
 </script>
 
 <style scoped>
