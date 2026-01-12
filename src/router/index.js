@@ -91,6 +91,11 @@ const router = createRouter({
                     name: 'ProjectRecommend',
                     component: () => import('@/pages/RecommendResultView.vue'),
                 },
+                {
+                    path: '/documents',
+                    name: 'Documents',
+                    component: () => import('@/pages/DocumentMain.vue'),
+                },
             ],
         },
     ],

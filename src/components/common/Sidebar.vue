@@ -24,7 +24,7 @@ type JwtPayload = {
   role?: 'PM' | 'USER'
 }
 
-/* 🔐 현재 사용자 role 판별 */
+/* 현재 사용자 role 판별 */
 const getHomePath = () => {
   const token = localStorage.getItem('accessToken')
   if (!token) return '/home'
@@ -38,7 +38,7 @@ const getHomePath = () => {
   }
 }
 
-/* 📌 메뉴 정의 (Home만 동적) */
+/* 메뉴 정의 */
 const menu = computed(() => [
   {
     path: getHomePath(),
@@ -56,7 +56,7 @@ const menu = computed(() => [
     label: '인력',
   },
   {
-    path: '/reports',
+    path: '/documents',
     icon: '/icons/report.png',
     label: '문서',
   },
