@@ -1,143 +1,49 @@
 <!-- 프로젝트 태스크 목록보기 -->
 <template>
   <div class="project-detail-page">
-    <!-- 대제목 -->
-    <h1 class="page-title">프로젝트 상세보기</h1>
+    <h1 v-if="!isRecommendPage" class="page-title">프로젝트 상세보기</h1>
 
-    <!-- 탭 + 수정 버튼 -->
-    <div class="tab-header">
+    <div v-if="!isRecommendPage" class="tab-header">
       <div class="tabs">
-        <button
-            class="tab"
-            :class="{ active: isActive('') }"
-            @click="goTab('')"
-        >
-          요약
-        </button>
-
-        <button
-            class="tab"
-            :class="{ active: isActive('tasks') }"
-            @click="goTab('tasks')"
-        >
-          태스크
-        </button>
-
-        <button
-            class="tab"
-            :class="{ active: isActive('schedule') }"
-            @click="goTab('schedule')"
-        >
-          일정
-        </button>
-
-        <button
-            class="tab"
-            :class="{ active: isActive('calendar') }"
-            @click="goTab('calendar')"
-        >
-          캘린더
-        </button>
-
-        <button
-            class="tab"
-            :class="{ active: isActive('docs') }"
-            @click="goTab('docs')"
-        >
-          문서
-        </button>
-
-        <button
-            class="tab"
-            :class="{ active: isActive('members') }"
-            @click="goTab('members')"
-        >
-          인력
-        </button>
+        <button class="tab" :class="{ active: isActive('') }" @click="goTab('')">요약</button>
+        <button class="tab" :class="{ active: isActive('tasks') }" @click="goTab('tasks')">태스크</button>
+        <button class="tab" :class="{ active: isActive('schedule') }" @click="goTab('schedule')">일정</button>
+        <button class="tab" :class="{ active: isActive('calendar') }" @click="goTab('calendar')">캘린더</button>
+        <button class="tab" :class="{ active: isActive('docs') }" @click="goTab('docs')">문서</button>
+        <button class="tab" :class="{ active: isActive('members') }" @click="goTab('members')">인력</button>
       </div>
 
-      <!-- 오른쪽 액션 버튼 영역 -->
       <div class="header-actions">
-
-        <!-- 요약 탭 -->
         <template v-if="isActive('')">
-          <button
-              class="edit-btn"
-              :class="{ 'save-mode': isEditing }"
-              @click="toggleEdit"
-          >
+          <button class="edit-btn" :class="{ 'save-mode': isEditing }" @click="toggleEdit">
             {{ isEditing ? '저장' : '수정' }}
           </button>
         </template>
 
-        <!-- 태스크 탭 -->
-        <div
-            v-if="isActive('tasks')"
-            class="task-actions"
-        >
+        <div v-if="isActive('tasks')" class="task-actions">
           <button class="filter-btn" @click="isFilterOpen = true">
             <img src="/filter.png" class="filter-icon" alt="filter" />
           </button>
-
-          <button class="add-btn" @click="showAddModal = true">
-            + 태스크 추가하기
-          </button>
+          <button class="add-btn" @click="showAddModal = true">+ 태스크 추가하기</button>
         </div>
 
-        <!-- 일정 탭 -->
-        <div
-            v-if="isActive('schedule')"
-            class="schedule-actions"
-        >
-          <button class="add-btn" @click="showMilestoneAddModal = true">
-            + 마일스톤 추가하기
-          </button>
+        <div v-if="isActive('schedule')" class="schedule-actions">
+          <button class="add-btn" @click="showMilestoneAddModal = true">+ 마일스톤 추가하기</button>
         </div>
 
-        <!-- 문서 탭 -->
-        <div
-            v-if="isActive('docs')"
-        >
-          <button class="add-btn btn-gradient" @click="showDocModal = true">
-          + 주간보고/회의록 생성
-          </button>
+        <div v-if="isActive('docs')">
+          <button class="add-btn btn-gradient" @click="showDocModal = true">+ 주간보고/회의록 생성</button>
         </div>
-
-
       </div>
-
     </div>
 
     <router-view :is-editing="isEditing" />
 
-    <TaskAddModal
-        v-if="showAddModal"
-        @close="showAddModal = false"
-        @add-task="handleAddTask"
-    />
-
-    <TaskFilterDrawer
-        :is-open="isFilterOpen"
-        @close="isFilterOpen = false"
-        @filter="handleFilter"
-    />
-
-    <ScheduleAddModal
-        v-if="showMilestoneAddModal"
-        @close="showMilestoneAddModal = false"
-        @add="handleAddMilestone"
-    />
-
-    <DocCreateModal
-        :isOpen="showDocModal"
-        @close="showDocModal = false"
-        @create="handleCreateDoc"
-    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue' // 🔥 computed 추가
 import { useRoute, useRouter } from 'vue-router'
 
 import TaskAddModal from '@/components/common/TaskAddModal.vue'
@@ -149,17 +55,26 @@ const route = useRoute()
 const router = useRouter()
 const projectId = route.params.projectId
 
+// --- 모달 및 상태 관리 ---
 const showAddModal = ref(false)
 const showMilestoneAddModal = ref(false)
-const showDocModal = ref(false);
-
+const showDocModal = ref(false)
 const isEditing = ref(false)
+const isFilterOpen = ref(false)
 
+// 🔥 [추가] 현재 경로가 '인재 추천' 페이지인지 판별하는 로직
+// URL에 'recommend'가 포함되어 있으면 true를 반환하여 template의 UI를 숨깁니다.
+const isRecommendPage = computed(() => {
+  return route.path.includes('recommend')
+})
+
+// --- Watchers ---
 // 탭이 바뀌면 수정 모드 해제
 watch(() => route.path, () => {
   isEditing.value = false
 })
 
+// --- Methods ---
 const toggleEdit = () => {
   if (isEditing.value) {
     // 저장 로직 (필요 시 API 호출)
@@ -173,8 +88,6 @@ const handleAddTask = (newTask: any) => {
   showAddModal.value = false
 }
 
-const isFilterOpen = ref(false)
-
 const handleFilter = (filterData: any) => {
   console.log('적용할 필터:', filterData)
 }
@@ -184,23 +97,24 @@ const handleAddMilestone = (newMilestone: any) => {
   showMilestoneAddModal.value = false
 }
 
+const handleCreateDoc = (data: any) => {
+  console.log('생성 데이터:', data)
+}
+
+// --- Navigation ---
 const goTab = (tab: string) => {
   router.push(`/projects/${projectId}/${tab}`)
 }
 
 const isActive = (tab: string) => {
-  const path = route.path;
+  const path = route.path
 
   if (tab === '') {
-    return path === `/projects/${projectId}` || path === `/projects/${projectId}/`;
+    return path === `/projects/${projectId}` || path === `/projects/${projectId}/`
   }
 
-  return path.includes(`/projects/${projectId}/${tab}`);
+  return path.includes(`/projects/${projectId}/${tab}`)
 }
-
-const handleCreateDoc = (data: any) => {
-  console.log('생성 데이터:', data);
-};
 </script>
 
 <style scoped>

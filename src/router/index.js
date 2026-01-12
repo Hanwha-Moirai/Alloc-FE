@@ -84,12 +84,13 @@ const router = createRouter({
                             path: 'members',
                             component: () => import('@/pages/projectTabs/ProjectMembers.vue'),
                         },
+                        {
+                            path: 'recommend',
+                            name: 'ProjectRecommend',
+                            component: () => import('@/pages/RecommendResultView.vue'),
+                            props: true
+                        },
                     ],
-                },
-                {
-                    path: '/projects/recommend',
-                    name: 'ProjectRecommend',
-                    component: () => import('@/pages/RecommendResultView.vue'),
                 },
                 {
                     path: '/documents',

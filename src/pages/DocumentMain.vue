@@ -1,6 +1,6 @@
 <template>
   <div class="doc-page">
-    <h1 class="page-title">문서</h1>
+    <h1 class="page-title">내 문서</h1>
 
     <div class="tab-header">
       <div class="tabs">
