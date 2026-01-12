@@ -17,7 +17,7 @@
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
         </div>
-        <button class="add-btn">
+        <button class="add-btn" @click="isModalOpen = true">
           <span class="plus-icon">+</span> 기술 스택 추가
         </button>
       </div>
@@ -69,12 +69,25 @@
       </ul>
     </div>
   </div>
+
+  <TechStackModal
+      :show="isModalOpen"
+      :isEdit="isEditMode"
+      :initialName="selectedItem.name"
+      @close="isModalOpen = false"
+      @confirm="onConfirm"
+  />
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import TechStackModal from '@/components/common/TechStackModal.vue';
 
 const searchText = ref('')
+
+const isModalOpen = ref(false);
+const isEditMode = ref(false);
+const selectedItem = ref({ id: -1, name: '' });
 
 // 가상 데이터
 const techStacks = ref(Array(12).fill(null).map((_, i) => ({
@@ -106,18 +119,50 @@ const closeHandler = () => {
   window.removeEventListener('click', closeHandler);
 };
 
-// 수정/삭제 핸들러
-const handleEdit = (index: number) => {
-  const target = techStacks.value[index];
-  alert(`${target.name} 기술스택 수정 모달을 띄웁니다.`);
-  activeMenuIndex.value = null;
-};
-
 const handleDelete = (index: number) => {
   if (confirm('정말 삭제하시겠습니까?')) {
     techStacks.value.splice(index, 1);
   }
   activeMenuIndex.value = null;
+};
+
+// 등록 버튼 클릭 시
+const openAddModal = () => {
+  isEditMode.value = false;
+  selectedItem.value = { id: -1, name: '' };
+  isModalOpen.value = true;
+};
+
+// 수정하기 메뉴 클릭 시
+const handleEdit = (index: number) => {
+  const target = techStacks.value[index];
+  isEditMode.value = true;
+  selectedItem.value = { ...target };
+  isModalOpen.value = true;
+  activeMenuIndex.value = null;
+};
+
+// 모달에서 저장/등록 버튼 눌렀을 때
+const onConfirm = (name: string) => {
+  if (isEditMode.value) {
+    // 수정 로직
+    const index = techStacks.value.findIndex(item => item.id === selectedItem.value.id);
+    if (index !== -1) {
+      techStacks.value[index].name = name;
+      techStacks.value[index].updatedAt = '2026.01.12 16:00:00'; // 예시 시간
+    }
+    console.log('수정 완료:', name);
+  } else {
+    // 등록 로직
+    techStacks.value.unshift({
+      id: Date.now(),
+      name: name,
+      createdAt: '2026.01.12 16:00:00',
+      updatedAt: '2026.01.12 16:00:00'
+    });
+    console.log('신규 등록:', name);
+  }
+  isModalOpen.value = false;
 };
 </script>
 

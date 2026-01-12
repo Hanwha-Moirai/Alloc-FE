@@ -116,11 +116,11 @@ const router = createRouter({
                     name: 'AdminTechStack',
                     component: () => import('@/pages/admin/TechStackManagement.vue'),
                 },
-                // {
-                //     path: 'jobs',
-                //     name: 'AdminJobs',
-                //     component: () => import('@/pages/admin/JobManagement.vue'),
-                // },
+                {
+                    path: 'jobs',
+                    name: 'AdminJobs',
+                    component: () => import('@/pages/admin/JobManagement.vue'),
+                },
                 // {
                 //     path: 'users',
                 //     name: 'AdminUsers',
