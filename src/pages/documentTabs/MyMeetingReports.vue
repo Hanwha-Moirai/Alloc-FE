@@ -13,43 +13,101 @@
           <th></th>
         </tr>
         </thead>
+
         <tbody>
-        <tr v-for="item in meetingData" :key="item.id" @click="goToDetail(item.id)" class="clickable-row">
+        <tr
+            v-for="item in meetingData"
+            :key="item.id"
+            @click="goToDetail(item.id)"
+            class="clickable-row"
+        >
           <td class="text-left project-cell">{{ item.title }}</td>
           <td>{{ item.projectName }}</td>
           <td>{{ item.id }}</td>
           <td>{{ item.meetingDate }}</td>
           <td>{{ item.author }}</td>
           <td>
-            <span :class="['status-badge', item.status.toLowerCase()]">{{ item.status }}</span>
+            <span :class="['status-badge', item.status.toLowerCase()]">
+              {{ item.status }}
+            </span>
           </td>
-          <td><button class="more-btn" @click.stop>•••</button></td>
+        </tr>
+
+        <tr v-if="meetingData.length === 0">
+          <td colspan="7">회의록이 없습니다.</td>
         </tr>
         </tbody>
       </table>
     </div>
 
-    <div class="pagination">
-      <button class="page-arrow">〈 Previous</button>
-      <button class="page-num active">1</button>
-      <button class="page-arrow">Next 〉</button>
+    <div class="pagination" v-if="totalPages > 1">
+      <button class="page-arrow" @click="prevPage">〈 Previous</button>
+      <button class="page-num active">{{ page + 1 }}</button>
+      <button class="page-arrow" @click="nextPage">Next 〉</button>
     </div>
   </div>
 </template>
 
+
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { getMyMeetingRecords } from '@/api/meetingRecord';
 
 const router = useRouter();
 
-const meetingData = ref([
-  { id: 753239, title: 'UI/UX 고도화 디자인 싱크', projectName: '실시간 채팅 + 감정 분석...', meetingDate: '2025. 12. 17', author: '홍길동', status: 'REVIEWED' },
-  { id: 753238, title: '백엔드 아키텍처 설계 검토', projectName: 'API 과금/제한 지원...', meetingDate: '2025. 12. 10', author: '이몽룡', status: 'DRAFT' },
-]);
+const meetingData = ref<any[]>([]);
+const page = ref(0);
+const totalPages = ref(0);
 
-const goToDetail = (id: number) => {
-  router.push(`/document/meeting/${id}`);
+// 목록 조회
+const fetchMeetingRecords = async () => {
+  const res = await getMyMeetingRecords(page.value);
+  const data = res.data.data;
+
+  meetingData.value = data.content.map((item: any) => ({
+    id: item.meetingId,
+    title: item.discussionTitle ?? '회의록',
+    projectId: item.projectId,
+    projectName: item.projectName,
+    meetingDate: formatDate(item.meetingDate),
+    author: item.createdBy,
+    status: item.status ?? 'DRAFT'
+  }));
+
+  totalPages.value = data.totalPages;
+};
+
+onMounted(fetchMeetingRecords);
+
+// 상세 이동
+const goToDetail = (meetingId: number) => {
+  const record = meetingData.value.find(m => m.id === meetingId);
+  if (!record) return;
+
+  router.push(`/projects/${record.projectId}/docs/meeting-record/${meetingId}`);
+};
+
+// 페이지 이동
+const prevPage = () => {
+  if (page.value > 0) {
+    page.value--;
+    fetchMeetingRecords();
+  }
+};
+
+const nextPage = () => {
+  if (page.value < totalPages.value - 1) {
+    page.value++;
+    fetchMeetingRecords();
+  }
+};
+
+// 날짜 포맷
+const formatDate = (value: string) => {
+  if (!value) return '-';
+  const d = new Date(value);
+  return `${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}`;
 };
 </script>
 
