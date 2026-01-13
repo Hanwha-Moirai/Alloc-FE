@@ -3,7 +3,7 @@
     <div class="modal" @click.stop>
       <!-- 헤더 -->
       <div class="modal-header">
-        <h3>기술스택 등록</h3>
+        <h3>기술스택 추가</h3>
         <button class="close-btn" @click="close">×</button>
       </div>
 
