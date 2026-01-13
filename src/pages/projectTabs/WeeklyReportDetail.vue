@@ -5,33 +5,27 @@
     <div class="top-info-grid">
       <div class="info-card wide">
         <span class="label">프로젝트명</span>
-        <input v-if="isEditing" v-model="form.projectName" class="edit-input" />
-        <div v-else class="value">{{ form.projectName }}</div>
+        <div class="value">{{ form.projectName }}</div>
       </div>
       <div class="info-card">
         <span class="label">프로젝트 기간</span>
-        <input v-if="isEditing" v-model="form.period" class="edit-input" />
-        <div v-else class="value">{{ form.period }}</div>
+        <div class="value">{{ form.period }}</div>
       </div>
       <div class="info-card">
         <span class="label">고객/협력사</span>
-        <input v-if="isEditing" v-model="form.client" class="edit-input" />
-        <div v-else class="value">{{ form.client }}</div>
+        <div class="value">{{ form.client }}</div>
       </div>
       <div class="info-card">
         <span class="label">담당자</span>
-        <input v-if="isEditing" v-model="form.manager" class="edit-input" />
-        <div v-else class="value">{{ form.manager }}</div>
+        <div class="value">{{ form.manager }}</div>
       </div>
       <div class="info-card">
         <span class="label">주차</span>
-        <input v-if="isEditing" v-model="form.week" class="edit-input" />
-        <div v-else class="value">{{ form.week }}</div>
+        <div class="value">{{ form.week }}</div>
       </div>
       <div class="info-card">
         <span class="label">보고자</span>
-        <input v-if="isEditing" v-model="form.reporter" class="edit-input" />
-        <div v-else class="value">{{ form.reporter }}</div>
+        <div class="value">{{ form.reporter }}</div>
       </div>
     </div>
 
@@ -43,10 +37,7 @@
       </div>
       <div class="chart-container">
         <div class="progress-circle" :style="`--p:${form.progress}; --c:#23cc66;`">
-          <div v-if="isEditing" class="edit-progress-box">
-            <input v-model="form.progress" type="number" class="percent-input" /> %
-          </div>
-          <span v-else class="percent">{{ form.progress }}%</span>
+          <span class="percent">{{ form.progress }}%</span>
         </div>
       </div>
     </div>
@@ -186,7 +177,7 @@
 
       <template v-else>
         <button class="btn-grey">검토 보류</button>
-        <button class="btn-outline">삭제</button>
+        <button class="btn-outline" @click="handleDelete">삭제</button>
         <button class="btn-outline" @click="toggleEditMode">수정</button>
         <button class="btn-red">PDF 출력</button>
       </template>
@@ -195,11 +186,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue';
-import { useRoute } from 'vue-router';
+import {ref, reactive, computed, onMounted} from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import axios from '@/lib/axios';
 
 const route = useRoute();
-const { type } = route.params;
+const router = useRouter();
+
+// URL 파라미터에서 ID 추출
+const projectId = route.params.projectId;
+const reportId = route.params.docId;
 
 const pageTitle = computed(() => {
   // 1순위: URL 파라미터 체크
@@ -214,54 +210,100 @@ const pageTitle = computed(() => {
 
 // 1. 공통 정보 데이터 (form)
 const form = reactive({
-  projectName: '트래픽 모니터링 및 장애 대응 고도화',
-  period: '2026.01.06 - 2026.01.25',
-  client: '삼성전자',
-  manager: '김현수',
-  week: '2025 FEB 12',
-  reporter: '김현수',
-  progress: 67
+  projectName: '',
+  period: '',
+  client: '',
+  manager: '',
+  week: '',
+  reporter: '',
+  progress: 0
 });
 
-// 2. 완수 태스크 데이터
-const completedTasks = ref([
-  { name: '로그 기반 이상 트래픽 자동 감지 알림 시스...', manager: '김현수', type: '개발', note: 'log 변경됨' }
-]);
-
-// 3. 미완수 태스크 데이터
-const uncompletedTasks = ref([
-  {
-    name: '로그 기반 이상 트래픽 자동 감지 알림 시스...',
-    manager: '김현수',
-    type: '개발',
-    delay: '3일',
-    reason: '초기 기획 단계에서 정의된 로그 수집 방식과 현재 시스템의 로그 포맷이 상이하여 정규식 재설계가 필요함.'
-  }
-]);
-
-// 4. 다음주 진행사항 데이터
-const nextWeekTasks = ref([
-  {
-    name: '로그 기반 이상 트래픽 자동 감지 알림 시스...',
-    manager: '2025. 12. 24',
-    delay: '506543',
-    created: '2025. 12. 24',
-    updated: '2025. 12. 31'
-  }
-]);
+// 태스크 데이터 리스트
+const completedTasks = ref([]);
+const uncompletedTasks = ref([]);
+const nextWeekTasks = ref([]);
 
 const expandedRow = ref<number | null>(null);
 const isEditing = ref(false);
 
+// 데이터 초기 로드 (상세 조회 연결)
+const fetchDetail = async () => {
+  try {
+    const response = await axios.get(`/api/projects/${projectId}/docs/report/${reportId}`);
+    const data = response.data.data;
+
+    // 백엔드 응답 필드에 맞게 폼 매핑
+    form.projectName = data.projectName;
+    form.period = `${data.startDate} ~ ${data.endDate}`;
+    form.client = data.clientName || 'N/A';
+    form.manager = data.pmName;
+    form.week = `${data.year} W${data.weekNo}`;
+    form.reporter = data.pmName;
+    form.progress = data.progressRate;
+
+    completedTasks.value = data.completedTasks;
+    uncompletedTasks.value = data.uncompletedTasks;
+    nextWeekTasks.value = data.nextWeekTasks;
+  } catch (error) {
+    console.error("데이터 로드 실패:", error);
+  }
+};
+
+onMounted(() => {
+  if (reportId) fetchDetail();
+});
+
 const toggleRow = (index: number) => {
-  if (isEditing.value) return; // 수정 중에는 토글 방지 (선택 사항)
+  if (isEditing.value) return;
   expandedRow.value = expandedRow.value === index ? null : index;
 };
 
 const toggleEditMode = () => { isEditing.value = true; };
-const handleSave = () => {
-  alert('성공적으로 저장되었습니다.');
-  isEditing.value = false;
+
+// 저장 로직 연결
+const handleSave = async () => {
+  try {
+    const payload = {
+      reportId: Number(reportId),
+      progressRate: form.progress,
+      completedTasks: completedTasks.value,
+      uncompletedTasks: uncompletedTasks.value,
+      nextWeekTasks: nextWeekTasks.value
+    };
+
+    await axios.patch(`/api/projects/${projectId}/docs/report/save`, payload);
+
+    alert('성공적으로 저장되었습니다.');
+    isEditing.value = false;
+    fetchDetail();
+  } catch (error) {
+    console.error("저장 실패:", error);
+    alert("저장 권한이 없거나 실패했습니다. (PM만 가능)");
+  }
+};
+
+// 삭제
+const handleDelete = async () => {
+  if (!confirm("정말 삭제하시겠습니까?")) return;
+
+  try {
+    await axios.delete(`/api/projects/${projectId}/docs/report/delete`, {
+      data: {
+        reportId: Number(reportId)
+      }
+    });
+
+    alert("삭제되었습니다.");
+    router.back(); // 삭제 후 리스트로 이동
+  } catch (error) {
+    console.error("삭제 실패 상세:", error.response);
+    if (error.response?.status === 403) {
+      alert("삭제 권한이 없습니다. (PM 권한 필요)");
+    } else {
+      alert("삭제 처리 중 오류가 발생했습니다.");
+    }
+  }
 };
 </script>
 

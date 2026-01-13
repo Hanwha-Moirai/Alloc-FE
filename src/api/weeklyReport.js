@@ -27,6 +27,24 @@ export const getWeeklyReportDetail = (projectId, reportId) => {
     return axios.get(`/api/projects/${projectId}/docs/report/${reportId}`);
 };
 
+// 주간보고 생성
+export const createWeeklyReport = (projectId, data) => {
+    return axios.post(`/api/projects/${projectId}/docs/report/create`, data);
+};
+
+// 주간보고 수정 및 저장 (PATCH)
+export const updateWeeklyReport = (projectId, data) => {
+    // data에는 reportId, progressRate, completedTasks 등이 포함되어야 함
+    return axios.patch(`/api/projects/${projectId}/docs/report/save`, data);
+};
+
+// 주간보고 삭제 (DELETE)
+export const deleteWeeklyReport = (projectId, reportId) => {
+    return axios.delete(`/api/projects/${projectId}/docs/report/delete`, {
+        data: { reportId }
+    });
+};
+
 
 // 내 주간보고(전체) API
 // 내 모든 주간보고 목록 조회 (My Docs)
