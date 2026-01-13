@@ -23,15 +23,16 @@
         <tr v-if="currentTab === 'weekly'">
           <th style="width: 15%">주차</th>
           <th style="width: 15%">주간보고 ID</th>
-          <th style="width: 20%">생성 날짜</th>
-          <th style="width: 20%">최신 수정 날짜</th>
-          <th style="width: 15%">상태</th>
+          <th style="width: 25%">생성 날짜</th>
+          <th style="width: 25%">최신 수정 날짜</th>
+          <th style="width: 20%">상태</th>
         </tr>
+
         <tr v-else>
-          <th style="width: 35%">제목</th>
-          <th style="width: 15%">회의 ID</th>
-          <th style="width: 15%">회의 일시</th>
-          <th style="width: 10%">작성자</th>
+          <th style="width: 15%">회의록 ID</th>
+          <th style="width: 25%">회의 날짜</th>
+          <th style="width: 30%">생성 날짜</th>
+          <th style="width: 30%">최신 수정 날짜</th>
         </tr>
         </thead>
 
@@ -57,28 +58,23 @@
               class="clickable-row"
               @click="goMeetingDetail(record.meetingId)"
           >
-            <td>{{ record.title ?? '회의록' }}</td>
             <td>{{ record.meetingId }}</td>
             <td>{{ formatDate(record.meetingDate) }}</td>
-            <td>{{ record.createdBy }}</td>
+            <td>{{ formatDate(record.createdAt) }}</td>
+            <td>{{ formatDate(record.updatedAt) }}</td>
           </tr>
 
           <tr v-if="meetingRecords.length === 0">
-            <td colspan="5">회의록이 없습니다.</td>
+            <td colspan="4">회의록이 없습니다.</td>
           </tr>
         </template>
-
         </tbody>
       </table>
 
       <div class="pagination" v-if="totalPages > 1">
-  <span
-      class="p-nav"
-      @click="page > 0 && (page--, fetchMeetingRecords())"
-  >
-    〈 Previous
-  </span>
-
+        <span class="p-nav" @click="page > 0 && (page--, fetchMeetingRecords())">
+          〈 Previous
+        </span>
         <button
             v-for="p in totalPages"
             :key="p"
@@ -88,15 +84,10 @@
         >
           {{ p }}
         </button>
-
-        <span
-            class="p-nav"
-            @click="page < totalPages - 1 && (page++, fetchMeetingRecords())"
-        >
+        <span class="p-nav" @click="page < totalPages - 1 && (page++, fetchMeetingRecords())">
           Next 〉
         </span>
       </div>
-
     </div>
   </div>
 </template>
