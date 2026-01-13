@@ -76,21 +76,54 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+import { getMeetingRecordDetail } from '@/api/meetingRecord';
+
+const route = useRoute();
+
+const projectId = Number(route.params.projectId);
+const meetingId = Number(route.params.docId);
 
 const isEditing = ref(false);
 
 const form = reactive({
-  projectName: '트래픽 모니터링 및 장애 대응 고도화',
-  period: '2026.01.06 - 2026.01.25',
-  client: '삼성전자',
-  manager: '김현수',
-  meetingDate: '2025 FEB 12',
-  reporter: '김현수',
-  topic: '트래픽 모니터링 및 장애 대응 고도화',
-  agendaType: '트래픽 모니터링 및 장애 대응 고도화',
-  decision: '트래픽 모니터링 및 장애 대응 고도화'
+  projectName: '',
+  period: '',
+  client: '',
+  manager: '',
+  meetingDate: '',
+  reporter: '',
+  topic: '',
+  agendaType: '',
+  decision: ''
 });
+
+const fetchMeetingDetail = async () => {
+  const res = await getMeetingRecordDetail(projectId, meetingId);
+  const data = res.data.data;
+
+  console.log('회의록 상세 응답', data);
+
+  form.meetingDate = formatDate(data.meetingDate);
+  form.reporter = data.createdBy;
+
+  const agenda = data.agendas?.[0];
+  if (agenda) {
+    form.topic = agenda.discussionTitle;
+    form.agendaType = agenda.agendaType;
+    form.decision = agenda.discussionResult;
+  }
+};
+
+onMounted(fetchMeetingDetail);
+
+// 날짜 포맷
+const formatDate = (value: string) => {
+  if (!value) return '-';
+  const d = new Date(value);
+  return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
+};
 
 const handleSave = () => {
   alert('회의록이 저장되었습니다.');
