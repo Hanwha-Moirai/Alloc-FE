@@ -62,7 +62,7 @@
         <button class="btn-cyan" @click="handleSave">저장</button>
       </template>
       <template v-else>
-        <button class="btn-outline">삭제</button>
+        <button class="btn-outline" @click="handleDelete">삭제</button>
         <button class="btn-outline" @click="isEditing = true">수정</button>
         <button class="btn-cyan">PDF 출력</button>
       </template>
@@ -72,10 +72,11 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
-import { getMeetingRecordDetail, updateMeetingRecord } from '@/api/meetingRecord';
+import { useRoute, useRouter } from 'vue-router';
+import { getMeetingRecordDetail, updateMeetingRecord, deleteMeetingRecord } from '@/api/meetingRecord';
 
 const route = useRoute();
+const router = useRouter();
 const projectId = Number(route.params.projectId);
 const meetingId = Number(route.params.docId);
 
@@ -159,6 +160,24 @@ const handleSave = async () => {
     // 이제 이 로그에서 파싱 에러가 사라질 것입니다.
     console.error('서버 응답 에러:', error.response?.data);
     alert('저장에 실패했습니다. 날짜 형식을 확인해주세요.');
+  }
+};
+
+// 삭제 처리 함수
+const handleDelete = async () => {
+  if (!confirm("이 회의록을 정말로 삭제하시겠습니까?")) return;
+
+  try {
+    const res = await deleteMeetingRecord(projectId, meetingId);
+
+    // ApiResponse.success() 구조에 따라 성공 여부 확인
+    if (res.status === 200 || res.data.success) {
+      alert('회의록이 삭제되었습니다.');
+      router.back(); // 삭제 성공 시 이전 목록 페이지로 이동
+    }
+  } catch (error) {
+    console.error('삭제 실패:', error.response?.data);
+    alert('삭제에 실패했습니다. 권한을 확인해주세요.');
   }
 };
 </script>

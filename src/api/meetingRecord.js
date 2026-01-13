@@ -19,6 +19,15 @@ export const createMeetingRecord = (projectId, data) => {
     return axios.post(`/api/projects/${projectId}/docs/meeting_record/create`, data);
 };
 
+// 회의록 삭제 API
+export const deleteMeetingRecord = (projectId, meetingId) => {
+    return axios.delete(`/api/projects/${projectId}/docs/meeting_record/delete`, {
+        params: { meetingId }
+    });
+};
+
+
+// ---------------------------------------------------------------------------
 // 내 회의록 목록 조회
 export const getMyMeetingRecords = (page = 0, size = 10) => {
     return axios.get('/api/mydocs/meeting_record', {
