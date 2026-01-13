@@ -38,16 +38,26 @@
 
         <tbody>
         <template v-if="currentTab === 'weekly'">
-          <tr v-for="i in 10" :key="'weekly-' + i">
-            <td>2025 DEC W3</td>
-            <td>506543</td>
-            <td>2025. 12. 24</td>
-            <td>2025. 12. 31</td>
+          <tr
+              v-for="report in weeklyReports"
+              :key="report.reportId"
+              class="clickable-row"
+              @click="goWeeklyDetail(report.reportId)"
+          >
+            <td>{{ report.year }} W{{ report.weekNo }}</td>
+            <td>{{ report.reportId }}</td>
+            <td>{{ formatDate(report.createdAt) }}</td>
+            <td>{{ formatDate(report.updatedAt) }}</td>
             <td>
               <div class="center-box">
-                <span class="status-tag draft">DRAFT</span>
+                <span :class="['status-tag', report.status ? report.status.toLowerCase() : 'draft']">
+                  {{ report.status || 'DRAFT' }}
+                </span>
               </div>
             </td>
+          </tr>
+          <tr v-if="weeklyReports.length === 0">
+            <td colspan="5">주간보고가 없습니다.</td>
           </tr>
         </template>
 
@@ -63,7 +73,6 @@
             <td>{{ formatDate(record.createdAt) }}</td>
             <td>{{ formatDate(record.updatedAt) }}</td>
           </tr>
-
           <tr v-if="meetingRecords.length === 0">
             <td colspan="4">회의록이 없습니다.</td>
           </tr>
@@ -72,21 +81,17 @@
       </table>
 
       <div class="pagination" v-if="totalPages > 1">
-        <span class="p-nav" @click="page > 0 && (page--, fetchMeetingRecords())">
-          〈 Previous
-        </span>
+        <span class="p-nav" @click="handlePrevPage">〈 Previous</span>
         <button
             v-for="p in totalPages"
             :key="p"
             class="p-num"
             :class="{ active: page === p - 1 }"
-            @click="page = p - 1; fetchMeetingRecords()"
+            @click="goToPage(p - 1)"
         >
           {{ p }}
         </button>
-        <span class="p-nav" @click="page < totalPages - 1 && (page++, fetchMeetingRecords())">
-          Next 〉
-        </span>
+        <span class="p-nav" @click="handleNextPage">Next 〉</span>
       </div>
     </div>
   </div>
@@ -96,52 +101,88 @@
 import { ref, watch, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { getMeetingRecords } from '@/api/meetingRecord';
+import { getWeeklyReports } from '@/api/weeklyReport'; // 주간보고 API 임포트
 
 const router = useRouter();
 const route = useRoute();
 const projectId = Number(route.params.projectId);
 
-
-// 탭 상태
 const currentTab = ref<'weekly' | 'meeting'>('weekly');
 
-// 회의록 목록 상태
-const meetingRecords = ref<any[]>([]);
+// 공통 상태
 const page = ref(0);
 const totalPages = ref(0);
 
-// 날짜 포맷
+// 데이터 상태
+const meetingRecords = ref<any[]>([]);
+const weeklyReports = ref<any[]>([]); // 주간보고 상태 추가
+
 const formatDate = (value: string) => {
   if (!value) return '-';
   const d = new Date(value);
-  return `${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}`;
+  return `${d.getFullYear()}. ${String(d.getMonth() + 1).padStart(2, '0')}. ${String(d.getDate()).padStart(2, '0')}`;
 };
 
-// 회의록 조회
+// 주간보고 조회 함수
+const fetchWeeklyReports = async () => {
+  try {
+    const res = await getWeeklyReports(projectId, page.value);
+    const data = res.data.data;
+
+    weeklyReports.value = data.content.map((report: any) => ({
+      ...report,
+      // 만약 status가 undefined거나 null이면 'DRAFT'를 기본값으로 사용
+      status: report.status || 'DRAFT'
+    }));
+
+    totalPages.value = data.totalPages;
+  } catch (err) {
+    console.error('주간보고 로드 실패', err);
+  }
+};
+
+// 회의록 조회 함수
 const fetchMeetingRecords = async () => {
-  const res = await getMeetingRecords(projectId, page.value);
-  console.log('회의록 응답', res.data);
-  meetingRecords.value = res.data.data.content;
+  try {
+    const res = await getMeetingRecords(projectId, page.value);
+    meetingRecords.value = res.data.data.content;
+    totalPages.value = res.data.data.totalPages;
+  } catch (err) {
+    console.error('회의록 로드 실패', err);
+  }
 };
 
-// 탭 전환 시 회의록이면 호출
-watch(currentTab, (tab) => {
-  if (tab === 'meeting') {
+// 현재 탭에 따른 데이터 로드
+const loadData = () => {
+  if (currentTab.value === 'weekly') {
+    fetchWeeklyReports();
+  } else {
     fetchMeetingRecords();
   }
+};
+
+// 탭 전환 시 페이지 초기화 및 데이터 로드
+watch(currentTab, () => {
+  page.value = 0;
+  loadData();
 });
 
-// 최초 진입 시
-onMounted(() => {
-  if (currentTab.value === 'meeting') {
-    fetchMeetingRecords();
-  }
-});
+onMounted(loadData);
 
+// 페이지네이션 제어
+const goToPage = (p: number) => {
+  page.value = p;
+  loadData();
+};
+const handlePrevPage = () => { if (page.value > 0) goToPage(page.value - 1); };
+const handleNextPage = () => { if (page.value < totalPages.value - 1) goToPage(page.value + 1); };
+
+// 상세 페이지 이동
+const goWeeklyDetail = (reportId: number) => {
+  router.push(`/projects/${projectId}/docs/weekly-report/${reportId}`);
+};
 const goMeetingDetail = (meetingId: number) => {
-  router.push(
-      `/projects/${route.params.projectId}/docs/meeting-record/${meetingId}`
-  );
+  router.push(`/projects/${projectId}/docs/meeting-record/${meetingId}`);
 };
 </script>
 

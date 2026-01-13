@@ -202,7 +202,14 @@ const route = useRoute();
 const { type } = route.params;
 
 const pageTitle = computed(() => {
-  return type === 'weekly' ? '주간보고 상세' : '회의록 상세';
+  // 1순위: URL 파라미터 체크
+  if (route.params.type === 'weekly') return '주간보고 상세';
+  if (route.params.type === 'meeting') return '회의록 상세';
+
+  // 2순위: 데이터 필드 기반 체크 (주간보고에만 있는 '주차' 정보 등)
+  if (form.week) return '주간보고 상세';
+
+  return '상세 보기';
 });
 
 // 1. 공통 정보 데이터 (form)
