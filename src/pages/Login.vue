@@ -78,9 +78,9 @@ const login = async () => {
     const role = payload.role
 
     if (role === 'PM') {
-      router.push('/pmhome')
+      router.push('/home/pm')
     } else {
-      router.push('/home')
+      router.push('/home/user')
     }
   } catch (e) {
     alert('아이디 또는 비밀번호가 올바르지 않습니다.')
