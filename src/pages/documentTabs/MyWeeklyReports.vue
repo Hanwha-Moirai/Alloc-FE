@@ -82,6 +82,14 @@ const fetchWeeklyReports = async () => {
 
     const data = res.data.data;
 
+    console.log("--- Request 상세 정보 ---");
+    console.log("요청 URL:", res.config.url);
+    console.log("요청 메서드:", res.config.method);
+    console.log("보낸 파라미터(params):", res.config.params);
+
+    // 기존 응답 로그
+    console.log("백엔드 응답 데이터:", res.data);
+
     // 백엔드 WeeklyReportSummaryResponse 필드 매핑
     weeklyData.value = data.content.map((item: any) => ({
       id: item.reportId,
