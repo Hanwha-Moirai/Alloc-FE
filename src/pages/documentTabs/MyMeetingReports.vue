@@ -16,7 +16,7 @@
         <tr
             v-for="item in meetingData"
             :key="item.id"
-            @click="goToDetail(item.id)"
+            @click="goToDetail(item.id, item.projectId)"
             class="clickable-row"
         >
           <td>{{ item.projectName }}</td>
@@ -47,7 +47,7 @@ import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { getMyMeetingRecords, searchMyMeetingRecords } from '@/api/meetingRecord';
 
-// 1. Props 추가: 부모로부터 검색 조건 수신
+// Props 추가: 부모로부터 검색 조건 수신
 const props = defineProps<{
   searchQuery: string;
   startDate: string;
@@ -66,7 +66,7 @@ const fetchMeetingRecords = async () => {
     const hasCondition = props.searchQuery || props.startDate || props.endDate;
 
     if (hasCondition) {
-      // 2. 검색 API 호출 (백엔드 파라미터명 projectName에 searchQuery 매핑)
+      // 검색 API 호출
       res = await searchMyMeetingRecords({
         page: page.value,
         size: 10,
@@ -95,7 +95,7 @@ const fetchMeetingRecords = async () => {
   }
 };
 
-// 3. Watch 추가: 검색 조건이 바뀌면 페이지를 0으로 초기화하고 다시 조회
+// Watch: 검색 조건이 바뀌면 페이지를 0으로 초기화하고 다시 조회
 watch(
     () => [props.searchQuery, props.startDate, props.endDate],
     () => {
@@ -107,7 +107,10 @@ watch(
 onMounted(fetchMeetingRecords);
 
 const goToDetail = (meetingId: number, projectId: number) => {
-  // projectId를 함께 넘겨 상세 페이지 경로 유지
+  if (!projectId) {
+    console.warn("이 회의록은 프로젝트 ID 정보가 없습니다.");
+    return;
+  }
   router.push(`/projects/${projectId}/docs/meeting-record/${meetingId}`);
 };
 
@@ -126,8 +129,6 @@ const formatDate = (value: string) => {
 .doc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .doc-table th { background: #f2f4f8; padding: 12px; color: #333; font-weight: 600; border-bottom: 1px solid #e1e4e8; }
 .doc-table td { padding: 14px 12px; text-align: center; border-bottom: 1px solid #f1f5f9; color: #334155; }
-.text-left { text-align: left !important; padding-left: 20px; }
-.project-cell { font-weight: 500; }
 .clickable-row:hover { background-color: #f8fafc; cursor: pointer; }
 .pagination { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 30px; }
 .page-arrow { background: none; border: none; color: #9ca3af; font-size: 13px; cursor: pointer; }
