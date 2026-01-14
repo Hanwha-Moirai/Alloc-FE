@@ -5,33 +5,28 @@
     <div class="top-info-grid">
       <div class="info-card wide">
         <span class="label">프로젝트명</span>
-        <input v-if="isEditing" v-model="form.projectName" class="edit-input" />
-        <div v-else class="value">{{ form.projectName }}</div>
+        <div class="value readonly-value">{{ form.projectName }}</div>
       </div>
       <div class="info-card">
         <span class="label">프로젝트 기간</span>
-        <input v-if="isEditing" v-model="form.period" class="edit-input" />
-        <div v-else class="value">{{ form.period }}</div>
+        <div class="value readonly-value">{{ form.period }}</div>
       </div>
       <div class="info-card">
         <span class="label">고객/협력사</span>
-        <input v-if="isEditing" v-model="form.client" class="edit-input" />
-        <div v-else class="value">{{ form.client }}</div>
+        <div class="value readonly-value">{{ form.client }}</div>
       </div>
       <div class="info-card">
         <span class="label">담당자</span>
-        <input v-if="isEditing" v-model="form.manager" class="edit-input" />
-        <div v-else class="value">{{ form.manager }}</div>
+        <div class="value readonly-value">{{ form.manager }}</div>
       </div>
       <div class="info-card">
         <span class="label">회의 날짜</span>
-        <input v-if="isEditing" v-model="form.meetingDate" class="edit-input" />
+        <input v-if="isEditing" type="date" v-model="form.meetingDate" class="edit-input" />
         <div v-else class="value">{{ form.meetingDate }}</div>
       </div>
       <div class="info-card">
         <span class="label">보고자</span>
-        <input v-if="isEditing" v-model="form.reporter" class="edit-input" />
-        <div v-else class="value">{{ form.reporter }}</div>
+        <div class="value readonly-value">{{ form.reporter }}</div>
       </div>
     </div>
 
@@ -67,7 +62,7 @@
         <button class="btn-cyan" @click="handleSave">저장</button>
       </template>
       <template v-else>
-        <button class="btn-outline">삭제</button>
+        <button class="btn-outline" @click="handleDelete">삭제</button>
         <button class="btn-outline" @click="isEditing = true">수정</button>
         <button class="btn-cyan">PDF 출력</button>
       </template>
@@ -76,25 +71,114 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { getMeetingRecordDetail, updateMeetingRecord, deleteMeetingRecord } from '@/api/meetingRecord';
+
+const route = useRoute();
+const router = useRouter();
+const projectId = Number(route.params.projectId);
+const meetingId = Number(route.params.docId);
 
 const isEditing = ref(false);
+// 기존 안건의 ID를 보관하기 위한 변수
+let originalAgendaId = null;
 
 const form = reactive({
-  projectName: '트래픽 모니터링 및 장애 대응 고도화',
-  period: '2026.01.06 - 2026.01.25',
-  client: '삼성전자',
-  manager: '김현수',
-  meetingDate: '2025 FEB 12',
-  reporter: '김현수',
-  topic: '트래픽 모니터링 및 장애 대응 고도화',
-  agendaType: '트래픽 모니터링 및 장애 대응 고도화',
-  decision: '트래픽 모니터링 및 장애 대응 고도화'
+  projectName: '',
+  period: '',
+  client: '',
+  manager: '',
+  meetingDate: '',
+  reporter: '',
+  topic: '',
+  agendaType: '',
+  decision: ''
 });
 
-const handleSave = () => {
-  alert('회의록이 저장되었습니다.');
-  isEditing.value = false;
+const fetchMeetingDetail = async () => {
+  try {
+    const res = await getMeetingRecordDetail(projectId, meetingId);
+    const data = res.data.data;
+
+    // 메타 정보 매핑
+    form.projectName = data.projectName || data.projectId;
+    form.period = data.period || '기간 정보 없음';
+    form.client = data.client || '고객사 정보 없음';
+    form.meetingDate = formatDate(data.meetingDate);
+    form.reporter = data.createdBy;
+
+    const agenda = data.agendas?.[0];
+    if (agenda) {
+      originalAgendaId = agenda.agendaId;
+      form.topic = agenda.discussionTitle;
+      form.agendaType = agenda.agendaType;
+      form.decision = agenda.discussionResult;
+    }
+  } catch (error) {
+    console.error('불러오기 실패:', error);
+  }
+};
+
+onMounted(fetchMeetingDetail);
+
+const formatDate = (value) => {
+  if (!value) return '';
+  const d = new Date(value);
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${month}-${day}`;
+};
+
+const handleSave = async () => {
+  try {
+    const updateData = {
+      meetingId: meetingId,
+      // 날짜 뒤에 T00:00:00를 붙여서 LocalDateTime 형식을 맞춤
+      meetingDate: form.meetingDate + 'T00:00:00',
+      agendas: [
+        {
+          agendaId: originalAgendaId,
+          discussionTitle: form.topic,
+          discussionResult: form.decision,
+          agendaType: form.agendaType,
+          discussionContent: form.topic
+        }
+      ]
+    };
+
+    console.log('전송 데이터 확인:', updateData);
+
+    const res = await updateMeetingRecord(projectId, updateData);
+
+    if (res.status === 200 || res.data.success) {
+      alert('회의록이 저장되었습니다.');
+      isEditing.value = false;
+      await fetchMeetingDetail();
+    }
+  } catch (error) {
+    // 이제 이 로그에서 파싱 에러가 사라질 것입니다.
+    console.error('서버 응답 에러:', error.response?.data);
+    alert('저장에 실패했습니다. 날짜 형식을 확인해주세요.');
+  }
+};
+
+// 삭제 처리 함수
+const handleDelete = async () => {
+  if (!confirm("이 회의록을 정말로 삭제하시겠습니까?")) return;
+
+  try {
+    const res = await deleteMeetingRecord(projectId, meetingId);
+
+    // ApiResponse.success() 구조에 따라 성공 여부 확인
+    if (res.status === 200 || res.data.success) {
+      alert('회의록이 삭제되었습니다.');
+      router.back(); // 삭제 성공 시 이전 목록 페이지로 이동
+    }
+  } catch (error) {
+    console.error('삭제 실패:', error.response?.data);
+    alert('삭제에 실패했습니다. 권한을 확인해주세요.');
+  }
 };
 </script>
 

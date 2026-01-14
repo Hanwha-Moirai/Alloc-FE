@@ -15,29 +15,39 @@
           <div class="info-item" v-for="item in infoItems" :key="item.label">
             <span class="label">{{ item.label }}</span>
             <span class="value">
-              <template v-if="isEditing && editableLabels.includes(item.label)">
-                <input
-                    v-if="item.label === '생년월일'"
-                    v-model="item.value"
-                    type="date"
-                    class="edit-input date-input"
-                />
-                <input
-                    v-else
-                    v-model="item.value"
-                    type="text"
-                    class="edit-input"
-                />
-              </template>
+      <template v-if="isEditing && editableLabels.includes(item.label)">
+        <input
+            v-if="item.label === '생년월일'"
+            v-model="item.value"
+            type="date"
+            class="edit-input date-input"
+        />
 
-              <template v-else-if="item.label === '프로젝트 투입현황'">
-                <span class="status-badge">● 투입중</span>
-              </template>
+        <select
+            v-else-if="item.label === '직군'"
+            v-model="item.value"
+            class="edit-input select-input"
+        >
+          <option v-for="job in jobOptions" :key="job" :value="job">
+            {{ job }}
+          </option>
+        </select>
 
-              <template v-else>
-                {{ item.value }}
-              </template>
-            </span>
+        <input
+            v-else
+            v-model="item.value"
+            type="text"
+            class="edit-input"
+        />
+      </template>
+
+      <template v-else-if="item.label === '프로젝트 투입현황'">
+        <span class="status-badge">● 투입중</span>
+      </template>
+      <template v-else>
+        {{ item.value }}
+      </template>
+    </span>
           </div>
         </div>
 
@@ -54,8 +64,14 @@
           <div class="card-header">
             <h3 class="card-title">기술 스택</h3>
             <div class="skill-actions">
-              <button class="btn-outline">저장</button>
-              <button class="btn-filled" @click="showSkillModal = true">등록</button>
+              <button
+                  class="btn-outline"
+                  :class="{ 'editing-mode': isSkillEditing }"
+                  @click="toggleSkillEdit"
+              >
+                {{ isSkillEditing ? '저장' : '수정' }}
+              </button>
+              <button class="btn-filled" @click="showSkillModal = true">추가</button>
             </div>
           </div>
 
@@ -64,12 +80,22 @@
               <canvas ref="skillChartRef"></canvas>
             </div>
             <ul class="skill-level-list">
-              <li v-for="skill in skills" :key="skill.name" class="skill-row">
+              <li v-for="(skill, index) in skills" :key="skill.name" class="skill-row">
                 <div class="skill-name-group">
                   <span class="dot">●</span>
                   <span class="skill-name">{{ skill.name }}</span>
                 </div>
-                <span class="skill-level" :class="`lv-${skill.level}`">L{{ skill.level }}</span>
+
+                <div class="level-action-group">
+                  <span class="skill-level" :class="`lv-${skill.level}`">L{{ skill.level }}</span>
+                  <button
+                      v-if="isSkillEditing"
+                      class="delete-skill-btn"
+                      @click="removeSkill(index)"
+                  >
+                    ✕
+                  </button>
+                </div>
               </li>
             </ul>
           </div>
@@ -115,7 +141,13 @@ const isMyProfile = true
 
 // 기본 정보 편집 상태 관리
 const isEditing = ref(false)
-const editableLabels: string[] = ['생년월일', '이메일', '연락처']
+const editableLabels: string[] = ['생년월일', '이메일', '연락처', '직군']
+
+// 기술 스택 수정 모드 여부
+const isSkillEditing = ref(false)
+
+const skillChartRef = ref<HTMLCanvasElement | null>(null)
+const showSkillModal = ref(false)
 
 const infoItems = ref([
   { label: '이름', value: '홍길동' },
@@ -130,7 +162,19 @@ const infoItems = ref([
   { label: '프로젝트 투입현황', value: '투입중' },
 ])
 
-// reactive하게 관리하기 위해 ref로 감싸는 것을 추천합니다.
+// 직군 드롭다운 옵션 리스트
+const jobOptions = [
+  '프론트엔드 개발자',
+  '백엔드 개발자',
+  '풀스택 개발자',
+  'IOS 개발자',
+  '안드로이드 개발자',
+  'UI/UX 디자이너',
+  '기획자',
+  '데브옵스 엔지니어'
+]
+
+// skills 더미데이터
 const skills = ref([
   { name: 'Spring Boot', level: 3 },
   { name: 'JPA', level: 2 },
@@ -146,9 +190,6 @@ const projects = [
   { name: '프로젝트 A', role: 'Backend / PL', period: '2025.01.01 - 2025.12.31', techs: ['Spring Boot', 'JPA'] },
   { name: '프로젝트 B', role: 'Backend', period: '2025.01.01 - 2025.12.31', techs: ['Kafka', 'Redis'] },
 ]
-
-const skillChartRef = ref<HTMLCanvasElement | null>(null)
-const showSkillModal = ref(false)
 
 let skillChart: InstanceType<typeof Chart> | null = null
 
@@ -177,19 +218,30 @@ onMounted(() => {
   })
 })
 
-/* 모달 저장 이벤트 핸들러 */
-const handleSkillSave = (updatedSkills: any) => {
-  // 1. 데이터 업데이트
-  skills.value = updatedSkills
+// 수정 모드 토글
+const toggleSkillEdit = () => {
+  isSkillEditing.value = !isSkillEditing.value
+}
 
-  // 2. 차트 반영
+// 기술 스택 삭제 함수
+const removeSkill = (index: number) => {
+  skills.value.splice(index, 1)
+  updateChart() // 차트 즉시 업데이트
+}
+
+// 차트 업데이트 공통 함수
+const updateChart = () => {
   if (skillChart) {
-    skillChart.data.labels = updatedSkills.map((s: any) => s.name)
-    skillChart.data.datasets[0].data = updatedSkills.map((s: any) => s.level)
+    skillChart.data.labels = skills.value.map(s => s.name)
+    skillChart.data.datasets[0].data = skills.value.map(s => s.level)
     skillChart.update()
   }
+}
 
-  // 3. 모달 닫기
+// 모달 저장 핸들러 수정
+const handleSkillSave = (updatedSkills: any) => {
+  skills.value = updatedSkills
+  updateChart()
   showSkillModal.value = false
 }
 </script>
@@ -404,7 +456,6 @@ const handleSkillSave = (updatedSkills: any) => {
   padding: 4px 16px;
   cursor: pointer;
   font-size: 13px;
-  border-radius: 2px;
 }
 
 .btn-filled {
@@ -414,7 +465,45 @@ const handleSkillSave = (updatedSkills: any) => {
   padding: 4px 16px;
   cursor: pointer;
   font-size: 13px;
-  border-radius: 2px;
+}
+
+.level-action-group {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-width: fit-content;
+}
+
+/* 기술 레벨 배지 */
+.skill-level {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 20px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* X 삭제 버튼 */
+.delete-skill-btn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  width: 16px;
+  height: 16px;
 }
 
 /* 프로젝트 히스토리 */

@@ -35,11 +35,11 @@ const router = createRouter({
                     component: () => import('@/pages/ProfileDetail.vue'),
                 },
                 {
-                    path: '/home',
+                    path: '/home/user',
                     component: () => import('@/pages/Dashboard.vue'),
                 },
                 {
-                    path: '/pmhome',
+                    path: '/home/pm',
                     component: () => import('@/pages/PmDashboard.vue'),
                 },
                 {

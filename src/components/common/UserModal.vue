@@ -46,8 +46,39 @@
 
           <div class="form-group">
             <label class="input-label">생년월일</label>
-            <div class="input-wrapper">
-              <input type="date" v-model="formData.birthDate" class="form-input date-input" />
+            <div class="input-wrapper date-field-wrapper">
+              <input
+                  type="date"
+                  v-model="formData.birthDate"
+                  class="form-input date-input"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="input-label">직군</label>
+            <div class="input-wrapper select-wrapper">
+              <select v-model="formData.jobGroup" class="form-input">
+                <option v-for="job in jobOptions" :key="job" :value="job">{{ job }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="input-label">직급</label>
+            <div class="input-wrapper select-wrapper">
+              <select v-model="formData.position" class="form-input">
+                <option v-for="pos in positionOptions" :key="pos" :value="pos">{{ pos }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="input-label">부서</label>
+            <div class="input-wrapper select-wrapper">
+              <select v-model="formData.department" class="form-input">
+                <option v-for="dept in deptOptions" :key="dept" :value="dept">{{ dept }}</option>
+              </select>
             </div>
           </div>
 
@@ -102,6 +133,11 @@ const props = defineProps<{
 
 const emit = defineEmits(['close', 'confirm']);
 
+// --- 옵션 데이터 리스트 ---
+const jobOptions = ['백엔드 개발자', '프론트엔드 개발자', 'UI/UX 디자이너', '기획자', '데브옵스'];
+const positionOptions = ['사원', '대리', '과장', '차장', '부장'];
+const deptOptions = ['정보보안팀', '플랫폼개발팀', '인프라팀', '디자인팀', '기획팀'];
+
 const fileInput = ref<HTMLInputElement | null>(null);
 const imagePreview = ref<string | null>(null);
 
@@ -112,11 +148,13 @@ const formData = ref({
   email: '',
   phone: '',
   birthDate: '2000-01-01',
+  jobGroup: '백엔드 개발자', // 초기값
+  position: '대리',        // 초기값
+  department: '정보보안팀',  // 초기값
   role: 'ADMIN',
   profileImage: null as File | null
 });
 
-// 모달 오픈 시 초기화 로직
 watch(() => props.show, (newVal) => {
   if (newVal) {
     if (props.isEdit && props.initialData) {
@@ -125,7 +163,9 @@ watch(() => props.show, (newVal) => {
     } else {
       formData.value = {
         userId: '', password: '', name: '', email: '',
-        phone: '', birthDate: '2000-01-01', role: 'ADMIN', profileImage: null
+        phone: '', birthDate: '2000-01-01',
+        jobGroup: '백엔드 개발자', position: '대리', department: '정보보안팀',
+        role: 'ADMIN', profileImage: null
       };
       imagePreview.value = null;
     }
@@ -133,7 +173,6 @@ watch(() => props.show, (newVal) => {
 });
 
 const triggerFileInput = () => fileInput.value?.click();
-
 const onFileChange = (e: Event) => {
   const file = (e.target as HTMLInputElement).files?.[0];
   if (file) {
@@ -141,11 +180,7 @@ const onFileChange = (e: Event) => {
     imagePreview.value = URL.createObjectURL(file);
   }
 };
-
-const handleConfirm = () => {
-  // 필수값 검증 로직 추가 가능
-  emit('confirm', { ...formData.value });
-};
+const handleConfirm = () => emit('confirm', { ...formData.value });
 </script>
 
 <style scoped>
@@ -192,6 +227,39 @@ const handleConfirm = () => {
 }
 
 .helper-text { font-size: 11px; color: #ef4444; margin-top: 6px; }
+
+.select-wrapper {
+  position: relative;
+}
+
+.date-field-wrapper {
+  display: flex;
+  align-items: center;
+  background-color: #f8fafc;
+  border-bottom: 2px solid #4ab8d8;
+}
+
+.date-input {
+  flex: 1; /* 남은 공간을 모두 차지 */
+  cursor: pointer;
+  position: relative;
+  background: transparent;
+  padding-right: 10px; /* 아이콘과 텍스트 사이 여백 */
+}
+
+.date-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  margin-left: 0;
+  padding: 0;
+  opacity: 0.6;
+  /* 아이콘을 입력란 안쪽 오른쪽 끝에 고정 */
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+}
 
 /* 이미지 업로드 영역 */
 .image-upload-box {

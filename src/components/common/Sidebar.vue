@@ -31,10 +31,10 @@ const getHomePath = () => {
 
   try {
     const payload = jwtDecode<JwtPayload>(token)
-    return payload.role === 'PM' ? '/pmhome' : '/home'
+    return payload.role === 'PM' ? '/home/pm' : '/home/user'
   } catch (e) {
     console.error('JWT decode 실패', e)
-    return '/home'
+    return '/home/user'
   }
 }
 

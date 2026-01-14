@@ -32,8 +32,10 @@
           <th width="40"><input type="checkbox" /></th>
           <th>이름 <span class="sort-icon">↓</span></th>
           <th>이메일</th>
-          <th>권한</th>
           <th>소속 / 팀</th>
+          <th>직급</th>
+          <th>직군</th>
+          <th>권한</th>
           <th>계정 상태</th>
           <th width="50"></th>
         </tr>
@@ -43,20 +45,22 @@
           <td><input type="checkbox" /></td>
           <td class="user-info-cell">
             <div class="user-avatar"></div>
-            <div class="user-detail">
-              <span class="user-name">{{ user.name }}</span>
-              <span class="user-job">{{ user.jobGroup }}</span>
-            </div>
+            <span class="user-name">{{ user.name }}</span>
           </td>
           <td class="email-text">{{ user.email }}</td>
+          <td class="dept-text">{{ user.team }}</td>
+          <td>
+            <span class="position-badge">{{ user.position }}</span>
+          </td>
+          <td class="job-text">{{ user.jobGroup }}</td>
           <td>
             <span :class="['role-badge', user.role.toLowerCase()]">{{ user.role }}</span>
           </td>
-          <td class="dept-text">{{ user.team }}</td>
+
           <td>
-              <span :class="['status-tag', user.status.toLowerCase()]">
-                <i class="dot"></i> {{ user.status }}
-              </span>
+          <span :class="['status-tag', user.status.toLowerCase()]">
+            <i class="dot"></i> {{ user.status }}
+          </span>
           </td>
           <td class="more-cell">
             <button class="more-btn" @click.stop="openContextMenu($event, user, index)">•••</button>
@@ -106,11 +110,9 @@ const menuPos = ref({ top: '0px', left: '0px' });
 
 // 이미지 데이터 기반 가상 데이터
 const users = ref([
-  { id: 1, name: '홍길동', jobGroup: '백엔드 엔지니어', email: 'test@alloc.com', role: 'PM', team: '플랫폼팀', status: 'ACTIVE' },
-  { id: 2, name: '홍길동', jobGroup: '백엔드 엔지니어', email: 'test@alloc.com', role: 'USER', team: '플랫폼팀', status: 'SUSPENDED' },
-  { id: 3, name: '홍길동', jobGroup: '백엔드 엔지니어', email: 'test@alloc.com', role: 'ADMIN', team: '플랫폼팀', status: 'DELETED' },
-  { id: 4, name: '홍길동', jobGroup: '백엔드 엔지니어', email: 'test@alloc.com', role: 'PM', team: '플랫폼팀', status: 'ACTIVE' },
-  { id: 5, name: '홍길동', jobGroup: '백엔드 엔지니어', email: 'test@alloc.com', role: 'PM', team: '플랫폼팀', status: 'ACTIVE' },
+  { id: 1, name: '홍길동', jobGroup: '백엔드 개발자', position: '대리', email: 'test@alloc.com', role: 'PM', team: '플랫폼팀', status: 'ACTIVE' },
+  { id: 2, name: '김철수', jobGroup: '프론트엔드 개발자', position: '사원', email: 'chul@alloc.com', role: 'USER', team: '디자인팀', status: 'SUSPENDED' },
+  { id: 3, name: '이영희', jobGroup: 'UI/UX 디자이너', position: '과장', email: 'young@alloc.com', role: 'ADMIN', team: '기획팀', status: 'ACTIVE' },
 ]);
 
 // 등록 모달 열기
@@ -140,17 +142,15 @@ const handleDelete = (index: number) => {
 // 모달에서 등록/수정 완료 버튼 눌렀을 때
 const onConfirm = (userData: any) => {
   if (isEditMode.value) {
-    // 수정 로직 (ID가 같은 항목을 찾아 업데이트)
     const idx = users.value.findIndex(u => u.id === selectedUser.value.id);
     if (idx !== -1) {
       users.value[idx] = { ...users.value[idx], ...userData };
     }
   } else {
-    // 등록 로직 (리스트 맨 앞에 추가)
     users.value.unshift({
       id: Date.now(),
       ...userData,
-      jobGroup: '백엔드 엔지니어',
+      team: userData.department,
       status: 'ACTIVE'
     });
   }
@@ -391,7 +391,6 @@ const closeHandler = () => {
 }
 
 .user-name { font-weight: 600; color: #1e293b; font-size: 13px; }
-.user-job { color: #94a3b8; font-size: 11px; margin-top: 2px; }
 
 /* 권한 배지 스타일 */
 .role-badge {
@@ -404,6 +403,13 @@ const closeHandler = () => {
 .role-badge.pm { background-color: #00d4fe; }
 .role-badge.user { background-color: #ffcc00; }
 .role-badge.admin { background-color: #ff3b30; }
+
+/* 직군 텍스트 */
+.job-text {
+  color: #1e293b;
+  font-weight: 500;
+  font-size: 12px;
+}
 
 /* 상태 태그 스타일 */
 .status-tag {

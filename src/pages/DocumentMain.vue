@@ -55,7 +55,7 @@
           <input type="date" v-model="endDate" class="hidden-date-input" />
         </div>
 
-        <button class="add-btn" @click="handleCreate">
+        <button class="add-btn" @click="showDocModal = true">
           <span class="plus-icon">+</span> {{ currentTab === 'weekly' ? '주간보고' : '회의록' }} 생성
         </button>
       </div>
@@ -75,6 +75,12 @@
           :end-date="endDate"
       />
     </div>
+
+    <DocCreateModal
+        :is-open="showDocModal"
+        @close="showDocModal = false"
+        @create="handleCreateDoc"
+    />
   </div>
 </template>
 
@@ -82,19 +88,23 @@
 import { ref } from 'vue';
 import MyWeeklyReports from '@/pages/documentTabs/MyWeeklyReports.vue';
 import MyMeetingReports from '@/pages/documentTabs/MyMeetingReports.vue';
+import DocCreateModal from '@/components/common/DocCreateModal.vue';
 
 const currentTab = ref('weekly');
 const searchQuery = ref('');
 const startDate = ref('');
 const endDate = ref('');
 
-const handleCreate = () => {
-  console.log(`${currentTab.value} 생성 페이지로 이동`);
+const showDocModal = ref(false);
+
+
+const handleCreateDoc = (data: any) => {
+  console.log('생성 데이터:', data);
+  showDocModal.value = false;
 };
 </script>
 
 <style scoped>
-/* 관리자 페이지와 동일한 공통 레이아웃 */
 .admin-page-container {
   display: flex;
   flex-direction: column;
