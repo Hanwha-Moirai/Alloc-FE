@@ -1,7 +1,7 @@
 <template>
   <div class="project-page">
     <!-- 대제목 -->
-    <h1 class="page-title">프로젝트</h1>
+    <h1 class="page-title">프로젝트 관리</h1>
 
     <div class="tab-header">
       <div class="tabs">

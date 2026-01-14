@@ -4,7 +4,7 @@
       <table class="doc-table">
         <thead>
         <tr>
-          <th class="text-left">프로젝트 이름</th>
+          <th>프로젝트 이름</th>
           <th>회의록 ID</th>
           <th>회의 날짜</th>
           <th>생성 날짜</th>
@@ -19,7 +19,7 @@
             @click="goToDetail(item.id)"
             class="clickable-row"
         >
-          <td class="text-left project-cell">{{ item.projectName }}</td>
+          <td>{{ item.projectName }}</td>
           <td>{{ item.id }}</td>
           <td>{{ item.meetingDate }}</td>
           <td>{{ item.createdAt }}</td>
@@ -43,48 +43,74 @@
 
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { getMyMeetingRecords } from '@/api/meetingRecord';
+import { getMyMeetingRecords, searchMyMeetingRecords } from '@/api/meetingRecord';
+
+// 1. Props 추가: 부모로부터 검색 조건 수신
+const props = defineProps<{
+  searchQuery: string;
+  startDate: string;
+  endDate: string;
+}>();
 
 const router = useRouter();
-
 const meetingData = ref<any[]>([]);
 const page = ref(0);
 const totalPages = ref(0);
 
-// 목록 조회
 const fetchMeetingRecords = async () => {
   try {
-    const res = await getMyMeetingRecords({ page: page.value, size: 10 });
-    const data = res.data.data;
+    let res;
+    // 검색 조건 존재 여부 확인
+    const hasCondition = props.searchQuery || props.startDate || props.endDate;
 
+    if (hasCondition) {
+      // 2. 검색 API 호출 (백엔드 파라미터명 projectName에 searchQuery 매핑)
+      res = await searchMyMeetingRecords({
+        page: page.value,
+        size: 10,
+        keyword: props.searchQuery, // meetingRecord.js 내부에서 projectName으로 전달됨
+        from: props.startDate,
+        to: props.endDate
+      });
+    } else {
+      // 일반 목록 조회
+      res = await getMyMeetingRecords(page.value);
+    }
+
+    const data = res.data.data;
     meetingData.value = data.content.map((item: any) => ({
       id: item.meetingId,
       projectName: item.projectName,
       meetingDate: formatDate(item.meetingDate),
-      createdAt: formatDate(item.createdAt), // 생성 날짜 추가
-      updatedAt: formatDate(item.updatedAt), // 수정 날짜 추가
+      createdAt: formatDate(item.createdAt),
+      updatedAt: formatDate(item.updatedAt),
       projectId: item.projectId
     }));
-
     totalPages.value = data.totalPages;
   } catch (error) {
     console.error("데이터 로드 실패:", error);
+    meetingData.value = [];
   }
 };
 
+// 3. Watch 추가: 검색 조건이 바뀌면 페이지를 0으로 초기화하고 다시 조회
+watch(
+    () => [props.searchQuery, props.startDate, props.endDate],
+    () => {
+      page.value = 0;
+      fetchMeetingRecords();
+    }
+);
+
 onMounted(fetchMeetingRecords);
 
-// 상세 이동
-const goToDetail = (meetingId: number) => {
-  const record = meetingData.value.find(m => m.id === meetingId);
-  if (!record) return;
-
-  router.push(`/projects/${record.projectId}/docs/meeting-record/${meetingId}`);
+const goToDetail = (meetingId: number, projectId: number) => {
+  // projectId를 함께 넘겨 상세 페이지 경로 유지
+  router.push(`/projects/${projectId}/docs/meeting-record/${meetingId}`);
 };
 
-// 페이지 이동 및 날짜 포맷 로직 (기존 유지)
 const prevPage = () => { if (page.value > 0) { page.value--; fetchMeetingRecords(); } };
 const nextPage = () => { if (page.value < totalPages.value - 1) { page.value++; fetchMeetingRecords(); } };
 
@@ -96,8 +122,7 @@ const formatDate = (value: string) => {
 </script>
 
 <style scoped>
-/* 기존 스타일 유지 */
-.table-container { background: #fff; border: 1px solid #e1e4e8; border-radius: 4px; overflow: hidden; }
+.table-container { background: #fff; border: 1px solid #e1e4e8; overflow: hidden; }
 .doc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .doc-table th { background: #f2f4f8; padding: 12px; color: #333; font-weight: 600; border-bottom: 1px solid #e1e4e8; }
 .doc-table td { padding: 14px 12px; text-align: center; border-bottom: 1px solid #f1f5f9; color: #334155; }

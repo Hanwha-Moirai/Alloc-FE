@@ -35,15 +35,15 @@ export const getMyMeetingRecords = (page = 0, size = 10) => {
     });
 };
 
-// 내 회의록 검색 (프로젝트명 keyword, 시작일 from, 종료일 to)
+// 내 회의록 검색
 export const searchMyMeetingRecords = (params) => {
     return axios.get('/api/mydocs/meeting_record/search', {
         params: {
             page: params.page || 0,
             size: params.size || 10,
-            keyword: params.keyword || null, // 프로젝트명 검색어
-            from: params.from || null,       // 회의 시작 날짜 (YYYY-MM-DD)
-            to: params.to || null            // 회의 종료 날짜 (YYYY-MM-DD)
+            projectName: params.keyword || null, // keyword 대신 projectName 사용
+            from: params.from || null,
+            to: params.to || null
         }
     });
 };

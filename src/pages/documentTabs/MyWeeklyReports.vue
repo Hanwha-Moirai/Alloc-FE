@@ -4,7 +4,7 @@
       <table class="doc-table">
         <thead>
         <tr>
-          <th class="text-left">프로젝트 이름</th>
+          <th>프로젝트 이름</th>
           <th>주차</th>
           <th>주간보고 ID</th>
           <th>생성 날짜</th>
@@ -19,7 +19,7 @@
             @click="goToDetail(item.id, item.projectId)"
             class="clickable-row"
         >
-          <td class="text-left project-cell">{{ item.projectName }}</td>
+          <td>{{ item.projectName }}</td>
           <td>{{ item.week }}</td>
           <td>{{ item.id }}</td>
           <td>{{ item.createdAt }}</td>
@@ -125,8 +125,7 @@ const formatDate = (value: string) => {
 </script>
 
 <style scoped>
-/* 기존 스타일 유지 */
-.table-container { background: #fff; border: 1px solid #e1e4e8; border-radius: 4px; overflow: hidden; }
+.table-container { background: #fff; border: 1px solid #e1e4e8; overflow: hidden; }
 .doc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .doc-table th { background: #f2f4f8; padding: 12px; color: #333; font-weight: 600; border-bottom: 1px solid #e1e4e8; }
 .doc-table td { padding: 14px 12px; text-align: center; border-bottom: 1px solid #f1f5f9; color: #334155; }
