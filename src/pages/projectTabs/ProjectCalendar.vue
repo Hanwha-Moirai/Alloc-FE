@@ -168,50 +168,90 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import dayjs from 'dayjs'
 import 'dayjs/locale/ko'
 import CalendarAddModal from '@/components/common/CalendarAddModal.vue';
+import { getCalendarData } from '@/api/calendar'
 
 dayjs.locale('ko')
+
+const route = useRoute()
+const projectId = Number(route.params.projectId)
 
 // 상태 및 데이터 정의
 const viewMode = ref('week')
 const isModalOpen = ref(false);
 const selectedDate = ref(dayjs())
 
-const eventItems = ref([
-  {
-    id: 1,
-    title: '주간 업무 보고',
-    date: dayjs().startOf('week').add(1, 'day').format('YYYY-MM-DD'),
-    startTime: '09:00',
-    duration: 2,
-    color: '#dcfce7',
-    borderColor: '#22c55e'
-  },
-  {
-    id: 2,
-    title: '프로젝트 운영 회의',
-    date: dayjs().startOf('week').add(3, 'day').format('YYYY-MM-DD'),
-    startTime: '13:00',
-    duration: 1.5,
-    color: '#dbeafe',
-    borderColor: '#3b82f6'
-  },
-  {
-    id: 3,
-    title: 'UI 디자인 검토',
-    date: dayjs().format('YYYY-MM-DD'),
-    startTime: '10:00',
-    duration: 3,
-    color: '#fee2e2',
-    borderColor: '#ef4444'
-  }
-])
+const eventItems = ref([])
 
 const dayLabels = ['일', '월', '화', '수', '목', '금', '토']
 const hours = Array.from({ length: 11 }, (_, i) => (i + 8).toString().padStart(2, '0'))
+
+const fetchCalendarData = async () => {
+  try {
+    const from = selectedDate.value.startOf(viewMode.value === 'month' ? 'month' : 'week').format('YYYY-MM-DD');
+    const to = selectedDate.value.endOf(viewMode.value === 'month' ? 'month' : 'week').format('YYYY-MM-DD');
+
+    const response = await getCalendarData(projectId, from, to, viewMode.value);
+
+    // 백엔드에서 준 실제 데이터 뭉치 확인 (로그에 items가 찍혔으므로 이를 활용)
+    const actualData = response.data;
+    if (!actualData || !actualData.items) {
+      console.warn("표시할 데이터가 없습니다.");
+      eventItems.value = [];
+      return;
+    }
+
+    // 1. actualData.items를 바로 사용
+    const integratedList = actualData.items;
+
+    console.log("통합된 리스트 개수:", integratedList.length);
+
+    // 2. UI 모델로 변환
+    eventItems.value = integratedList.map(item => ({
+      // 백엔드 필드명(id, title, startDate, type 등)을 대조하여 매핑
+      id: item.id,
+      title: item.title || item.name || '제목 없음',
+      date: dayjs(item.startDate || item.date).format('YYYY-MM-DD'),
+      startTime: item.startTime || '09:00',
+      duration: item.duration || 1,
+      // 백엔드에서 보내주는 item.type (TASK, EVENT, MILESTONE 등)에 따라 색상 지정
+      color: getCategoryColor(item.type),
+      borderColor: getCategoryBorderColor(item.type)
+    }));
+
+  } catch (error) {
+    console.error("데이터 매핑 실패:", error);
+  }
+};
+
+// 도움 함수: 카테고리별 색상 지정
+const getCategoryColor = (category: string) => {
+  switch (category) {
+    case 'TASK': return '#dbeafe';      // 파란색 계열
+    case 'EVENT': return '#dcfce7';     // 초록색 계열
+    case 'MILESTONE': return '#fef9c3'; // 노란색 계열
+    default: return '#f3f4f6';
+  }
+};
+
+const getCategoryBorderColor = (category: string) => {
+  switch (category) {
+    case 'TASK': return '#3b82f6';
+    case 'EVENT': return '#22c55e';
+    case 'MILESTONE': return '#facc15';
+    default: return '#d1d5db';
+  }
+};
+
+console.log(eventItems.value)
+
+// 날짜나 뷰가 바뀔 때마다 실행
+watch([selectedDate, viewMode], fetchCalendarData);
+onMounted(fetchCalendarData);
 
 // 모달 및 이벤트 관련 함수
 const openModal = () => {
