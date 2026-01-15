@@ -208,18 +208,22 @@ const fetchCalendarData = async () => {
     const response = await getCalendarData(projectId, from, to, viewMode.value);
 
     const items = response.data?.items || [];
-    console.log(`=== 데이터 수신: ${items.length}개 ===`);
 
     eventItems.value = items.map(item => {
+      const isVacation = item.itemType === 'VACATION' || item.title.includes('연차');
       const startDayjs = dayjs(item.start);
       const endDayjs = dayjs(item.end);
+
+      const startTime = isVacation ? '08:00' : startDayjs.format('HH:mm');
+      // 연차일 경우 08:00부터 18:00까지 총 10시간으로 설정
+      const duration = isVacation ? 10 : endDayjs.diff(startDayjs, 'hour', true);
 
       return {
         id: item.id,
         title: item.title || '제목 없음',
         date: startDayjs.format('YYYY-MM-DD'),
-        startTime: startDayjs.format('HH:mm'),
-        duration: endDayjs.diff(startDayjs, 'hour', true) || 1,
+        startTime: startTime,
+        duration: duration || 1,
         category: item.itemType,
         color: getCategoryColor(item.itemType),
         borderColor: getCategoryBorderColor(item.itemType)
@@ -236,10 +240,10 @@ const getCategoryColor = (category: string, title: string = '') => {
   // 1. 제목에 '연차'가 포함되면 노란색
   if (title.includes('연차')) return '#fef9c3';
 
-  // 2. 타입이 'EVENT'인 경우 (현재 모든 데이터가 EVENT로 오고 있음)
+  // 2. 타입이 'EVENT'인 경우
   switch (category) {
     case 'EVENT':
-      return '#dcfce7'; // 일단 연한 초록색으로 표시
+      return '#dcfce7'; // 연한 초록색
     case 'PUBLIC':
       return '#dbeafe'; // 파란색
     case 'PRIVATE':
@@ -254,7 +258,7 @@ const getCategoryBorderColor = (category: string, title: string = '') => {
 
   switch (category) {
     case 'EVENT':
-      return '#22c55e'; // 진한 초록색
+      return '#22c55e';
     case 'PUBLIC':
       return '#3b82f6';
     default:
@@ -374,17 +378,12 @@ const tomorrowSchedules = computed(() => {
 const vacationSchedules = computed(() => {
   return eventItems.value
       .filter(event => event.category === 'VACATION' || event.title.includes('연차'))
-      .map(event => {
-        // 기간 표시를 위해 날짜 포맷팅 (01.17 ~ 01.17 형식)
-        const formattedDate = dayjs(event.date).format('MM.DD');
-
-        return {
-          id: event.id,
-          name: event.title, // '연차' 또는 '김현수 휴가' 등
-          range: `${formattedDate} ~ ${formattedDate}`, // 기간 데이터가 있다면 end를 활용해 더 정확히 표시 가능
-          color: event.borderColor
-        };
-      });
+      .map(event => ({
+        id: event.id,
+        name: event.title,
+        range: dayjs(event.date).format('MM.DD'),
+        color: event.borderColor
+      }));
 });
 
 // 이벤트 스타일 계산
@@ -413,8 +412,9 @@ const getEventStyle = (event: any) => {
 <style scoped>
 .calendar-container {
   display: flex;
-  height: calc(100vh - 180px);
+  height: calc(100vh - 210px);
   background: #f9fafb;
+  overflow: hidden;
 }
 
 /* 사이드바 스타일 */
@@ -575,12 +575,18 @@ const getEventStyle = (event: any) => {
   font-weight: 500;
 }
 
-/* 기존 스타일 하단에 추가 또는 수정 */
+
 .grid-body {
   flex: 1;
   overflow-y: auto;
   position: relative;
-  /* 가로 세로 스크롤 시에도 배경이 유지되도록 설정 */
+}
+
+/* 스크롤바 숨기기 */
+.grid-body::-webkit-scrollbar,
+.month-grid-body::-webkit-scrollbar,
+.calendar-sidebar::-webkit-scrollbar {
+  display: none;
 }
 
 .event-card {
