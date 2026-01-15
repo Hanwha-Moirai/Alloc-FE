@@ -63,8 +63,8 @@ const router = createRouter({
                             component: () => import('@/pages/projectTabs/ProjectTasks.vue'),
                         },
                         {
-                            path: 'schedule',
-                            component: () => import('@/pages/projectTabs/ProjectSchedule.vue'),
+                            path: 'gantt',
+                            component: () => import('@/pages/projectTabs/ProjectGantt.vue'),
                         },
                         {
                             path: 'calendar',

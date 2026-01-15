@@ -7,7 +7,7 @@
       <div class="tabs">
         <button class="tab" :class="{ active: isActive('') }" @click="goTab('')">요약</button>
         <button class="tab" :class="{ active: isActive('tasks') }" @click="goTab('tasks')">태스크</button>
-        <button class="tab" :class="{ active: isActive('schedule') }" @click="goTab('schedule')">일정</button>
+        <button class="tab" :class="{ active: isActive('gantt') }" @click="goTab('gantt')">일정</button>
         <button class="tab" :class="{ active: isActive('calendar') }" @click="goTab('calendar')">캘린더</button>
         <button class="tab" :class="{ active: isActive('docs') }" @click="goTab('docs')">문서</button>
         <button class="tab" :class="{ active: isActive('members') }" @click="goTab('members')">인력</button>
