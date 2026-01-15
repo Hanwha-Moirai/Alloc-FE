@@ -117,15 +117,59 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import dayjs from 'dayjs'
 import ScheduleEditModal from '@/components/common/ScheduleEditModal.vue'
 import ScheduleDeleteModal from '@/components/common/ScheduleDeleteModal.vue'
+import { getGanttTasks, getGanttMilestones } from '@/api/gantt'
+
+const route = useRoute()
+const projectId = Number(route.params.projectId)
+
+// 상태 관리
+const scheduleData = ref([])
+const isLoading = ref(true)
 
 //보기 모드 상태
 const isViewMenuOpen = ref(false)
 const currentViewMode = ref('월간')
 const viewModes = ['일간', '주간', '월간']
+
+// API 데이터 로드 함수
+const fetchGanttData = async () => {
+  isLoading.value = true;
+  try {
+    const [msRes] = await Promise.all([
+      getGanttMilestones(projectId)
+    ]);
+
+    const rawMilestones = msRes.data?.data || msRes.data || [];
+
+    scheduleData.value = rawMilestones.map(ms => ({
+      id: ms.milestoneId,
+      projectName: ms.milestoneName || '제목 없음',
+      startDate: dayjs(ms.startDate).format('YYYY.MM.DD'),
+      endDate: dayjs(ms.endDate).format('YYYY.MM.DD'),
+      expanded: true,
+
+      tasks: (ms.tasks || []).map(t => ({
+        id: t.taskId,
+        name: t.taskName || t.title || '태스크 제목 없음',
+        startDate: dayjs(t.startDate).format('YYYY.MM.DD'),
+        endDate: dayjs(t.endDate).format('YYYY.MM.DD')
+      }))
+    }));
+
+    console.log("매핑 완료 데이터:", scheduleData.value);
+  } catch (error) {
+    console.error("간트 데이터 로딩 에러:", error);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+onMounted(fetchGanttData)
 
 // --- 보기 모드별 하루당 차지하는 픽셀 폭 (동적 계산) ---
 const pixelPerDay = computed(() => {
@@ -155,28 +199,6 @@ const changeViewMode = (mode: string) => {
 // 프로젝트별 고유 색상 배열
 const projectColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 const getProjectColor = (index: number) => projectColors[index % projectColors.length];
-
-const scheduleData = ref([
-  {
-    id: 1,
-    projectName: '클라우드 인프라 전환 프로젝트',
-    startDate: '2026.01.25',
-    endDate: '2026.03.25',
-    expanded: false,
-    tasks: [{ id: 11, name: '서버 가동 범위 설정', startDate: '2026.01.25', endDate: '2026.02.10' }]
-  },
-  {
-    id: 2,
-    projectName: '신규 서비스 런칭 준비',
-    startDate: '2026.01.03',
-    endDate: '2026.01.31',
-    expanded: true,
-    tasks: [
-      { id: 21, name: 'UI/UX 개선 설계', startDate: '2026.01.03', endDate: '2026.01.15' },
-      { id: 22, name: '메인 화면 개편', startDate: '2026.01.08', endDate: '2026.01.25' }
-    ]
-  }
-])
 
 // --- 타임라인 생성 로직 (일간 보기 대응 추가) ---
 const months = computed(() => {
