@@ -210,23 +210,30 @@ const fetchCalendarData = async () => {
     const items = response.data?.items || [];
 
     eventItems.value = items.map(item => {
-      const isVacation = item.itemType === 'VACATION' || item.title.includes('연차');
+      // 로그에서 확인된 대로 eventType과 eventId를 사용합니다.
+      const type = item.eventType;
+      const id = item.eventId;
+
+      // 제목에 '연차'가 포함되거나 타입이 'VACATION'인 경우 체크
+      const isVacation = type === 'VACATION' || (item.title && item.title.includes('연차'));
+
       const startDayjs = dayjs(item.start);
       const endDayjs = dayjs(item.end);
 
       const startTime = isVacation ? '08:00' : startDayjs.format('HH:mm');
-      // 연차일 경우 08:00부터 18:00까지 총 10시간으로 설정
       const duration = isVacation ? 10 : endDayjs.diff(startDayjs, 'hour', true);
 
+      console.log(`[매핑 확인] ${item.title} -> 타입: ${type}, ID: ${id}`);
+
       return {
-        id: item.id,
+        id: id,
         title: item.title || '제목 없음',
         date: startDayjs.format('YYYY-MM-DD'),
         startTime: startTime,
         duration: duration || 1,
-        category: item.itemType,
-        color: getCategoryColor(item.itemType),
-        borderColor: getCategoryBorderColor(item.itemType)
+        category: type,
+        color: getCategoryColor(type, item.title),
+        borderColor: getCategoryBorderColor(type, item.title)
       };
     });
 
@@ -236,31 +243,27 @@ const fetchCalendarData = async () => {
 };
 
 //  카테고리별 색상 지정
-const getCategoryColor = (category: string, title: string = '') => {
-  // 1. 제목에 '연차'가 포함되면 노란색
-  if (title.includes('연차')) return '#fef9c3';
+const getCategoryColor = (type, title = '') => {
+  if (type === 'VACATION' || (title && title.includes('연차'))) return '#fef9c3'; // 노란색
 
-  // 2. 타입이 'EVENT'인 경우
-  switch (category) {
-    case 'EVENT':
-      return '#dcfce7'; // 연한 초록색
-    case 'PUBLIC':
-      return '#dbeafe'; // 파란색
-    case 'PRIVATE':
-      return '#f3f4f6'; // 회색
-    default:
-      return '#f3f4f6';
+  switch (type) {
+    case 'EVENT': return '#dcfce7';   // 초록색
+    case 'PUBLIC': return '#dbeafe';  // 파란색
+    case 'PRIVATE': return '#ffedd5'; // 회색
+    default: return '#ffffff';
   }
 };
 
-const getCategoryBorderColor = (category: string, title: string = '') => {
-  if (title.includes('연차')) return '#facc15';
+const getCategoryBorderColor = (type, title = '') => {
+  if (type === 'VACATION' || (title && title.includes('연차'))) return '#facc15'; // 노란색 테두리
 
-  switch (category) {
+  switch (type) {
     case 'EVENT':
       return '#22c55e';
     case 'PUBLIC':
       return '#3b82f6';
+    case 'PRIVATE':
+      return '#f97316';
     default:
       return '#d1d5db';
   }

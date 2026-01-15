@@ -1,4 +1,4 @@
-import axios from '@/lib/axios'; // 기존 설정된 인스턴스 사용
+import axios from '@/lib/axios';
 
 export const getCalendarData = async (projectId, from, to, view) => {
     const response = await axios.get(`/api/projects/${projectId}/calendar`, {
