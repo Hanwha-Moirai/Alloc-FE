@@ -2,7 +2,6 @@ import axios from '@/lib/axios';
 
 // 태스크 목록 조회
 export const getGanttTasks = (projectId) => {
-    // 파라미터를 명시적으로 보내지 않아 백엔드에서 null로 처리하게 유도
     return axios.get(`/api/projects/${projectId}/tasks`);
 };
 
@@ -16,12 +15,12 @@ export const createMilestone = (projectId, data) => {
     return axios.post(`/api/projects/${projectId}/ganttchart/milestones`, data);
 };
 
-// 마일스톤 수정 (Patch)
+// 마일스톤 수정
 export const updateMilestone = (projectId, milestoneId, data) => {
     return axios.patch(`/api/projects/${projectId}/ganttchart/milestones/${milestoneId}`, data);
 };
 
-// 마일스톤 삭제 (Delete)
+// 마일스톤 삭제
 export const deleteMilestone = (projectId, milestoneId) => {
     return axios.delete(`/api/projects/${projectId}/ganttchart/milestones/${milestoneId}`);
 };

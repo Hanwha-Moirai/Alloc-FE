@@ -103,11 +103,86 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import {ref, onMounted, watch} from 'vue'
+import { useRoute } from 'vue-router'
+import dayjs from 'dayjs'
 import TaskDetailModal from '@/components/common/TaskDetailModal.vue'
+import { getGanttTasks } from '@/api/gantt'
 
+const route = useRoute()
+const projectId = Number(route.params.projectId)
+const tasks = ref<any[]>([])
+const isLoading = ref(false)
 const selectedTask = ref<any>(null)
 const showModal = ref(false)
+
+const props = defineProps({
+
+  isEditing: {
+    type: Boolean,
+    default: false
+  },
+  refreshTrigger: {
+    type: Number,
+    default: 0
+  }
+});
+
+// 카테고리 매핑 정보
+const categoryLabel: Record<string, string> = {
+  DEVELOPMENT: '개발',
+  TESTING: '테스트',
+  BUGFIXING: '버그',
+  DISTRIBUTION: '배포'
+}
+
+const categoryClass: Record<string, string> = {
+  DEVELOPMENT: 'dev',
+  TESTING: 'test',
+  BUGFIXING: 'bug',
+  DISTRIBUTION: 'dist'
+}
+
+// 데이터 로드
+const fetchTasks = async () => {
+  isLoading.value = true;
+  try {
+    const response = await getGanttTasks(projectId);
+    const rawData = response.data?.data || response.data || [];
+
+    tasks.value = rawData.map((t: any) => {
+      // DB의 INPROGRESS를 프론트의 IN_PROGRESS로 변환하는 안전한 로직
+      let mappedStatus = t.taskStatus;
+      if (t.taskStatus === 'TODO') mappedStatus = 'TO_DO';
+      if (t.taskStatus === 'INPROGRESS') mappedStatus = 'IN_PROGRESS';
+
+      return {
+        id: t.taskId,
+        title: t.taskName,
+        status: mappedStatus,
+        startDate: dayjs(t.startDate).format('YYYY.MM.DD'),
+        endDate: dayjs(t.endDate).format('YYYY.MM.DD'),
+        assignee: t.userId,
+        description: t.taskDescription,
+        task_category: t.taskCategory
+      };
+    });
+  } catch (error) {
+    console.error("조회 실패:", error);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+onMounted(() => {
+  if (projectId) {
+    fetchTasks()
+  }
+})
+
+watch(() => props.refreshTrigger, () => {
+  fetchTasks();
+});
 
 const openTask = (task: any) => {
   selectedTask.value = task
@@ -117,56 +192,8 @@ const openTask = (task: any) => {
 const closeModal = () => {
   showModal.value = false
   selectedTask.value = null
+  fetchTasks() // 변경 사항이 있을 수 있으므로 새로고침
 }
-
-/* ERD ENUM → UI 매핑 */
-const categoryLabel = {
-  DEVELOPMENT: '개발',
-  TESTING: '테스트',
-  BUGFIXING: '버그',
-  DISTRIBUTION: '배포'
-}
-
-const categoryClass = {
-  DEVELOPMENT: 'dev',
-  TESTING: 'test',
-  BUGFIXING: 'bug',
-  DISTRIBUTION: 'dist'
-}
-
-/* ERD 기준 데이터 */
-const tasks = [
-  {
-    id: 1,
-    title: 'API 게이트웨이 인증',
-    status: 'DONE',
-    startDate: '2025.12.01',
-    endDate: '2025.12.31',
-    assignee: '김동리',
-    description: 'API 게이트웨이 인증 설명입니다.',
-    task_category: 'DEVELOPMENT'
-  },
-  {
-    id: 2,
-    title: '권한 테스트 시나리오 작성',
-    status: 'IN_PROGRESS',
-    startDate: '2025.12.05',
-    endDate: '2025.12.20',
-    assignee: '김동리',
-    description: '권한 테스트 케이스 정리',
-    task_category: 'TESTING'
-  },
-  {
-    id: 3,
-    title: '권한 테스트 시나리오 작성',
-    status: 'TO_DO',
-    startDate: '2025.12.05',
-    endDate: '2025.12.20',
-    assignee: '김동리',
-    description: '권한 테스트 케이스 정리',
-    task_category: 'DISTRIBUTION'
-  }
-]
 </script>
 
 <style scoped>

@@ -158,7 +158,7 @@ const fetchGanttData = async () => {
       projectName: ms.milestoneName || '제목 없음',
       startDate: dayjs(ms.startDate).format('YYYY.MM.DD'),
       endDate: dayjs(ms.endDate).format('YYYY.MM.DD'),
-      expanded: true,
+      expanded: true, // task 펼치기 : true
 
       tasks: (ms.tasks || []).map(t => ({
         id: t.taskId,
