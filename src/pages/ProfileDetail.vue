@@ -140,9 +140,7 @@ import {
   fetchMyProjectHistory
 } from '@/api/profile'
 
-/* =======================
-   Chart.js 설정
-======================= */
+//Chart.js 설정
 Chart.register(
     RadarController,
     RadialLinearScale,
@@ -152,9 +150,7 @@ Chart.register(
     Tooltip
 )
 
-/* =======================
-   상태
-======================= */
+// 상태
 const isMyProfile = true
 
 // 기본 정보
@@ -171,9 +167,7 @@ const showSkillModal = ref(false)
 // 프로젝트 히스토리
 const projects = ref<any[]>([])
 
-/* =======================
-   차트
-======================= */
+// 차트
 const skillChartRef = ref<HTMLCanvasElement | null>(null)
 let skillChart: Chart | null = null
 
@@ -215,9 +209,7 @@ const updateChart = () => {
   skillChart.update()
 }
 
-/* =======================
-   API 로드 함수
-======================= */
+// API 로드 함수
 const loadBasicProfile = async () => {
   const res = await fetchMyProfile()
   const d = res.data.data
@@ -251,17 +243,16 @@ const loadTechStacks = async () => {
 
 const loadProjectHistory = async () => {
   const res = await fetchMyProjectHistory()
+
   projects.value = res.data.data.map((p: any) => ({
     name: p.projectName,
     role: p.myJobName,
     period: `${p.startDate} ~ ${p.endDate}`,
-    techs: p.contributed.map((c: any) => c.techName)
+    techs: (p.contributedTechs ?? []).map((c: any) => c.techName)
   }))
 }
 
-/* =======================
-   액션
-======================= */
+// 액션
 const toggleSkillEdit = () => {
   isSkillEditing.value = !isSkillEditing.value
 }
@@ -277,9 +268,6 @@ const handleSkillSave = (updatedSkills: any[]) => {
   showSkillModal.value = false
 }
 
-/* =======================
-   마운트
-======================= */
 onMounted(async () => {
   await loadBasicProfile()
   await loadTechStacks()
