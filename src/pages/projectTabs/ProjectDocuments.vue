@@ -131,7 +131,6 @@ const fetchWeeklyReports = async () => {
 
     weeklyReports.value = data.content.map((report: any) => ({
       ...report,
-      // 만약 status가 undefined거나 null이면 'DRAFT'를 기본값으로 사용
       week: report.weekLabel || (report.weekNo ? `${report.year} W${report.weekNo}` : '주차 정보 없음'),
       status: report.status || 'DRAFT'
     }));
