@@ -134,67 +134,52 @@
 import { ref, onMounted } from 'vue'
 import { Chart, RadarController, RadialLinearScale, PointElement, LineElement, Filler, Tooltip } from 'chart.js'
 import SkillRegisterModal from '@/components/common/SkillRegisterModal.vue'
+import {
+  fetchMyProfile,
+  fetchMyTechStacks,
+  fetchMyProjectHistory
+} from '@/api/profile'
 
-Chart.register(RadarController, RadialLinearScale, PointElement, LineElement, Filler, Tooltip)
+/* =======================
+   Chart.js 설정
+======================= */
+Chart.register(
+    RadarController,
+    RadialLinearScale,
+    PointElement,
+    LineElement,
+    Filler,
+    Tooltip
+)
 
+/* =======================
+   상태
+======================= */
 const isMyProfile = true
 
-// 기본 정보 편집 상태 관리
+// 기본 정보
 const isEditing = ref(false)
-const editableLabels: string[] = ['생년월일', '이메일', '연락처', '직군']
+const editableLabels = ['생년월일', '이메일', '연락처', '직군']
 
-// 기술 스택 수정 모드 여부
+const infoItems = ref<{ label: string; value: string }[]>([])
+
+// 기술 스택
 const isSkillEditing = ref(false)
-
-const skillChartRef = ref<HTMLCanvasElement | null>(null)
+const skills = ref<{ name: string; level: number }[]>([])
 const showSkillModal = ref(false)
 
-const infoItems = ref([
-  { label: '이름', value: '홍길동' },
-  { label: '생년월일', value: '2000-01-01' },
-  { label: '이메일', value: 'example@alloc.com' },
-  { label: '연락처', value: '010-1234-5678' },
-  { label: '직군', value: '백엔드 개발자' },
-  { label: '부서', value: 'IT부서' },
-  { label: '근무형태', value: '정규직' },
-  { label: '직급', value: '대리' },
-  { label: '입사일', value: '2025-01-01' },
-  { label: '프로젝트 투입현황', value: '투입중' },
-])
+// 프로젝트 히스토리
+const projects = ref<any[]>([])
 
-// 직군 드롭다운 옵션 리스트
-const jobOptions = [
-  '프론트엔드 개발자',
-  '백엔드 개발자',
-  '풀스택 개발자',
-  'IOS 개발자',
-  '안드로이드 개발자',
-  'UI/UX 디자이너',
-  '기획자',
-  '데브옵스 엔지니어'
-]
+/* =======================
+   차트
+======================= */
+const skillChartRef = ref<HTMLCanvasElement | null>(null)
+let skillChart: Chart | null = null
 
-// skills 더미데이터
-const skills = ref([
-  { name: 'Spring Boot', level: 3 },
-  { name: 'JPA', level: 2 },
-  { name: 'MySQL', level: 3 },
-  { name: 'Docker', level: 2 },
-  { name: 'Redis', level: 1 },
-  { name: 'JavaScript', level: 1 },
-])
-
-const projects = [
-  { name: '프로젝트 A', role: 'Backend / PL', period: '2025.01.01 - 2025.12.31', techs: ['Spring Boot', 'JPA'] },
-  { name: '프로젝트 B', role: 'Backend', period: '2025.01.01 - 2025.12.31', techs: ['Kafka', 'Redis'] },
-  { name: '프로젝트 A', role: 'Backend / PL', period: '2025.01.01 - 2025.12.31', techs: ['Spring Boot', 'JPA'] },
-  { name: '프로젝트 B', role: 'Backend', period: '2025.01.01 - 2025.12.31', techs: ['Kafka', 'Redis'] },
-]
-
-let skillChart: InstanceType<typeof Chart> | null = null
-
-onMounted(() => {
+const initChart = () => {
   if (!skillChartRef.value) return
+
   skillChart = new Chart(skillChartRef.value, {
     type: 'radar',
     data: {
@@ -211,39 +196,96 @@ onMounted(() => {
       responsive: true,
       maintainAspectRatio: false,
       scales: {
-        r: { min: 0, max: 3, ticks: { display: false }, grid: { color: '#e2e8f0' } }
+        r: {
+          min: 0,
+          max: 3,
+          ticks: { display: false },
+          grid: { color: '#e2e8f0' }
+        }
       },
       plugins: { legend: { display: false } }
     }
   })
-})
+}
 
-// 수정 모드 토글
+const updateChart = () => {
+  if (!skillChart) return
+  skillChart.data.labels = skills.value.map(s => s.name)
+  skillChart.data.datasets[0].data = skills.value.map(s => s.level)
+  skillChart.update()
+}
+
+/* =======================
+   API 로드 함수
+======================= */
+const loadBasicProfile = async () => {
+  const res = await fetchMyProfile()
+  const d = res.data.data
+
+  infoItems.value = [
+    { label: '이름', value: d.userName },
+    { label: '생년월일', value: d.birthday },
+    { label: '이메일', value: d.email },
+    { label: '연락처', value: d.phone },
+    { label: '직군', value: d.jobName },
+    { label: '부서', value: d.deptName },
+    { label: '근무형태', value: d.employeeType },
+    { label: '입사일', value: d.hiringDate },
+    { label: '프로젝트 투입현황', value: d.projectStatus }
+  ]
+}
+
+const loadTechStacks = async () => {
+  const res = await fetchMyTechStacks()
+
+  skills.value = res.data.data.map((t: any) => {
+
+    return {
+      name: t.techName,
+      level: Number(t.proficiency.replace('LV', ''))
+    }
+  })
+
+  updateChart()
+}
+
+const loadProjectHistory = async () => {
+  const res = await fetchMyProjectHistory()
+  projects.value = res.data.data.map((p: any) => ({
+    name: p.projectName,
+    role: p.myJobName,
+    period: `${p.startDate} ~ ${p.endDate}`,
+    techs: p.contributed.map((c: any) => c.techName)
+  }))
+}
+
+/* =======================
+   액션
+======================= */
 const toggleSkillEdit = () => {
   isSkillEditing.value = !isSkillEditing.value
 }
 
-// 기술 스택 삭제 함수
 const removeSkill = (index: number) => {
   skills.value.splice(index, 1)
-  updateChart() // 차트 즉시 업데이트
+  updateChart()
 }
 
-// 차트 업데이트 공통 함수
-const updateChart = () => {
-  if (skillChart) {
-    skillChart.data.labels = skills.value.map(s => s.name)
-    skillChart.data.datasets[0].data = skills.value.map(s => s.level)
-    skillChart.update()
-  }
-}
-
-// 모달 저장 핸들러 수정
-const handleSkillSave = (updatedSkills: any) => {
+const handleSkillSave = (updatedSkills: any[]) => {
   skills.value = updatedSkills
   updateChart()
   showSkillModal.value = false
 }
+
+/* =======================
+   마운트
+======================= */
+onMounted(async () => {
+  await loadBasicProfile()
+  await loadTechStacks()
+  await loadProjectHistory()
+  initChart()
+})
 </script>
 
 <style scoped>
