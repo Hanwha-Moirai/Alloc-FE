@@ -25,11 +25,15 @@
 
         <select
             v-else-if="item.label === '직군'"
-            v-model="item.value"
+            v-model="selectedJobId"
             class="edit-input select-input"
         >
-          <option v-for="job in jobOptions" :key="job" :value="job">
-            {{ job }}
+          <option
+              v-for="job in jobOptions"
+              :key="job.jobId"
+              :value="job.jobId"
+          >
+            {{ job.jobName }}
           </option>
         </select>
 
@@ -54,7 +58,11 @@
         <button v-if="isMyProfile && !isEditing" class="edit-btn" @click="isEditing = true">
           수정
         </button>
-        <button v-else-if="isMyProfile && isEditing" class="save-btn" @click="isEditing = false">
+        <button
+            v-else-if="isMyProfile && isEditing"
+            class="save-btn"
+            @click="saveProfile"
+        >
           저장
         </button>
       </aside>
@@ -139,9 +147,11 @@ import {
   fetchMyTechStacks,
   fetchMyProjectHistory,
   updateMyTechStacks,
+  updateMyProfile,
   deleteMyTechStack,
   createMyTechStack
 } from '@/api/profile'
+import { fetchJobs } from '@/api/hr'
 
 //Chart.js 설정
 Chart.register(
@@ -161,6 +171,9 @@ const isEditing = ref(false)
 const editableLabels = ['생년월일', '이메일', '연락처', '직군']
 
 const infoItems = ref<{ label: string; value: string }[]>([])
+
+const jobOptions = ref<JobOption[]>([])
+const selectedJobId = ref<number | null>(null)
 
 // 기술 스택
 const isSkillEditing = ref(false)
@@ -223,6 +236,8 @@ const loadBasicProfile = async () => {
   const res = await fetchMyProfile()
   const d = res.data.data
 
+  selectedJobId.value = d.jobId
+
   infoItems.value = [
     { label: '이름', value: d.userName },
     { label: '생년월일', value: d.birthday },
@@ -234,6 +249,16 @@ const loadBasicProfile = async () => {
     { label: '입사일', value: d.hiringDate },
     { label: '프로젝트 투입현황', value: d.projectStatus }
   ]
+}
+
+type JobOption = {
+  jobId: number
+  jobName: string
+}
+
+const loadJobs = async () => {
+  const res = await fetchJobs()
+  jobOptions.value = res.data.data
 }
 
 const loadTechStacks = async () => {
@@ -313,7 +338,24 @@ const handleSkillSave = async (payload: {
   showSkillModal.value = false
 }
 
+const saveProfile = async () => {
+  const birthday = infoItems.value.find(i => i.label === '생년월일')?.value
+  const email = infoItems.value.find(i => i.label === '이메일')?.value
+  const phone = infoItems.value.find(i => i.label === '연락처')?.value
+
+  await updateMyProfile({
+    birthday,
+    email,
+    phone,
+    jobId: selectedJobId.value
+  })
+
+  isEditing.value = false
+  await loadBasicProfile()
+}
+
 onMounted(async () => {
+  await loadJobs()
   await loadBasicProfile()
   await loadTechStacks()
   await loadProjectHistory()

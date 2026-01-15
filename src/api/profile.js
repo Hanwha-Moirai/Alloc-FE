@@ -10,6 +10,11 @@ export const fetchMyProfile = () => {
     return axios.get('/api/users/me/profile')
 }
 
+// 기본 정보 수정
+export const updateMyProfile = (data) => {
+    return axios.put('/api/users/me/profile', data)
+}
+
 // 기술 스택
 export const fetchMyTechStacks = () => {
     return axios.get('/api/users/me/tech-stacks')
