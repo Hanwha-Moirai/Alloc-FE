@@ -249,7 +249,6 @@ const handleTaskDelete = async (taskId: number) => {
 </script>
 
 <style scoped>
-/* 보드를 감싸는 기본 여백 */
 .kanban-wrapper {
   padding-top: 10px;
 }
