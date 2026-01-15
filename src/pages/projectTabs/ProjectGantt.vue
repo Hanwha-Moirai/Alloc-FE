@@ -98,7 +98,7 @@
     </div>
 
     <div class="gantt-wrapper">
-      <ScheduleEditModal
+      <MilestoneEditModal
           v-if="isEditModalOpen"
           v-model="editingData"
           @close="isEditModalOpen = false"
@@ -107,7 +107,7 @@
     </div>
 
     <div class="gantt-wrapper">
-      <ScheduleDeleteModal
+      <MilestoneDeleteModal
           v-if="isDeleteModalOpen"
           @close="isDeleteModalOpen = false"
           @confirm="confirmDelete"
@@ -117,11 +117,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import {ref, computed, onMounted, watch} from 'vue'
 import { useRoute } from 'vue-router'
 import dayjs from 'dayjs'
-import ScheduleEditModal from '@/components/common/ScheduleEditModal.vue'
-import ScheduleDeleteModal from '@/components/common/ScheduleDeleteModal.vue'
+import MilestoneEditModal from '@/components/common/MilestoneEditModal.vue'
+import MilestoneDeleteModal from '@/components/common/MilestoneDeleteModal.vue'
 import { getGanttTasks, getGanttMilestones } from '@/api/gantt'
 
 const route = useRoute()
@@ -135,6 +135,13 @@ const isLoading = ref(true)
 const isViewMenuOpen = ref(false)
 const currentViewMode = ref('월간')
 const viewModes = ['일간', '주간', '월간']
+
+const props = defineProps({
+  refreshTrigger: {
+    type: Number,
+    default: 0
+  }
+});
 
 // API 데이터 로드 함수
 const fetchGanttData = async () => {
@@ -170,6 +177,11 @@ const fetchGanttData = async () => {
 };
 
 onMounted(fetchGanttData)
+
+watch(() => props.refreshTrigger, () => {
+  console.log("부모로부터 데이터 갱신 요청을 받았습니다.");
+  fetchGanttData();
+});
 
 // --- 보기 모드별 하루당 차지하는 픽셀 폭 (동적 계산) ---
 const pixelPerDay = computed(() => {

@@ -27,7 +27,7 @@
           <button class="add-btn" @click="showAddModal = true">+ 태스크 추가하기</button>
         </div>
 
-        <div v-if="isActive('gantt')" class="schedule-actions">
+        <div v-if="isActive('gantt')" class="milstone-actions">
           <button class="add-btn" @click="showMilestoneAddModal = true">+ 마일스톤 추가하기</button>
         </div>
 
@@ -37,7 +37,7 @@
       </div>
     </div>
 
-    <router-view :is-editing="isEditing" />
+    <router-view :is-editing="isEditing" :refresh-trigger="refreshKey" />
 
     <TaskAddModal
         v-if="showAddModal"
@@ -52,7 +52,7 @@
         @filter="handleFilter"
     />
 
-    <ScheduleAddModal
+    <MilestoneAddModal
         v-if="showMilestoneAddModal"
         :is-open="showMilestoneAddModal"
         @close="showMilestoneAddModal = false"
@@ -74,8 +74,10 @@ import { useRoute, useRouter } from 'vue-router'
 
 import TaskAddModal from '@/components/common/TaskAddModal.vue'
 import TaskFilterDrawer from '@/components/common/TaskFilterDrawer.vue'
-import ScheduleAddModal from '@/components/common/ScheduleAddModal.vue'
+import MilestoneAddModal from '@/components/common/MilestoneAddModal.vue'
 import DocCreateModal from '@/components/common/DocCreateModal.vue'
+
+import { createMilestone } from '@/api/gantt'
 
 const route = useRoute()
 const router = useRouter()
@@ -116,9 +118,36 @@ const handleFilter = (filterData: any) => {
   console.log('적용할 필터:', filterData)
 }
 
-const handleAddMilestone = (newMilestone: any) => {
-  console.log('새로운 마일스톤 데이터:', newMilestone)
-  showMilestoneAddModal.value = false
+const refreshKey = ref(0)
+
+const handleAddMilestone = async (newMilestone: any) => {
+  try {
+    const requestData = {
+      milestoneName: newMilestone.projectName,
+      startDate: newMilestone.startDate.replace(/\./g, '-'),
+      endDate: newMilestone.endDate.replace(/\./g, '-'),
+      achievementRate: 0
+    }
+
+    const response = await createMilestone(Number(projectId), requestData)
+
+    if (response.data && (response.data.success || response.data.status === 'SUCCESS')) {
+      alert('마일스톤이 등록되었습니다.')
+      showMilestoneAddModal.value = false
+
+      refreshKey.value++
+    } else {
+      alert(response.data?.message || '등록에 실패했습니다.')
+    }
+  } catch (error) {
+    console.error('마일스톤 등록 실패:', error)
+
+    if (error.response?.status === 403) {
+      alert('마일스톤 생성 권한이 없습니다. (PM 전용)')
+    } else {
+      alert('서버 오류가 발생했습니다. 로그를 확인해주세요.')
+    }
+  }
 }
 
 const handleCreateDoc = (data: any) => {

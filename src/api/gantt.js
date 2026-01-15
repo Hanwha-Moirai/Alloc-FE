@@ -10,3 +10,8 @@ export const getGanttTasks = (projectId) => {
 export const getGanttMilestones = (projectId) => {
     return axios.get(`/api/projects/${projectId}/ganttchart/milestones`);
 };
+
+// 마일스톤 생성 API
+export const createMilestone = (projectId, data) => {
+    return axios.post(`/api/projects/${projectId}/ganttchart/milestones`, data);
+};
