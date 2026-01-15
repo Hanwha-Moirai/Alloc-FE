@@ -122,7 +122,7 @@ import { useRoute } from 'vue-router'
 import dayjs from 'dayjs'
 import MilestoneEditModal from '@/components/common/MilestoneEditModal.vue'
 import MilestoneDeleteModal from '@/components/common/MilestoneDeleteModal.vue'
-import { getGanttTasks, getGanttMilestones } from '@/api/gantt'
+import { getGanttMilestones, updateMilestone, deleteMilestone } from '@/api/gantt'
 
 const route = useRoute()
 const projectId = Number(route.params.projectId)
@@ -270,14 +270,11 @@ const menuPos = ref({ top: '0px', left: '0px' });
 const openMilestoneMenu = (event: MouseEvent, group: any) => {
   activeMenuId.value = group.id;
 
-  // 클릭한 버튼의 위치를 기준으로 메뉴 위치 설정
-  // fixed 포지션이므로 뷰포트 좌표(client)를 그대로 사용합니다.
   menuPos.value = {
     top: `${event.clientY + 5}px`,
     left: `${event.clientX - 100}px`
   };
 
-  // 버블링 방지 및 즉시 닫기 방지를 위해 setTimeout 사용
   setTimeout(() => {
     window.addEventListener('click', closeHandler);
   }, 0);
@@ -301,31 +298,64 @@ const handleEdit = (id: number) => {
   activeMenuId.value = null;
 };
 
-const saveEdit = () => {
-  const index = scheduleData.value.findIndex(item => item.id === editingData.value.id);
-  if (index !== -1) {
-    scheduleData.value[index] = { ...editingData.value };
-    isEditModalOpen.value = false;
+// 마일스톤 수정 로직
+const saveEdit = async (updatedData: any) => {
+  try {
+    const requestData = {
+      milestoneName: updatedData.projectName,
+      startDate: updatedData.startDate.replace(/\./g, '-'),
+      endDate: updatedData.endDate.replace(/\./g, '-'),
+      achievementRate: updatedData.achievementRate || 0
+    };
+
+    const response = await updateMilestone(projectId, updatedData.id, requestData);
+
+    if (response.data.success || response.status === 200) {
+      alert('마일스톤이 수정되었습니다.');
+      isEditModalOpen.value = false;
+      await fetchGanttData(); // 데이터 재조회
+    }
+  } catch (error: any) {
+    console.error("수정 실패:", error);
+    alert(error.response?.data?.message || '수정 중 오류가 발생했습니다.');
+  }
+};
+
+// 마일스톤 삭제 로직
+const handleDelete = (id: number) => {
+  console.log("삭제할 마일스톤 ID 선택됨:", id); // <-- ID가 제대로 찍히는지 확인!
+  targetDeleteId.value = id;
+  isDeleteModalOpen.value = true;
+  activeMenuId.value = null;
+};
+
+const confirmDelete = async () => {
+  if (targetDeleteId.value === null) {
+    console.error("삭제할 ID가 없습니다!");
+    return;
+  }
+
+  try {
+    console.log(`서버로 삭제 요청 보냄: 프로젝트=${projectId}, 마일스톤=${targetDeleteId.value}`);
+
+    // 이 함수의 return값이 success인지 확인
+    const response = await deleteMilestone(projectId, targetDeleteId.value);
+
+    console.log("서버 응답:", response.data);
+
+    if (response.data.success || response.status === 200) {
+      alert('삭제되었습니다.');
+      isDeleteModalOpen.value = false;
+      targetDeleteId.value = null;
+      await fetchGanttData(); // 새로고침
+    }
+  } catch (error) {
+    console.error("삭제 요청 중 에러 발생:", error);
   }
 };
 
 const isDeleteModalOpen = ref(false);
 const targetDeleteId = ref<number | null>(null);
-
-const handleDelete = (id: number) => {
-  targetDeleteId.value = id;
-  isDeleteModalOpen.value = true;
-  activeMenuId.value = null; // 메뉴 닫기
-};
-
-// 2. 삭제 모달에서 최종 확인 시
-const confirmDelete = () => {
-  if (targetDeleteId.value !== null) {
-    scheduleData.value = scheduleData.value.filter(item => item.id !== targetDeleteId.value);
-    isDeleteModalOpen.value = false;
-    targetDeleteId.value = null;
-  }
-}
 </script>
 
 <style scoped>

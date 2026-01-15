@@ -15,3 +15,13 @@ export const getGanttMilestones = (projectId) => {
 export const createMilestone = (projectId, data) => {
     return axios.post(`/api/projects/${projectId}/ganttchart/milestones`, data);
 };
+
+// 마일스톤 수정 (Patch)
+export const updateMilestone = (projectId, milestoneId, data) => {
+    return axios.patch(`/api/projects/${projectId}/ganttchart/milestones/${milestoneId}`, data);
+};
+
+// 마일스톤 삭제 (Delete)
+export const deleteMilestone = (projectId, milestoneId) => {
+    return axios.delete(`/api/projects/${projectId}/ganttchart/milestones/${milestoneId}`);
+};

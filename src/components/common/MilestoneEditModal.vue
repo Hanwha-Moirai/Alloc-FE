@@ -68,9 +68,8 @@ const formattedEndDate = computed({
 })
 
 const handleSave = () => {
-  // 변경된 데이터를 부모에게 전달
   emit('update:modelValue', { ...editableData })
-  emit('save')
+  emit('save', { ...editableData })
 }
 
 const close = () => emit('close')
