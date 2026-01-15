@@ -22,40 +22,46 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { jwtDecode } from 'jwt-decode'
+import { fetchMyProfileSummary } from '@/api/profile';
 
 const router = useRouter()
 
-/* ===== JWT 파싱 ===== */
-const token = localStorage.getItem('accessToken')
+// 상태
+const profile = ref<{
+  userName: string
+  jobName: string
+  titleName: string
+  profileImageUrl: string
+} | null>(null)
 
-let payload: any = null
-if (token) {
+// API 호출
+const loadProfile = async () => {
   try {
-    payload = jwtDecode(token)
+    const res = await fetchMyProfileSummary()
+    profile.value = res.data.data
   } catch (e) {
-    console.error('JWT decode failed', e)
+    console.error('프로필 요약 조회 실패', e)
   }
 }
 
-/* ===== 표시용 데이터 ===== */
-const displayName = computed(() => {
-  // name 없으니 email 또는 userId 사용
-  return payload?.email ?? `USER-${payload?.sub ?? ''}`
+onMounted(() => {
+  loadProfile()
 })
+
+// 표시용
+const displayName = computed(() => profile.value?.userName ?? '-')
 
 const displayRole = computed(() => {
-  if (payload?.role === 'PM') return 'Project Manager'
-  if (payload?.role === 'USER') return 'Member'
-  return payload?.role ?? ''
+  // 직책 + 직군 같이 보여주고 싶으면
+  if (!profile.value) return '-'
+  return `${profile.value.titleName} · ${profile.value.jobName}`
 })
 
-/* ===== 액션 ===== */
+// 액션
 const goProfile = () => {
-  if (!payload?.sub) return
-  router.push(`/profile/${payload.sub}`)
+  router.push('/my/profile')
 }
 
 const logout = () => {
