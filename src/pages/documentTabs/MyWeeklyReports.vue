@@ -63,19 +63,20 @@ const totalPages = ref(0);
 // 데이터 조회 함수
 const fetchWeeklyReports = async () => {
   try {
-    const hasSearchCondition =
-        props.searchQuery ||
-        props.startDate ||
-        props.endDate;
+    let res;
+    const hasCondition = props.searchQuery || props.startDate || props.endDate;
 
-    const res = hasSearchCondition
-        ? await searchMyWeeklyReports({
-          page: page.value,
-          projectName: props.searchQuery || null,
-          from: props.startDate || null,
-          to: props.endDate || null
-        })
-        : await getMyWeeklyReports(page.value);
+    if (hasCondition) {
+      res = await searchMyWeeklyReports({
+        page: page.value,
+        size: 10,
+        projectName: props.searchQuery,
+        from: props.startDate,
+        to: props.endDate
+      });
+    } else {
+      res = await getMyWeeklyReports(page.value);
+    }
 
     const responseData = res.data.data;
 
@@ -84,7 +85,7 @@ const fetchWeeklyReports = async () => {
         id: item.reportId,
         projectId: item.projectId,
         projectName: item.projectName,
-        week: item.weekLabel ?? '-',
+        week: item.weekLabel || `${item.year} W${item.weekNo}`,
         createdAt: formatDate(item.createdAt),
         updatedAt: formatDate(item.updatedAt),
         status: item.status || 'DRAFT'
@@ -95,11 +96,11 @@ const fetchWeeklyReports = async () => {
       totalPages.value = 0;
     }
   } catch (error) {
-    console.error('조회 실패:', error);
+    console.error("주간보고 데이터 로드 실패:", error);
+    weeklyData.value = [];
   }
 };
 
-// 검색 조건 변경 시 즉시 재조회
 watch(
     () => [props.searchQuery, props.startDate, props.endDate],
     () => {

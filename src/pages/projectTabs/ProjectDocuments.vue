@@ -44,7 +44,7 @@
               class="clickable-row"
               @click="goWeeklyDetail(report.reportId)"
           >
-            <td>{{ report.year }} W{{ report.weekNo }}</td>
+            <td>{{ report.week }}</td>
             <td>{{ report.reportId }}</td>
             <td>{{ formatDate(report.createdAt) }}</td>
             <td>{{ formatDate(report.updatedAt) }}</td>
@@ -132,6 +132,7 @@ const fetchWeeklyReports = async () => {
     weeklyReports.value = data.content.map((report: any) => ({
       ...report,
       // 만약 status가 undefined거나 null이면 'DRAFT'를 기본값으로 사용
+      week: report.weekLabel || (report.weekNo ? `${report.year} W${report.weekNo}` : '주차 정보 없음'),
       status: report.status || 'DRAFT'
     }));
 
