@@ -99,6 +99,8 @@
       v-if="showModal"
       :task="selectedTask"
       @close="closeModal"
+      @save="saveTaskEdit"
+      @delete="handleTaskDelete"
   />
 </template>
 
@@ -107,7 +109,7 @@ import {ref, onMounted, watch} from 'vue'
 import { useRoute } from 'vue-router'
 import dayjs from 'dayjs'
 import TaskDetailModal from '@/components/common/TaskDetailModal.vue'
-import { getGanttTasks } from '@/api/gantt'
+import { getGanttTasks, updateTask, deleteTask, completeTask } from '@/api/gantt'
 
 const route = useRoute()
 const projectId = Number(route.params.projectId)
@@ -192,8 +194,58 @@ const openTask = (task: any) => {
 const closeModal = () => {
   showModal.value = false
   selectedTask.value = null
-  fetchTasks() // 변경 사항이 있을 수 있으므로 새로고침
+  fetchTasks()
 }
+
+// 태스크 수정 저장 로직
+const saveTaskEdit = async (updatedData: any) => {
+  try {
+    const formatDate = (date: string) => date?.replace(/\./g, '-') || null;
+
+    const statusMap: Record<string, string> = {
+      'IN_PROGRESS': 'INPROGRESS',
+      'TO_DO': 'TODO'
+    };
+
+    const requestData = {
+      milestoneId: Number(updatedData.milestoneId || 1),
+      assigneeId: Number(updatedData.assigneeId || 9),
+      taskCategory: updatedData.task_category,
+      taskName: updatedData.title,
+      taskDescription: updatedData.description,
+      taskStatus: statusMap[updatedData.status] || updatedData.status,
+      startDate: formatDate(updatedData.startDate),
+      endDate: formatDate(updatedData.endDate)
+    };
+
+    const { status, data } = await updateTask(projectId, updatedData.id, requestData);
+
+    if (status === 200 || data.success) {
+      alert('성공적으로 수정되었습니다.');
+      showModal.value = false;
+      await fetchTasks();
+    }
+  } catch (error: any) {
+    const errorMsg = error.response?.data?.message || '수정 중 오류가 발생했습니다.';
+    console.error("수정 실패:", error.response?.data);
+    alert(`수정 실패: ${errorMsg}`);
+  }
+};
+
+// 태스크 삭제 로직
+const handleTaskDelete = async (taskId: number) => {
+  try {
+    const response = await deleteTask(projectId, taskId);
+    if (response.data.success) {
+      alert('태스크가 삭제되었습니다.');
+      showModal.value = false;
+      await fetchTasks();
+    }
+  } catch (error: any) {
+    console.error("삭제 실패:", error);
+    alert('삭제 처리 중 오류가 발생했습니다.');
+  }
+};
 </script>
 
 <style scoped>

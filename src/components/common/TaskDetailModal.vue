@@ -93,38 +93,55 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, watch } from 'vue'
 
 const props = defineProps<{
   task: any
 }>()
 
-const emit = defineEmits(['close', 'update-task', 'delete'])
+const emit = defineEmits(['close', 'save', 'delete'])
 
-// 편집 모드 상태 관리
 const isEdit = ref(false)
-// 편집용 임시 데이터 (반응형 객체)
-const editableTask = reactive({ ...props.task })
+const editableTask = reactive<any>({})
 
-// 담당자 목록 (예시 데이터)
-const userList = ['김동리', '이철수', '박영희', '최민수']
+watch(() => props.task, (newTask) => {
+  if (newTask) {
+    Object.assign(editableTask, JSON.parse(JSON.stringify(newTask)))
+  }
+}, { immediate: true, deep: true })
 
 const toggleEdit = () => {
   if (!isEdit.value) {
-    // 수정 모드로 진입할 때 원본 데이터를 최신 상태로 복사
-    Object.assign(editableTask, props.task)
+    const taskCopy = JSON.parse(JSON.stringify(props.task));
+
+    if (taskCopy.startDate) taskCopy.startDate = taskCopy.startDate.replace(/\./g, '-');
+    if (taskCopy.endDate) taskCopy.endDate = taskCopy.endDate.replace(/\./g, '-');
+
+    Object.assign(editableTask, taskCopy);
   }
-  isEdit.value = !isEdit.value
-  console.log('Edit Mode:', isEdit.value) // 디버깅용 로그 추가
-}
+  isEdit.value = !isEdit.value;
+};
 
 const handleSave = () => {
-  emit('update-task', { ...editableTask })
-  isEdit.value = false
+  emit('save', { ...editableTask });
+  isEdit.value = false;
+};
+
+const handleDelete = () => {
+  if (confirm('이 태스크를 삭제하시겠습니까?')) {
+    emit('delete', props.task.id)
+  }
 }
 
-const close = () => emit('close')
+const close = () => {
+  isEdit.value = false
+  emit('close')
+}
 
+// 담당자 목록
+const userList = ['김동리', '이철수', '박영희', '최민수']
+
+// 매핑 상수
 const statusLabel = { TO_DO: 'To Do', IN_PROGRESS: 'In Progress', DONE: 'Done' }
 const categoryLabel = { DEVELOPMENT: '개발', TESTING: '테스트', BUGFIXING: '버그', DISTRIBUTION: '배포' }
 const categoryClass = { DEVELOPMENT: 'dev', TESTING: 'test', BUGFIXING: 'bug', DISTRIBUTION: 'dist' }
