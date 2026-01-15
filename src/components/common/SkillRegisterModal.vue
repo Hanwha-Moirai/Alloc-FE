@@ -11,14 +11,14 @@
       <div class="form-group">
         <label class="label">기술스택명</label>
         <div class="select-box">
-          <select v-model="skillName">
-            <option disabled value="">기술스택 선택</option>
+          <select v-model="selectedTechId" class="select-input">
+            <option disabled value="">기술을 선택하세요</option>
             <option
                 v-for="tech in techOptions"
-                :key="tech"
-                :value="tech"
+                :key="tech.techId"
+                :value="tech.techId"
             >
-              {{ tech }}
+              {{ tech.techName }}
             </option>
           </select>
         </div>
@@ -27,11 +27,10 @@
       <!-- 숙련도 -->
       <div class="form-group">
         <label class="label">숙련도</label>
-        <select v-model="level">
-          <option disabled value="">숙련도 선택</option>
-          <option :value="1">L1</option>
-          <option :value="2">L2</option>
-          <option :value="3">L3</option>
+        <select v-model="selectedLevel" class="select-input">
+          <option value="LV1">LV1</option>
+          <option value="LV2">LV2</option>
+          <option value="LV3">LV3</option>
         </select>
       </div>
 
@@ -51,37 +50,62 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { fetchTechStacks } from '@/api/hr'
 
+// emit 정의
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'submit', payload: { name: string; level: number }): void
+  (e: 'save', payload: {
+    techId: number
+    level: number
+  }): void
 }>()
 
-const techOptions = [
-  'Spring Boot',
-  'JPA',
-  'MySQL',
-  'Docker',
-  'Redis',
-  'JavaScript',
-]
+/* ======================
+   상태
+====================== */
+const selectedTechId = ref<number | null>(null)
+const selectedLevel = ref<'LV1' | 'LV2' | 'LV3'>('LV1')
 
-const skillName = ref('')
-const level = ref<number | ''>('')
+const techOptions = ref<
+    { techId: number; techName: string }[]
+>([])
 
+/* ======================
+   유효성
+====================== */
 const isValid = computed(() => {
-  return skillName.value !== '' && level.value !== ''
+  return selectedTechId.value !== null
 })
 
+/* ======================
+   API 로드
+====================== */
+onMounted(async () => {
+  const res = await fetchTechStacks({ size: 50 })
+
+  // HrQueryController 응답 구조 기준
+  techOptions.value = res.data.data.items
+})
+
+/* ======================
+   액션
+====================== */
 const close = () => emit('close')
 
 const submit = () => {
   if (!isValid.value) return
 
-  emit('submit', {
-    name: skillName.value,
-    level: Number(level.value),
+  const selected = techOptions.value.find(
+      t => t.techId === selectedTechId.value
+  )
+
+  if (!selected) return
+
+  emit('save', {
+    techId: selected.techId,
+    level: Number(selectedLevel.value.replace('LV', ''))
   })
 
   close()

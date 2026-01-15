@@ -164,12 +164,13 @@ const infoItems = ref<{ label: string; value: string }[]>([])
 
 // 기술 스택
 const isSkillEditing = ref(false)
-const skills = ref<{
-  employeeTechId: number
+type SkillItem = {
+  employeeTechId: number | null
   techId: number
   name: string
   level: number
-}[]>([])
+}
+const skills = ref<SkillItem[]>([])
 const showSkillModal = ref(false)
 
 // 프로젝트 히스토리
@@ -264,27 +265,12 @@ const loadProjectHistory = async () => {
 // 액션
 const toggleSkillEdit = async () => {
   if (isSkillEditing.value) {
-    // 1️⃣ 삭제 처리
+    // 삭제만 처리
     for (const employeeTechId of deletedTechIds.value) {
       await deleteMyTechStack(employeeTechId)
     }
 
-    // 2️⃣ 신규 추가 처리
-    const newSkills = skills.value.filter(
-        s => !s.employeeTechId
-    )
-
-    for (const s of newSkills) {
-      await createMyTechStack({
-        techId: s.techId,
-        proficiency: `LV${s.level}`
-      })
-    }
-
-    // 초기화
     deletedTechIds.value = []
-
-    // 재조회
     await loadTechStacks()
   }
 
@@ -302,15 +288,26 @@ const removeSkill = (index: number) => {
   updateChart()
 }
 
-const handleSkillSave = (updatedSkills: any[]) => {
-  skills.value.push(
-      ...updatedSkills.map(s => ({
-        employeeTechId: null,
-        techId: s.techId,
-        name: s.name,
-        level: s.level
-      }))
-  )
+const handleSkillSave = async (payload: {
+  techId: number
+  name: string
+  level: number
+}) => {
+  // 즉시 DB 저장
+  const res = await createMyTechStack({
+    techId: payload.techId,
+    proficiency: `LV${payload.level}`
+  })
+
+  const saved = res.data.data
+
+  // 서버 응답 기준으로 상태 반영
+  skills.value.push({
+    employeeTechId: saved.employeeTechId,
+    techId: saved.techId,
+    name: saved.techName,
+    level: Number(saved.proficiency.replace('LV', ''))
+  })
 
   updateChart()
   showSkillModal.value = false
