@@ -197,57 +197,48 @@ const fetchCalendarData = async () => {
 
     const response = await getCalendarData(projectId, from, to, viewMode.value);
 
-    // 백엔드에서 준 실제 데이터 뭉치 확인 (로그에 items가 찍혔으므로 이를 활용)
-    const actualData = response.data;
-    if (!actualData || !actualData.items) {
-      console.warn("표시할 데이터가 없습니다.");
-      eventItems.value = [];
-      return;
-    }
+    const items = response.data?.items || [];
+    console.log(`=== 데이터 수신: ${items.length}개 ===`);
 
-    // 1. actualData.items를 바로 사용
-    const integratedList = actualData.items;
+    eventItems.value = items.map(item => {
+      const startDayjs = dayjs(item.start);
+      const endDayjs = dayjs(item.end);
 
-    console.log("통합된 리스트 개수:", integratedList.length);
-
-    // 2. UI 모델로 변환
-    eventItems.value = integratedList.map(item => ({
-      // 백엔드 필드명(id, title, startDate, type 등)을 대조하여 매핑
-      id: item.id,
-      title: item.title || item.name || '제목 없음',
-      date: dayjs(item.startDate || item.date).format('YYYY-MM-DD'),
-      startTime: item.startTime || '09:00',
-      duration: item.duration || 1,
-      // 백엔드에서 보내주는 item.type (TASK, EVENT, MILESTONE 등)에 따라 색상 지정
-      color: getCategoryColor(item.type),
-      borderColor: getCategoryBorderColor(item.type)
-    }));
+      return {
+        id: item.id,
+        title: item.title || '제목 없음',
+        date: startDayjs.format('YYYY-MM-DD'),
+        startTime: startDayjs.format('HH:mm'),
+        duration: endDayjs.diff(startDayjs, 'hour', true) || 1,
+        category: item.itemType,
+        color: getCategoryColor(item.itemType),
+        borderColor: getCategoryBorderColor(item.itemType)
+      };
+    });
 
   } catch (error) {
-    console.error("데이터 매핑 실패:", error);
+    console.error("데이터 로딩 실패:", error);
   }
 };
 
-// 도움 함수: 카테고리별 색상 지정
+//  카테고리별 색상 지정
 const getCategoryColor = (category: string) => {
   switch (category) {
-    case 'TASK': return '#dbeafe';      // 파란색 계열
-    case 'EVENT': return '#dcfce7';     // 초록색 계열
-    case 'MILESTONE': return '#fef9c3'; // 노란색 계열
-    default: return '#f3f4f6';
+    case 'VACATION': return '#fef9c3';
+    case 'PRIVATE':  return '#dcfce7';
+    case 'PUBLIC':   return '#dbeafe';
+    default:         return '#f3f4f6';
   }
 };
 
 const getCategoryBorderColor = (category: string) => {
   switch (category) {
-    case 'TASK': return '#3b82f6';
-    case 'EVENT': return '#22c55e';
-    case 'MILESTONE': return '#facc15';
-    default: return '#d1d5db';
+    case 'VACATION': return '#facc15';
+    case 'PRIVATE':  return '#22c55e';
+    case 'PUBLIC':   return '#3b82f6';
+    default:         return '#d1d5db';
   }
 };
-
-console.log(eventItems.value)
 
 // 날짜나 뷰가 바뀔 때마다 실행
 watch([selectedDate, viewMode], fetchCalendarData);
