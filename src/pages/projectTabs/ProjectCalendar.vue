@@ -57,10 +57,20 @@
 
         <section class="summary-section">
           <h3>✈️ 휴가</h3>
-          <div class="vacation-item">
-            <span class="dot blue"></span>
-            <span class="name">김현수</span>
-            <span class="range">01.02 ~ 01.05</span>
+          <ul v-if="vacationSchedules.length > 0">
+            <li
+                v-for="vacation in vacationSchedules"
+                :key="vacation.id"
+                class="vacation-item"
+            >
+              <span class="dot" :style="{ backgroundColor: vacation.color }"></span>
+              <span class="name">{{ vacation.name }}</span>
+              <span class="range">{{ vacation.range }}</span>
+            </li>
+          </ul>
+
+          <div v-else class="vacation-item no-data">
+            <span class="name">등록된 휴가가 없습니다.</span>
           </div>
         </section>
       </div>
@@ -222,21 +232,33 @@ const fetchCalendarData = async () => {
 };
 
 //  카테고리별 색상 지정
-const getCategoryColor = (category: string) => {
+const getCategoryColor = (category: string, title: string = '') => {
+  // 1. 제목에 '연차'가 포함되면 노란색
+  if (title.includes('연차')) return '#fef9c3';
+
+  // 2. 타입이 'EVENT'인 경우 (현재 모든 데이터가 EVENT로 오고 있음)
   switch (category) {
-    case 'VACATION': return '#fef9c3';
-    case 'PRIVATE':  return '#dcfce7';
-    case 'PUBLIC':   return '#dbeafe';
-    default:         return '#f3f4f6';
+    case 'EVENT':
+      return '#dcfce7'; // 일단 연한 초록색으로 표시
+    case 'PUBLIC':
+      return '#dbeafe'; // 파란색
+    case 'PRIVATE':
+      return '#f3f4f6'; // 회색
+    default:
+      return '#f3f4f6';
   }
 };
 
-const getCategoryBorderColor = (category: string) => {
+const getCategoryBorderColor = (category: string, title: string = '') => {
+  if (title.includes('연차')) return '#facc15';
+
   switch (category) {
-    case 'VACATION': return '#facc15';
-    case 'PRIVATE':  return '#22c55e';
-    case 'PUBLIC':   return '#3b82f6';
-    default:         return '#d1d5db';
+    case 'EVENT':
+      return '#22c55e'; // 진한 초록색
+    case 'PUBLIC':
+      return '#3b82f6';
+    default:
+      return '#d1d5db';
   }
 };
 
@@ -347,6 +369,23 @@ const tomorrowSchedules = computed(() => {
       .filter(event => event.date === tomorrow)
       .map(event => ({ name: event.title, time: event.startTime, color: event.borderColor }))
 })
+
+// 사이드바에 표시할 휴가 일정 추출
+const vacationSchedules = computed(() => {
+  return eventItems.value
+      .filter(event => event.category === 'VACATION' || event.title.includes('연차'))
+      .map(event => {
+        // 기간 표시를 위해 날짜 포맷팅 (01.17 ~ 01.17 형식)
+        const formattedDate = dayjs(event.date).format('MM.DD');
+
+        return {
+          id: event.id,
+          name: event.title, // '연차' 또는 '김현수 휴가' 등
+          range: `${formattedDate} ~ ${formattedDate}`, // 기간 데이터가 있다면 end를 활용해 더 정확히 표시 가능
+          color: event.borderColor
+        };
+      });
+});
 
 // 이벤트 스타일 계산
 const getEventStyle = (event: any) => {
