@@ -47,7 +47,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-// API 임포트
 import { getMyWeeklyReports, searchMyWeeklyReports } from '@/api/weeklyReport';
 
 const props = defineProps<{
@@ -64,46 +63,39 @@ const totalPages = ref(0);
 // 데이터 조회 함수
 const fetchWeeklyReports = async () => {
   try {
-    let res;
-    const hasCondition = props.searchQuery || props.startDate || props.endDate;
+    const hasSearchCondition =
+        props.searchQuery ||
+        props.startDate ||
+        props.endDate;
 
-    if (hasCondition) {
-      // 검색 API 호출 (/api/mydocs/report/search)
-      res = await searchMyWeeklyReports({
-        page: page.value,
-        keyword: props.searchQuery,
-        from: props.startDate,
-        to: props.endDate
-      });
+    const res = hasSearchCondition
+        ? await searchMyWeeklyReports({
+          page: page.value,
+          projectName: props.searchQuery || null,
+          from: props.startDate || null,
+          to: props.endDate || null
+        })
+        : await getMyWeeklyReports(page.value);
+
+    const responseData = res.data.data;
+
+    if (responseData && responseData.content) {
+      weeklyData.value = responseData.content.map((item: any) => ({
+        id: item.reportId,
+        projectId: item.projectId,
+        projectName: item.projectName,
+        week: item.weekLabel ?? '-',
+        createdAt: formatDate(item.createdAt),
+        updatedAt: formatDate(item.updatedAt),
+        status: item.status || 'DRAFT'
+      }));
+      totalPages.value = responseData.totalPages;
     } else {
-      // 일반 목록 조회 호출 (/api/mydocs/report)
-      res = await getMyWeeklyReports(page.value);
+      weeklyData.value = [];
+      totalPages.value = 0;
     }
-
-    const data = res.data.data;
-
-    console.log("--- Request 상세 정보 ---");
-    console.log("요청 URL:", res.config.url);
-    console.log("요청 메서드:", res.config.method);
-    console.log("보낸 파라미터(params):", res.config.params);
-
-    // 기존 응답 로그
-    console.log("백엔드 응답 데이터:", res.data);
-
-    // 백엔드 WeeklyReportSummaryResponse 필드 매핑
-    weeklyData.value = data.content.map((item: any) => ({
-      id: item.reportId,
-      projectId: item.projectId,
-      projectName: item.projectName,
-      week: `${item.year ?? ''} W${item.weekNo ?? item.week ?? ''}`,
-      createdAt: formatDate(item.createdAt),
-      updatedAt: formatDate(item.updatedAt),
-      status: item.status || 'DRAFT'
-    }));
-
-    totalPages.value = data.totalPages;
   } catch (error) {
-    console.error("주간보고 조회 실패:", error);
+    console.error('조회 실패:', error);
   }
 };
 

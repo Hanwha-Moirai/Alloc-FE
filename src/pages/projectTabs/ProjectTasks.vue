@@ -98,6 +98,7 @@
   <TaskDetailModal
       v-if="showModal"
       :task="selectedTask"
+      :milestone-list="[]"
       @close="closeModal"
       @save="saveTaskEdit"
       @delete="handleTaskDelete"
@@ -153,7 +154,6 @@ const fetchTasks = async () => {
     const rawData = response.data?.data || response.data || [];
 
     tasks.value = rawData.map((t: any) => {
-      // DB의 INPROGRESS를 프론트의 IN_PROGRESS로 변환하는 안전한 로직
       let mappedStatus = t.taskStatus;
       if (t.taskStatus === 'TODO') mappedStatus = 'TO_DO';
       if (t.taskStatus === 'INPROGRESS') mappedStatus = 'IN_PROGRESS';
