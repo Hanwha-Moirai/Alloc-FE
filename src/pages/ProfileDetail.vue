@@ -137,7 +137,10 @@ import SkillRegisterModal from '@/components/common/SkillRegisterModal.vue'
 import {
   fetchMyProfile,
   fetchMyTechStacks,
-  fetchMyProjectHistory
+  fetchMyProjectHistory,
+  updateMyTechStacks,
+  deleteMyTechStack,
+  createMyTechStack
 } from '@/api/profile'
 
 //Chart.js 설정
@@ -161,7 +164,12 @@ const infoItems = ref<{ label: string; value: string }[]>([])
 
 // 기술 스택
 const isSkillEditing = ref(false)
-const skills = ref<{ name: string; level: number }[]>([])
+const skills = ref<{
+  employeeTechId: number
+  techId: number
+  name: string
+  level: number
+}[]>([])
 const showSkillModal = ref(false)
 
 // 프로젝트 히스토리
@@ -230,16 +238,17 @@ const loadBasicProfile = async () => {
 const loadTechStacks = async () => {
   const res = await fetchMyTechStacks()
 
-  skills.value = res.data.data.map((t: any) => {
-
-    return {
-      name: t.techName,
-      level: Number(t.proficiency.replace('LV', ''))
-    }
-  })
+  skills.value = res.data.data.map((t: any) => ({
+    employeeTechId: t.employeeTechId,
+    techId: t.techId,
+    name: t.techName,
+    level: Number(t.proficiency.replace('LV', ''))
+  }))
 
   updateChart()
 }
+
+const deletedTechIds = ref<number[]>([])
 
 const loadProjectHistory = async () => {
   const res = await fetchMyProjectHistory()
@@ -253,17 +262,56 @@ const loadProjectHistory = async () => {
 }
 
 // 액션
-const toggleSkillEdit = () => {
+const toggleSkillEdit = async () => {
+  if (isSkillEditing.value) {
+    // 1️⃣ 삭제 처리
+    for (const employeeTechId of deletedTechIds.value) {
+      await deleteMyTechStack(employeeTechId)
+    }
+
+    // 2️⃣ 신규 추가 처리
+    const newSkills = skills.value.filter(
+        s => !s.employeeTechId
+    )
+
+    for (const s of newSkills) {
+      await createMyTechStack({
+        techId: s.techId,
+        proficiency: `LV${s.level}`
+      })
+    }
+
+    // 초기화
+    deletedTechIds.value = []
+
+    // 재조회
+    await loadTechStacks()
+  }
+
   isSkillEditing.value = !isSkillEditing.value
 }
 
 const removeSkill = (index: number) => {
+  const removed = skills.value[index]
+
+  if (removed.employeeTechId) {
+    deletedTechIds.value.push(removed.employeeTechId)
+  }
+
   skills.value.splice(index, 1)
   updateChart()
 }
 
 const handleSkillSave = (updatedSkills: any[]) => {
-  skills.value = updatedSkills
+  skills.value.push(
+      ...updatedSkills.map(s => ({
+        employeeTechId: null,
+        techId: s.techId,
+        name: s.name,
+        level: s.level
+      }))
+  )
+
   updateChart()
   showSkillModal.value = false
 }

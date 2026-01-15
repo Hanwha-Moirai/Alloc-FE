@@ -15,6 +15,21 @@ export const fetchMyTechStacks = () => {
     return axios.get('/api/users/me/tech-stacks')
 }
 
+// 기술 스택 수정
+export const updateMyTechStacks = (payload) => {
+    return axios.put('/api/users/me/tech-stacks', payload)
+}
+
+// 기술 스택 삭제
+export const deleteMyTechStack = (employeeTechId) => {
+    return axios.delete(`/api/users/me/tech-stacks/${employeeTechId}`)
+}
+
+// 기술 스택 추가
+export const createMyTechStack = (payload) => {
+    return axios.post('/api/users/me/tech-stacks', payload)
+}
+
 // 프로젝트 히스토리
 export const fetchMyProjectHistory = (page = 0, size = 10) => {
     return axios.get('/api/users/me/project-history', {
