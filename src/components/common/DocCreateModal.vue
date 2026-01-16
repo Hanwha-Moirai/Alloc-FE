@@ -66,8 +66,13 @@ const form = reactive({
 const handleCreate = () => {
   if (!form.projectId) return alert('프로젝트를 선택해주세요.');
 
-  const tempDocId = Date.now();
-  router.push(`/projects/${form.projectId}/docs/${form.docType}/${tempDocId}`);
+  if (form.docType === 'meeting') {
+    // 회의록 생성 페이지로 이동
+    router.push(`/projects/${form.projectId}/docs/meeting/create`);
+  } else if (form.docType === 'weekly') {
+    // 주간보고 생성 페이지로 이동
+    router.push(`/projects/${form.projectId}/docs/weekly/create`);
+  }
 
   emit('close');
 };

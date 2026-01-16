@@ -84,6 +84,11 @@ const router = createRouter({
                             component: () => import('@/pages/MeetingRecordCreate.vue'),
                         },
                         {
+                            path: 'docs/weekly/create',
+                            name: 'WeeklyReportCreate',
+                            component: () => import('@/pages/WeeklyReportCreate.vue'),
+                        },
+                        {
                             path: 'docs/:type/:docId',
                             name: 'ProjectDocDetail',
                             component: () => import('@/pages/projectTabs/DocDetailContainer.vue'),
