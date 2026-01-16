@@ -27,7 +27,7 @@
             </span>
             <h4 class="card-title">{{ task.title }}</h4>
             <p class="card-desc">{{ task.description }}</p>
-            <span class="user-name">{{ task.assignee }}</span>
+            <span class="user-name">{{ task.userName }}</span>
           </div>
         </div>
       </div>
@@ -57,7 +57,7 @@
             </span>
             <h4 class="card-title">{{ task.title }}</h4>
             <p class="card-desc">{{ task.description }}</p>
-            <span class="user-name">{{ task.assignee }}</span>
+            <span class="user-name">{{ task.userName }}</span>
           </div>
         </div>
       </div>
@@ -87,7 +87,7 @@
             </span>
             <h4 class="card-title">{{ task.title }}</h4>
             <p class="card-desc">{{ task.description }}</p>
-            <span class="user-name">{{ task.assignee }}</span>
+            <span class="user-name">{{ task.userName }}</span>
           </div>
         </div>
       </div>
@@ -164,7 +164,7 @@ const fetchTasks = async () => {
         status: mappedStatus,
         startDate: dayjs(t.startDate).format('YYYY.MM.DD'),
         endDate: dayjs(t.endDate).format('YYYY.MM.DD'),
-        assignee: t.userId,
+        userName: t.userName,
         description: t.taskDescription,
         task_category: t.taskCategory
       };
