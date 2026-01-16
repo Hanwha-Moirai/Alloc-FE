@@ -16,6 +16,6 @@ export const updateProject = (projectId, payload) => {
 }
 
 // 프로젝트 등록
-export const createProject = (payload) => {
-    return axios.post('/api/projects', payload)
+export const createProject = (data) => {
+    return axios.post('/api/projects', data)
 }
