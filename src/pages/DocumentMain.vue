@@ -78,6 +78,7 @@
 
     <DocCreateModal
         :is-open="showDocModal"
+        :project-list="myProjectList"
         @close="showDocModal = false"
         @create="handleCreateDoc"
     />
@@ -85,10 +86,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import {onMounted, ref, watch} from 'vue';
 import MyWeeklyReports from '@/pages/documentTabs/MyWeeklyReports.vue';
 import MyMeetingReports from '@/pages/documentTabs/MyMeetingReports.vue';
 import DocCreateModal from '@/components/common/DocCreateModal.vue';
+import { fetchMyProjectHistory } from '@/api/profile'
 
 const currentTab = ref('weekly');
 const searchQuery = ref('');
@@ -96,16 +98,33 @@ const startDate = ref('');
 const endDate = ref('');
 
 const showDocModal = ref(false);
-
+const myProjectList = ref<{ id: number; name: string }[]>([])
 
 const handleCreateDoc = (data: any) => {
   console.log('생성 데이터:', data);
   showDocModal.value = false;
 };
 
+const fetchMyProjects = async () => {
+  try {
+    const res = await fetchMyProjectHistory()
+
+    myProjectList.value = res.data.data.map((p: any) => ({
+      id: p.projectId,
+      name: p.projectName
+    }))
+  } catch (e) {
+    console.error('내 프로젝트 목록 조회 실패', e)
+  }
+}
+
 watch([startDate, endDate], () => {
   console.log('[DocumentMain DATE]', startDate.value, endDate.value);
 });
+
+onMounted(() => {
+  fetchMyProjects()
+})
 </script>
 
 <style scoped>
