@@ -148,10 +148,10 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, reactive } from 'vue'
+import { onMounted, ref, reactive, watch, toRefs } from 'vue'
 import { useRoute } from 'vue-router'
 import { Chart, ArcElement, Tooltip, DoughnutController } from 'chart.js'
-import { fetchProjectDetail } from '@/api/project'
+import { fetchProjectDetail, updateProject } from '@/api/project'
 
 Chart.register(ArcElement, Tooltip, DoughnutController)
 
@@ -165,7 +165,9 @@ const props = defineProps({
     type: Boolean,
     default: false
   }
-});
+})
+
+const { isEditing } = toRefs(props)
 
 const form = reactive({
   projectName: '',
@@ -255,6 +257,32 @@ const loadProjectDetail = async () => {
     console.error('프로젝트 상세 조회 실패', e)
   }
 }
+
+watch(
+    isEditing,
+    async (now, prev) => {
+      if (prev === true && now === false) {
+        try {
+          const payload = {
+            projectName: form.projectName,
+            status: form.status,
+            projectType: form.type,
+            startDate: form.startDate,
+            endDate: form.endDate,
+            partners: form.client,
+            description: form.description,
+            predictedCost: form.budget
+          }
+
+          await updateProject(projectId, payload)
+          alert('프로젝트가 수정되었습니다.')
+        } catch (e) {
+          console.error('프로젝트 수정 실패', e)
+          alert('프로젝트 수정에 실패했습니다.')
+        }
+      }
+    }
+)
 
 onMounted(() => {
   loadProjectDetail()

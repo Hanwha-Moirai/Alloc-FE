@@ -99,10 +99,6 @@ const isRecommendPage = computed(() => {
 
 // --- Methods ---
 const toggleEdit = () => {
-  if (isEditing.value) {
-    // 저장 로직 (필요 시 API 호출)
-    alert('저장되었습니다.')
-  }
   isEditing.value = !isEditing.value
 }
 

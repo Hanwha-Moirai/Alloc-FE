@@ -9,3 +9,13 @@ export const fetchProjectList = () => {
 export const fetchProjectDetail = (projectId) => {
     return axios.get(`/api/projects/${projectId}`)
 }
+
+// 프로젝트 수정
+export const updateProject = (projectId, payload) => {
+    return axios.put(`/api/projects/${projectId}`, payload)
+}
+
+// 프로젝트 등록
+export const createProject = (payload) => {
+    return axios.post('/api/projects', payload)
+}
