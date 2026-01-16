@@ -149,9 +149,14 @@
 
 <script setup lang="ts">
 import { onMounted, ref, reactive } from 'vue'
+import { useRoute } from 'vue-router'
 import { Chart, ArcElement, Tooltip, DoughnutController } from 'chart.js'
+import { fetchProjectDetail } from '@/api/project'
 
 Chart.register(ArcElement, Tooltip, DoughnutController)
+
+const route = useRoute()
+const projectId = Number(route.params.projectId)
 
 const progressChart = ref<HTMLCanvasElement | null>(null)
 const riskChart = ref<HTMLCanvasElement | null>(null)
@@ -163,14 +168,14 @@ const props = defineProps({
 });
 
 const form = reactive({
-  projectName: '트래픽 모니터링 및 장애 대응 고도화',
-  status: 'ACTIVE', // ENUM: DRAFT, ACTIVE, CLOSED, HOLD
-  type: 'OPERATION', // ENUM: NEW, OPERATION, MAINTENANCE
-  startDate: '2025-01-03',
-  endDate: '2025-12-31',
-  client: '삼성전자',
-  description: '기존 서비스의 트래픽 모니터링 체계를 개선하고, 장애 발생 시 원인 파악과 대응 시간을 단축하기 위한 운영 중심의 알림 기능을 고도화합니다. 주요 API 구간의 이상 징후를 사전에 감지하여 서비스 가용성을 확보하고, 장애 지표를 통합 시각화하여 운영 효율성을 높이는 것을 목표로 합니다.',
-  budget: 180000000
+  projectName: '',
+  status: '',
+  type: '',
+  startDate: '',
+  endDate: '',
+  client: '',
+  description: '',
+  budget: 0
 })
 
 // 예산 숫자를 한글 읽기로 변환 (예: 1억 8천만 원)
@@ -229,6 +234,30 @@ onMounted(() => {
       },
     })
   }
+})
+
+const loadProjectDetail = async () => {
+  try {
+    const res = await fetchProjectDetail(projectId)
+
+    const data = res.data
+
+    form.projectName = data.projectName
+    form.status = data.status
+    form.type = data.projectType
+    form.startDate = data.startDate
+    form.endDate = data.endDate
+    form.client = data.partners
+    form.description = data.description
+    form.budget = data.predictedCost ?? 0
+
+  } catch (e) {
+    console.error('프로젝트 상세 조회 실패', e)
+  }
+}
+
+onMounted(() => {
+  loadProjectDetail()
 })
 </script>
 
