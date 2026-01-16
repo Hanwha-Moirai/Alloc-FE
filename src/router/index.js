@@ -31,6 +31,10 @@ const router = createRouter({
                     component: () => import('@/pages/Home.vue'),
                 },
                 {
+                    path: 'my/profile',
+                    component: () => import('@/pages/ProfileDetail.vue'),
+                },
+                {
                     path: '/profile/:userId',
                     component: () => import('@/pages/ProfileDetail.vue'),
                 },
@@ -63,8 +67,8 @@ const router = createRouter({
                             component: () => import('@/pages/projectTabs/ProjectTasks.vue'),
                         },
                         {
-                            path: 'schedule',
-                            component: () => import('@/pages/projectTabs/ProjectSchedule.vue'),
+                            path: 'gantt',
+                            component: () => import('@/pages/projectTabs/ProjectGantt.vue'),
                         },
                         {
                             path: 'calendar',

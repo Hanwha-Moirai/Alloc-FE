@@ -85,7 +85,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import MyWeeklyReports from '@/pages/documentTabs/MyWeeklyReports.vue';
 import MyMeetingReports from '@/pages/documentTabs/MyMeetingReports.vue';
 import DocCreateModal from '@/components/common/DocCreateModal.vue';
@@ -102,6 +102,10 @@ const handleCreateDoc = (data: any) => {
   console.log('생성 데이터:', data);
   showDocModal.value = false;
 };
+
+watch([startDate, endDate], () => {
+  console.log('[DocumentMain DATE]', startDate.value, endDate.value);
+});
 </script>
 
 <style scoped>
@@ -204,6 +208,7 @@ const handleCreateDoc = (data: any) => {
   height: 100%;
   opacity: 0;
   cursor: pointer;
+  z-index: 10;
 }
 
 .hidden-date-input::-webkit-calendar-picker-indicator {

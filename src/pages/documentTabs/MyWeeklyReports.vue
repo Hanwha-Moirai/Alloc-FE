@@ -47,7 +47,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-// API 임포트
 import { getMyWeeklyReports, searchMyWeeklyReports } from '@/api/weeklyReport';
 
 const props = defineProps<{
@@ -68,38 +67,40 @@ const fetchWeeklyReports = async () => {
     const hasCondition = props.searchQuery || props.startDate || props.endDate;
 
     if (hasCondition) {
-      // 검색 API 호출 (/api/mydocs/report/search)
       res = await searchMyWeeklyReports({
         page: page.value,
-        keyword: props.searchQuery,
+        size: 10,
+        projectName: props.searchQuery,
         from: props.startDate,
         to: props.endDate
       });
     } else {
-      // 일반 목록 조회 호출 (/api/mydocs/report)
       res = await getMyWeeklyReports(page.value);
     }
 
-    const data = res.data.data;
+    const responseData = res.data.data;
 
-    // 백엔드 WeeklyReportSummaryResponse 필드 매핑
-    weeklyData.value = data.content.map((item: any) => ({
-      id: item.reportId,
-      projectId: item.projectId,
-      projectName: item.projectName,
-      week: `${item.year ?? ''} W${item.weekNo ?? item.week ?? ''}`,
-      createdAt: formatDate(item.createdAt),
-      updatedAt: formatDate(item.updatedAt),
-      status: item.status || 'DRAFT'
-    }));
-
-    totalPages.value = data.totalPages;
+    if (responseData && responseData.content) {
+      weeklyData.value = responseData.content.map((item: any) => ({
+        id: item.reportId,
+        projectId: item.projectId,
+        projectName: item.projectName,
+        week: item.weekLabel || `${item.year} W${item.weekNo}`,
+        createdAt: formatDate(item.createdAt),
+        updatedAt: formatDate(item.updatedAt),
+        status: item.status || 'DRAFT'
+      }));
+      totalPages.value = responseData.totalPages;
+    } else {
+      weeklyData.value = [];
+      totalPages.value = 0;
+    }
   } catch (error) {
-    console.error("주간보고 조회 실패:", error);
+    console.error("주간보고 데이터 로드 실패:", error);
+    weeklyData.value = [];
   }
 };
 
-// 검색 조건 변경 시 즉시 재조회
 watch(
     () => [props.searchQuery, props.startDate, props.endDate],
     () => {

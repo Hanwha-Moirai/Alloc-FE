@@ -57,10 +57,20 @@
 
         <section class="summary-section">
           <h3>✈️ 휴가</h3>
-          <div class="vacation-item">
-            <span class="dot blue"></span>
-            <span class="name">김현수</span>
-            <span class="range">01.02 ~ 01.05</span>
+          <ul v-if="vacationSchedules.length > 0">
+            <li
+                v-for="vacation in vacationSchedules"
+                :key="vacation.id"
+                class="vacation-item"
+            >
+              <span class="dot" :style="{ backgroundColor: vacation.color }"></span>
+              <span class="name">{{ vacation.name }}</span>
+              <span class="range">{{ vacation.range }}</span>
+            </li>
+          </ul>
+
+          <div v-else class="vacation-item no-data">
+            <span class="name">등록된 휴가가 없습니다.</span>
           </div>
         </section>
       </div>
@@ -168,59 +178,152 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import dayjs from 'dayjs'
 import 'dayjs/locale/ko'
 import CalendarAddModal from '@/components/common/CalendarAddModal.vue';
-
+import { createSharedEvent, createPersonalEvent, createVacationEvent, getCalendarData } from '@/api/calendar';
 dayjs.locale('ko')
+
+const route = useRoute()
+const projectId = Number(route.params.projectId)
 
 // 상태 및 데이터 정의
 const viewMode = ref('week')
 const isModalOpen = ref(false);
 const selectedDate = ref(dayjs())
 
-const eventItems = ref([
-  {
-    id: 1,
-    title: '주간 업무 보고',
-    date: dayjs().startOf('week').add(1, 'day').format('YYYY-MM-DD'),
-    startTime: '09:00',
-    duration: 2,
-    color: '#dcfce7',
-    borderColor: '#22c55e'
-  },
-  {
-    id: 2,
-    title: '프로젝트 운영 회의',
-    date: dayjs().startOf('week').add(3, 'day').format('YYYY-MM-DD'),
-    startTime: '13:00',
-    duration: 1.5,
-    color: '#dbeafe',
-    borderColor: '#3b82f6'
-  },
-  {
-    id: 3,
-    title: 'UI 디자인 검토',
-    date: dayjs().format('YYYY-MM-DD'),
-    startTime: '10:00',
-    duration: 3,
-    color: '#fee2e2',
-    borderColor: '#ef4444'
-  }
-])
+const eventItems = ref([])
 
 const dayLabels = ['일', '월', '화', '수', '목', '금', '토']
 const hours = Array.from({ length: 11 }, (_, i) => (i + 8).toString().padStart(2, '0'))
+
+const fetchCalendarData = async () => {
+  try {
+    const from = selectedDate.value.startOf(viewMode.value === 'month' ? 'month' : 'week').format('YYYY-MM-DD');
+    const to = selectedDate.value.endOf(viewMode.value === 'month' ? 'month' : 'week').format('YYYY-MM-DD');
+
+    const response = await getCalendarData(projectId, from, to, viewMode.value);
+
+    const items = response.data?.items || [];
+
+    eventItems.value = items.map(item => {
+      // 로그에서 확인된 대로 eventType과 eventId를 사용합니다.
+      const type = item.eventType;
+      const id = item.eventId;
+
+      // 제목에 '연차'가 포함되거나 타입이 'VACATION'인 경우 체크
+      const isVacation = type === 'VACATION' || (item.title && item.title.includes('연차'));
+
+      const startDayjs = dayjs(item.start);
+      const endDayjs = dayjs(item.end);
+
+      const startTime = isVacation ? '08:00' : startDayjs.format('HH:mm');
+      const duration = isVacation ? 10 : endDayjs.diff(startDayjs, 'hour', true);
+
+      console.log(`[매핑 확인] ${item.title} -> 타입: ${type}, ID: ${id}`);
+
+      return {
+        id: id,
+        title: item.title || '제목 없음',
+        date: startDayjs.format('YYYY-MM-DD'),
+        startTime: startTime,
+        duration: duration || 1,
+        category: type,
+        color: getCategoryColor(type, item.title),
+        borderColor: getCategoryBorderColor(type, item.title)
+      };
+    });
+
+  } catch (error) {
+    console.error("데이터 로딩 실패:", error);
+  }
+};
+
+//  카테고리별 색상 지정
+const getCategoryColor = (type, title = '') => {
+  if (type === 'VACATION' || (title && title.includes('연차'))) return '#fef9c3'; // 노란색
+
+  switch (type) {
+    case 'EVENT': return '#dcfce7';   // 초록색
+    case 'PUBLIC': return '#dbeafe';  // 파란색
+    case 'PRIVATE': return '#ffedd5'; // 회색
+    default: return '#ffffff';
+  }
+};
+
+const getCategoryBorderColor = (type, title = '') => {
+  if (type === 'VACATION' || (title && title.includes('연차'))) return '#facc15'; // 노란색 테두리
+
+  switch (type) {
+    case 'EVENT':
+      return '#22c55e';
+    case 'PUBLIC':
+      return '#3b82f6';
+    case 'PRIVATE':
+      return '#f97316';
+    default:
+      return '#d1d5db';
+  }
+};
+
+// 날짜나 뷰가 바뀔 때마다 실행
+watch([selectedDate, viewMode], fetchCalendarData);
+onMounted(fetchCalendarData);
 
 // 모달 및 이벤트 관련 함수
 const openModal = () => {
   isModalOpen.value = true;
 };
 
-const saveNewEvent = (eventData: any) => {
-  eventItems.value.push(eventData);
-  isModalOpen.value = false;
+const saveNewEvent = async (eventData: any) => {
+  const startDateTime = `${eventData.startDate}T${eventData.startTime || '00:00'}:00`;
+  const endDateTime = `${eventData.endDate}T${eventData.endTime || '23:59'}:00`;
+
+  try {
+    let result;
+
+    // 공유 일정 (PUBLIC / EVENT / work)
+    if (eventData.type === 'PUBLIC' || eventData.type === 'EVENT' || eventData.type === 'work') {
+      result = await createSharedEvent(projectId, {
+        eventName: eventData.title,
+        startDateTime: startDateTime,
+        endDateTime: endDateTime,
+        place: eventData.location || '',
+        description: eventData.description || '',
+        memberUserIds: eventData.memberUserIds || [1] // 백엔드 @NotEmpty 대응 (실제 ID 배열 필요)
+      });
+    }
+    // 개인 일정 (PRIVATE)
+    else if (eventData.type === 'PRIVATE') {
+      result = await createPersonalEvent(projectId, {
+        eventName: eventData.title,
+        startDateTime: startDateTime,
+        endDateTime: endDateTime,
+        place: eventData.location || '',
+        description: eventData.description || ''
+      });
+    }
+    // 휴가 일정 (VACATION)
+    else if (eventData.type === 'VACATION') {
+      result = await createVacationEvent(projectId, {
+        eventName: eventData.title || '휴가',
+        startDateTime: startDateTime,
+        endDateTime: endDateTime,
+        description: eventData.description || ''
+      });
+    }
+
+    if (result) {
+      alert('일정이 등록되었습니다.');
+      await fetchCalendarData(); // 목록 갱신
+      isModalOpen.value = false;  // 모달 닫기
+    }
+  } catch (error: any) {
+    console.error('❌ 등록 실패:', error.response?.data || error.message);
+    alert('일정 등록에 실패했습니다: ' + (error.response?.data?.message || '서버 오류'));
+  }
 };
 
 const setViewMode = (mode: string) => {
@@ -317,6 +420,18 @@ const tomorrowSchedules = computed(() => {
       .map(event => ({ name: event.title, time: event.startTime, color: event.borderColor }))
 })
 
+// 사이드바에 표시할 휴가 일정 추출
+const vacationSchedules = computed(() => {
+  return eventItems.value
+      .filter(event => event.category === 'VACATION' || event.title.includes('연차'))
+      .map(event => ({
+        id: event.id,
+        name: event.title,
+        range: dayjs(event.date).format('MM.DD'),
+        color: event.borderColor
+      }));
+});
+
 // 이벤트 스타일 계산
 const getEventStyle = (event: any) => {
   const eventDate = dayjs(event.date);
@@ -343,8 +458,9 @@ const getEventStyle = (event: any) => {
 <style scoped>
 .calendar-container {
   display: flex;
-  height: calc(100vh - 180px);
+  height: calc(100vh - 210px);
   background: #f9fafb;
+  overflow: hidden;
 }
 
 /* 사이드바 스타일 */
@@ -505,12 +621,18 @@ const getEventStyle = (event: any) => {
   font-weight: 500;
 }
 
-/* 기존 스타일 하단에 추가 또는 수정 */
+
 .grid-body {
   flex: 1;
   overflow-y: auto;
   position: relative;
-  /* 가로 세로 스크롤 시에도 배경이 유지되도록 설정 */
+}
+
+/* 스크롤바 숨기기 */
+.grid-body::-webkit-scrollbar,
+.month-grid-body::-webkit-scrollbar,
+.calendar-sidebar::-webkit-scrollbar {
+  display: none;
 }
 
 .event-card {

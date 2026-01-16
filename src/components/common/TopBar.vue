@@ -57,7 +57,10 @@ const goMyProfile = () => {
 
 const handleLogout = () => {
   closeProfile()
-  // 로그아웃 처리
+
+  localStorage.removeItem('accessToken')
+  localStorage.removeItem('refreshToken')
+  router.push('/login')
 }
 </script>
 

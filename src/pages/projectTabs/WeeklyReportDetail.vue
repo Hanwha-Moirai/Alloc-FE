@@ -193,22 +193,17 @@ import axios from '@/lib/axios';
 const route = useRoute();
 const router = useRouter();
 
-// URL 파라미터에서 ID 추출
 const projectId = route.params.projectId;
 const reportId = route.params.docId;
 
 const pageTitle = computed(() => {
-  // 1순위: URL 파라미터 체크
   if (route.params.type === 'weekly') return '주간보고 상세';
   if (route.params.type === 'meeting') return '회의록 상세';
-
-  // 2순위: 데이터 필드 기반 체크 (주간보고에만 있는 '주차' 정보 등)
   if (form.week) return '주간보고 상세';
 
   return '상세 보기';
 });
 
-// 1. 공통 정보 데이터 (form)
 const form = reactive({
   projectName: '',
   period: '',
@@ -227,28 +222,31 @@ const nextWeekTasks = ref([]);
 const expandedRow = ref<number | null>(null);
 const isEditing = ref(false);
 
-// 데이터 초기 로드 (상세 조회 연결)
+// 데이터 초기 로드
 const fetchDetail = async () => {
   try {
-    const response = await axios.get(`/api/projects/${projectId}/docs/report/${reportId}`);
+    const response = await axios.get(
+        `/api/projects/${projectId}/docs/report/${reportId}`
+    );
+
     const data = response.data.data;
 
-    // 백엔드 응답 필드에 맞게 폼 매핑
     form.projectName = data.projectName;
-    form.period = `${data.startDate} ~ ${data.endDate}`;
-    form.client = data.clientName || 'N/A';
-    form.manager = data.pmName;
-    form.week = `${data.year} W${data.weekNo}`;
-    form.reporter = data.pmName;
-    form.progress = data.progressRate;
+    form.period = `${data.weekStartDate} ~ ${data.weekEndDate}`;
+    form.client = 'N/A';
+    form.manager = '-';
+    form.week = data.weekLabel ?? '-';
+    form.reporter = data.reporterName ?? '-';
+    form.progress = Math.round(data.taskCompletionRate ?? 0);
 
-    completedTasks.value = data.completedTasks;
-    uncompletedTasks.value = data.uncompletedTasks;
-    nextWeekTasks.value = data.nextWeekTasks;
+    completedTasks.value = data.completedTasks ?? [];
+    uncompletedTasks.value = data.incompleteTasks ?? [];
+    nextWeekTasks.value = data.nextWeekTasks ?? [];
   } catch (error) {
-    console.error("데이터 로드 실패:", error);
+    console.error('데이터 로드 실패:', error);
   }
 };
+
 
 onMounted(() => {
   if (reportId) fetchDetail();
@@ -308,7 +306,6 @@ const handleDelete = async () => {
 </script>
 
 <style scoped>
-/* 입력창 디자인 스타일 */
 .edit-input {
   width: 100%;
   box-sizing: border-box;

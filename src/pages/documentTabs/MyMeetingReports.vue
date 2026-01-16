@@ -70,7 +70,7 @@ const fetchMeetingRecords = async () => {
       res = await searchMyMeetingRecords({
         page: page.value,
         size: 10,
-        keyword: props.searchQuery, // meetingRecord.js 내부에서 projectName으로 전달됨
+        keyword: props.searchQuery,
         from: props.startDate,
         to: props.endDate
       });
@@ -94,6 +94,12 @@ const fetchMeetingRecords = async () => {
     meetingData.value = [];
   }
 };
+
+console.log('[SEARCH PARAMS]', {
+  from: props.startDate,
+  to: props.endDate
+});
+
 
 // Watch: 검색 조건이 바뀌면 페이지를 0으로 초기화하고 다시 조회
 watch(

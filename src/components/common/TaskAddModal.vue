@@ -51,6 +51,20 @@
         </div>
 
         <div class="input-section">
+          <label>마일스톤</label>
+          <select v-model="newTask.milestoneId" class="full-input select-input">
+            <option value="" disabled>마일스톤 선택</option>
+            <option
+                v-for="ms in milestoneList"
+                :key="ms.milestoneId"
+                :value="ms.milestoneId"
+            >
+              {{ ms.milestoneName }}
+            </option>
+          </select>
+        </div>
+
+        <div class="input-section">
           <label>설명</label>
           <textarea
               v-model="newTask.description"
@@ -71,7 +85,11 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
 
-const emit = defineEmits(['close', 'add-task'])
+const props = defineProps<{
+  milestoneList: any[]
+}>()
+
+const emit = defineEmits(['close', 'add'])
 
 // 담당자 목록 데이터
 const userList = ['김동리', '이철수', '박영희', '최민수']
@@ -83,8 +101,9 @@ const newTask = reactive({
   endDate: '',
   assignee: '',
   task_category: 'DEVELOPMENT',
+  milestoneId: '',
   description: '',
-  status: 'TO_DO' // 기본 상태
+  status: 'TO_DO'
 })
 
 const close = () => emit('close')
@@ -94,7 +113,8 @@ const handleSubmit = () => {
     alert('필수 정보를 모두 입력해주세요.')
     return
   }
-  emit('add-task', { ...newTask, id: Date.now() }) // 임시 ID 부여
+
+  emit('add', { ...newTask })
   close()
 }
 </script>
@@ -164,7 +184,7 @@ const handleSubmit = () => {
 }
 
 .full-textarea {
-  min-height: 100px;
+  min-height: 50px;
   resize: vertical;
 }
 

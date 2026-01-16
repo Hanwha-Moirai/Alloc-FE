@@ -7,7 +7,7 @@
       <div class="tabs">
         <button class="tab" :class="{ active: isActive('') }" @click="goTab('')">요약</button>
         <button class="tab" :class="{ active: isActive('tasks') }" @click="goTab('tasks')">태스크</button>
-        <button class="tab" :class="{ active: isActive('schedule') }" @click="goTab('schedule')">일정</button>
+        <button class="tab" :class="{ active: isActive('gantt') }" @click="goTab('gantt')">마일스톤</button>
         <button class="tab" :class="{ active: isActive('calendar') }" @click="goTab('calendar')">캘린더</button>
         <button class="tab" :class="{ active: isActive('docs') }" @click="goTab('docs')">문서</button>
         <button class="tab" :class="{ active: isActive('members') }" @click="goTab('members')">인력</button>
@@ -27,7 +27,7 @@
           <button class="add-btn" @click="showAddModal = true">+ 태스크 추가하기</button>
         </div>
 
-        <div v-if="isActive('schedule')" class="schedule-actions">
+        <div v-if="isActive('gantt')" class="milstone-actions">
           <button class="add-btn" @click="showMilestoneAddModal = true">+ 마일스톤 추가하기</button>
         </div>
 
@@ -37,11 +37,12 @@
       </div>
     </div>
 
-    <router-view :is-editing="isEditing" />
+    <router-view :is-editing="isEditing" :refresh-trigger="refreshKey" />
 
     <TaskAddModal
         v-if="showAddModal"
         :is-open="showAddModal"
+        :milestone-list="milestoneList"
         @close="showAddModal = false"
         @add="handleAddTask"
     />
@@ -52,7 +53,7 @@
         @filter="handleFilter"
     />
 
-    <ScheduleAddModal
+    <MilestoneAddModal
         v-if="showMilestoneAddModal"
         :is-open="showMilestoneAddModal"
         @close="showMilestoneAddModal = false"
@@ -74,8 +75,10 @@ import { useRoute, useRouter } from 'vue-router'
 
 import TaskAddModal from '@/components/common/TaskAddModal.vue'
 import TaskFilterDrawer from '@/components/common/TaskFilterDrawer.vue'
-import ScheduleAddModal from '@/components/common/ScheduleAddModal.vue'
+import MilestoneAddModal from '@/components/common/MilestoneAddModal.vue'
 import DocCreateModal from '@/components/common/DocCreateModal.vue'
+
+import { createMilestone, createTask, getGanttMilestones } from '@/api/gantt'
 
 const route = useRoute()
 const router = useRouter()
@@ -87,15 +90,11 @@ const showMilestoneAddModal = ref(false)
 const showDocModal = ref(false)
 const isEditing = ref(false)
 const isFilterOpen = ref(false)
+const milestoneList = ref<any[]>([])
 
 // URL에 'recommend'가 포함되어 있으면 true를 반환하여 template의 UI를 숨김
 const isRecommendPage = computed(() => {
   return route.path.includes('recommend')
-})
-
-// --- Watchers ---
-watch(() => route.path, () => {
-  isEditing.value = false
 })
 
 // --- Methods ---
@@ -107,18 +106,77 @@ const toggleEdit = () => {
   isEditing.value = !isEditing.value
 }
 
-const handleAddTask = (newTask: any) => {
-  console.log('새로운 태스크 데이터:', newTask)
-  showAddModal.value = false
+// 마일스톤 목록 조회
+const fetchMilestones = async () => {
+  try {
+    const res = await getGanttMilestones(Number(projectId))
+    milestoneList.value = res.data?.data || res.data || []
+  } catch (e) {
+    console.error('마일스톤 목록 조회 실패', e)
+  }
+}
+
+const handleAddTask = async (newTask: any) => {
+  try {
+    const requestData = {
+      milestoneId: Number(newTask.milestoneId),
+      taskName: newTask.title,
+      taskDescription: newTask.description,
+      taskCategory: newTask.task_category,
+      startDate: newTask.startDate,
+      endDate: newTask.endDate,
+      assigneeId: 9
+    }
+
+    const res = await createTask(Number(projectId), requestData)
+
+    if (res.status === 200 || res.data?.success) {
+      alert('태스크가 등록되었습니다.')
+      showAddModal.value = false
+
+      // 태스크 목록 새로고침
+      refreshKey.value++
+    }
+  } catch (e: any) {
+    console.error('태스크 등록 실패:', e)
+    alert(e.response?.data?.message || '태스크 등록 중 오류가 발생했습니다.')
+  }
 }
 
 const handleFilter = (filterData: any) => {
   console.log('적용할 필터:', filterData)
 }
 
-const handleAddMilestone = (newMilestone: any) => {
-  console.log('새로운 마일스톤 데이터:', newMilestone)
-  showMilestoneAddModal.value = false
+const refreshKey = ref(0)
+
+const handleAddMilestone = async (newMilestone: any) => {
+  try {
+    const requestData = {
+      milestoneName: newMilestone.projectName,
+      startDate: newMilestone.startDate.replace(/\./g, '-'),
+      endDate: newMilestone.endDate.replace(/\./g, '-'),
+      achievementRate: 0
+    }
+
+    const response = await createMilestone(Number(projectId), requestData)
+
+    if (response.data && (response.data.success || response.data.status === 'SUCCESS')) {
+      alert('마일스톤이 등록되었습니다.')
+      showMilestoneAddModal.value = false
+
+      refreshKey.value++
+    } else {
+      alert(response.data?.message || '등록에 실패했습니다.')
+    }
+  } catch (error) {
+    console.error('마일스톤 등록 실패:', error)
+
+    if (error.response?.status === 403) {
+      alert('마일스톤 생성 권한이 없습니다. (PM 전용)')
+    } else {
+      alert('서버 오류가 발생했습니다. 로그를 확인해주세요.')
+    }
+  }
 }
 
 const handleCreateDoc = (data: any) => {
@@ -145,6 +203,17 @@ const isActive = (tab: string) => {
   // 기타 탭
   return path.includes(`/projects/${projectId}/${tab}`)
 }
+
+// Watchers
+watch(
+    () => route.path,
+    (path) => {
+      if (path.includes('/tasks')) {
+        fetchMilestones()
+      }
+    },
+    { immediate: true }
+)
 </script>
 
 <style scoped>

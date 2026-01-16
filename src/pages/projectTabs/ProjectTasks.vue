@@ -27,7 +27,7 @@
             </span>
             <h4 class="card-title">{{ task.title }}</h4>
             <p class="card-desc">{{ task.description }}</p>
-            <span class="user-name">{{ task.assignee }}</span>
+            <span class="user-name">{{ task.userName }}</span>
           </div>
         </div>
       </div>
@@ -57,7 +57,7 @@
             </span>
             <h4 class="card-title">{{ task.title }}</h4>
             <p class="card-desc">{{ task.description }}</p>
-            <span class="user-name">{{ task.assignee }}</span>
+            <span class="user-name">{{ task.userName }}</span>
           </div>
         </div>
       </div>
@@ -87,7 +87,7 @@
             </span>
             <h4 class="card-title">{{ task.title }}</h4>
             <p class="card-desc">{{ task.description }}</p>
-            <span class="user-name">{{ task.assignee }}</span>
+            <span class="user-name">{{ task.userName }}</span>
           </div>
         </div>
       </div>
@@ -98,16 +98,106 @@
   <TaskDetailModal
       v-if="showModal"
       :task="selectedTask"
+      :milestone-list="milestoneList"
       @close="closeModal"
+      @save="saveTaskEdit"
+      @delete="handleTaskDelete"
   />
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import {ref, onMounted, watch} from 'vue'
+import { useRoute } from 'vue-router'
+import dayjs from 'dayjs'
 import TaskDetailModal from '@/components/common/TaskDetailModal.vue'
+import { getGanttTasks, getGanttMilestones, updateTask, deleteTask, completeTask } from '@/api/gantt'
 
+const route = useRoute()
+const projectId = Number(route.params.projectId)
+const tasks = ref<any[]>([])
+const isLoading = ref(false)
 const selectedTask = ref<any>(null)
 const showModal = ref(false)
+const milestoneList = ref<any[]>([])
+
+const props = defineProps({
+
+  isEditing: {
+    type: Boolean,
+    default: false
+  },
+  refreshTrigger: {
+    type: Number,
+    default: 0
+  }
+});
+
+// 카테고리 매핑 정보
+const categoryLabel: Record<string, string> = {
+  DEVELOPMENT: '개발',
+  TESTING: '테스트',
+  BUGFIXING: '버그',
+  DISTRIBUTION: '배포'
+}
+
+const categoryClass: Record<string, string> = {
+  DEVELOPMENT: 'dev',
+  TESTING: 'test',
+  BUGFIXING: 'bug',
+  DISTRIBUTION: 'dist'
+}
+
+// 데이터 로드
+const fetchTasks = async () => {
+  isLoading.value = true;
+  try {
+    const response = await getGanttTasks(projectId);
+    const rawData = response.data?.data || response.data || [];
+
+    tasks.value = rawData.map((t: any) => {
+      let mappedStatus = t.taskStatus;
+      if (t.taskStatus === 'TODO') mappedStatus = 'TO_DO';
+      if (t.taskStatus === 'INPROGRESS') mappedStatus = 'IN_PROGRESS';
+
+      return {
+        id: t.taskId,
+        title: t.taskName,
+        status: mappedStatus,
+        startDate: dayjs(t.startDate).format('YYYY.MM.DD'),
+        endDate: dayjs(t.endDate).format('YYYY.MM.DD'),
+        userName: t.userName,
+        milestoneId: t.milestoneId,
+        description: t.taskDescription,
+        task_category: t.taskCategory
+      };
+    });
+  } catch (error) {
+    console.error("조회 실패:", error);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const fetchMilestones = async () => {
+  try {
+    const res = await getGanttMilestones(projectId)
+    milestoneList.value = res.data?.data || res.data || []
+  } catch (e) {
+    console.error('마일스톤 조회 실패', e)
+  }
+}
+
+
+onMounted(() => {
+  if (projectId) {
+    fetchTasks()
+    fetchMilestones()
+  }
+})
+
+watch(() => props.refreshTrigger, () => {
+  fetchTasks();
+});
 
 const openTask = (task: any) => {
   selectedTask.value = task
@@ -117,60 +207,61 @@ const openTask = (task: any) => {
 const closeModal = () => {
   showModal.value = false
   selectedTask.value = null
+  fetchTasks()
 }
 
-/* ERD ENUM → UI 매핑 */
-const categoryLabel = {
-  DEVELOPMENT: '개발',
-  TESTING: '테스트',
-  BUGFIXING: '버그',
-  DISTRIBUTION: '배포'
-}
+// 태스크 수정 저장 로직
+const saveTaskEdit = async (updatedData: any) => {
+  try {
+    const formatDate = (date: string) => date?.replace(/\./g, '-') || null;
 
-const categoryClass = {
-  DEVELOPMENT: 'dev',
-  TESTING: 'test',
-  BUGFIXING: 'bug',
-  DISTRIBUTION: 'dist'
-}
+    const statusMap: Record<string, string> = {
+      'IN_PROGRESS': 'INPROGRESS',
+      'TO_DO': 'TODO'
+    };
 
-/* ERD 기준 데이터 */
-const tasks = [
-  {
-    id: 1,
-    title: 'API 게이트웨이 인증',
-    status: 'DONE',
-    startDate: '2025.12.01',
-    endDate: '2025.12.31',
-    assignee: '김동리',
-    description: 'API 게이트웨이 인증 설명입니다.',
-    task_category: 'DEVELOPMENT'
-  },
-  {
-    id: 2,
-    title: '권한 테스트 시나리오 작성',
-    status: 'IN_PROGRESS',
-    startDate: '2025.12.05',
-    endDate: '2025.12.20',
-    assignee: '김동리',
-    description: '권한 테스트 케이스 정리',
-    task_category: 'TESTING'
-  },
-  {
-    id: 3,
-    title: '권한 테스트 시나리오 작성',
-    status: 'TO_DO',
-    startDate: '2025.12.05',
-    endDate: '2025.12.20',
-    assignee: '김동리',
-    description: '권한 테스트 케이스 정리',
-    task_category: 'DISTRIBUTION'
+    const requestData = {
+      milestoneId: Number(updatedData.milestoneId || 1),
+      assigneeId: Number(updatedData.assigneeId || 9),
+      taskCategory: updatedData.task_category,
+      taskName: updatedData.title,
+      taskDescription: updatedData.description,
+      taskStatus: statusMap[updatedData.status] || updatedData.status,
+      startDate: formatDate(updatedData.startDate),
+      endDate: formatDate(updatedData.endDate)
+    };
+
+    const { status, data } = await updateTask(projectId, updatedData.id, requestData);
+
+    if (status === 200 || data.success) {
+      alert('성공적으로 수정되었습니다.');
+      showModal.value = false;
+      await fetchTasks();
+    }
+  } catch (error: any) {
+    const errorMsg = error.response?.data?.message || '수정 중 오류가 발생했습니다.';
+    console.error("수정 실패:", error.response?.data);
+    alert(`수정 실패: ${errorMsg}`);
   }
-]
+};
+
+// 태스크 삭제 로직
+const handleTaskDelete = async (taskId: number) => {
+  try {
+    const response = await deleteTask(projectId, taskId);
+    if (response.data.success) {
+      alert('태스크가 삭제되었습니다.');
+      showModal.value = false;
+      await fetchTasks();
+    }
+  } catch (error: any) {
+    console.error("삭제 실패:", error);
+    alert('삭제 처리 중 오류가 발생했습니다.');
+  }
+};
 </script>
 
 <style scoped>
-/* 보드를 감싸는 기본 여백 */
 .kanban-wrapper {
   padding-top: 10px;
 }
