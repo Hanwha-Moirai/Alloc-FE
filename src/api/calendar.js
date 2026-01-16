@@ -1,5 +1,6 @@
 import axios from '@/lib/axios';
 
+// 일정 조회
 export const getCalendarData = async (projectId, from, to, view) => {
     const response = await axios.get(`/api/projects/${projectId}/calendar`, {
         params: {
@@ -9,6 +10,35 @@ export const getCalendarData = async (projectId, from, to, view) => {
         }
     });
 
-    // 백엔드 ApiResponse 객체를 반환 (실제 데이터는 response.data에 들어있음)
+    return response.data;
+};
+
+// 공유 일정 생성
+export const createSharedEvent = async (projectId, data) => {
+    // POST /api/projects/{projectId}/calendar/events/shared
+    const response = await axios.post(
+        `/api/projects/${projectId}/calendar/events/shared`,
+        data
+    );
+    return response.data;
+};
+
+// 개인 일정 생성
+export const createPersonalEvent = async (projectId, data) => {
+    // POST /api/projects/{projectId}/calendar/events/personal
+    const response = await axios.post(
+        `/api/projects/${projectId}/calendar/events/personal`,
+        data
+    );
+    return response.data;
+};
+
+// 휴가 일정 생성
+export const createVacationEvent = async (projectId, data) => {
+    // POST /api/projects/{projectId}/calendar/events/vacation
+    const response = await axios.post(
+        `/api/projects/${projectId}/calendar/events/vacation`,
+        data
+    );
     return response.data;
 };

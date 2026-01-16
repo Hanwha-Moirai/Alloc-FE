@@ -183,8 +183,7 @@ import { useRoute } from 'vue-router'
 import dayjs from 'dayjs'
 import 'dayjs/locale/ko'
 import CalendarAddModal from '@/components/common/CalendarAddModal.vue';
-import { getCalendarData } from '@/api/calendar'
-
+import { createSharedEvent, createPersonalEvent, createVacationEvent, getCalendarData } from '@/api/calendar';
 dayjs.locale('ko')
 
 const route = useRoute()
@@ -278,9 +277,53 @@ const openModal = () => {
   isModalOpen.value = true;
 };
 
-const saveNewEvent = (eventData: any) => {
-  eventItems.value.push(eventData);
-  isModalOpen.value = false;
+const saveNewEvent = async (eventData: any) => {
+  const startDateTime = `${eventData.startDate}T${eventData.startTime || '00:00'}:00`;
+  const endDateTime = `${eventData.endDate}T${eventData.endTime || '23:59'}:00`;
+
+  try {
+    let result;
+
+    // 1. 공유 일정 (PUBLIC / EVENT / work)
+    if (eventData.type === 'PUBLIC' || eventData.type === 'EVENT' || eventData.type === 'work') {
+      result = await createSharedEvent(projectId, {
+        eventName: eventData.title,
+        startDateTime: startDateTime,
+        endDateTime: endDateTime,
+        place: eventData.location || '',
+        description: eventData.description || '',
+        memberUserIds: eventData.memberUserIds || [1] // 백엔드 @NotEmpty 대응 (실제 ID 배열 필요)
+      });
+    }
+    // 2. 개인 일정 (PRIVATE)
+    else if (eventData.type === 'PRIVATE') {
+      result = await createPersonalEvent(projectId, {
+        eventName: eventData.title,
+        startDateTime: startDateTime,
+        endDateTime: endDateTime,
+        place: eventData.location || '',
+        description: eventData.description || ''
+      });
+    }
+    // 3. 휴가 일정 (VACATION)
+    else if (eventData.type === 'VACATION') {
+      result = await createVacationEvent(projectId, {
+        eventName: eventData.title || '휴가',
+        startDateTime: startDateTime,
+        endDateTime: endDateTime,
+        description: eventData.description || ''
+      });
+    }
+
+    if (result) {
+      alert('일정이 등록되었습니다.');
+      await fetchCalendarData(); // 목록 갱신
+      isModalOpen.value = false;  // 모달 닫기
+    }
+  } catch (error: any) {
+    console.error('❌ 등록 실패:', error.response?.data || error.message);
+    alert('일정 등록에 실패했습니다: ' + (error.response?.data?.message || '서버 오류'));
+  }
 };
 
 const setViewMode = (mode: string) => {

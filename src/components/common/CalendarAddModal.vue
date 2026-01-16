@@ -37,18 +37,20 @@
           <div class="form-row">
             <label class="form-label">유형</label>
             <div class="form-input-group radio-group">
-              <label class="radio-item"><input type="radio" v-model="form.type" value="work" /> 공개 일정</label>
-              <label class="radio-item"><input type="radio" v-model="form.type" value="meeting" /> 개인 일정</label>
-              <label class="radio-item"><input type="radio" v-model="form.type" value="vacation" /> 휴가</label>
+              <label class="radio-item"><input type="radio" v-model="form.type" value="PUBLIC" /> 공개 일정</label>
+              <label class="radio-item"><input type="radio" v-model="form.type" value="PRIVATE" /> 개인 일정</label>
+              <label class="radio-item"><input type="radio" v-model="form.type" value="VACATION" /> 휴가</label>
             </div>
           </div>
 
           <div class="form-row">
             <label class="form-label">담당자</label>
             <div class="form-input-group">
-              <select v-model="form.assignee" class="full-input select-input">
-                <option value="" disabled>담당자를 선택하세요</option>
-                <option v-for="user in userList" :key="user" :value="user">{{ user }}</option>
+              <select v-model="form.assigneeId" class="full-input select-input">
+                <option :value="null" disabled>담당자를 선택하세요</option>
+                <option v-for="user in userList" :key="user.id" :value="user.id">
+                  {{ user.name }}
+                </option>
               </select>
             </div>
           </div>
@@ -77,7 +79,14 @@ import dayjs from 'dayjs';
 const props = defineProps<{ isOpen: boolean }>();
 const emit = defineEmits(['close', 'add-event']);
 
-const userList = ref(['김현수', '이민지', '박철수', '최유진', '홍길동']);
+const userList = ref([
+  { id: 1, name: '김현수' },
+  { id: 2, name: '이민지' },
+  { id: 3, name: '박철수' },
+  { id: 4, name: '최유진' },
+  { id: 5, name: '홍길동' },
+  { id: 9, name: '프로젝트매니저' }
+]);
 
 const form = ref({
   title: '',
@@ -85,31 +94,49 @@ const form = ref({
   startTime: '09:00',
   endDate: dayjs().format('YYYY-MM-DD'),
   endTime: '10:00',
-  type: 'work',
-  assignee: '',
+  type: 'PUBLIC',
+  assigneeId: null as number | null,
   location: '',
-  color: '#dbeafe',
-  borderColor: '#4ab8d8'
+  description: ''
 });
 
 const handleSave = () => {
   if (!form.value.title) return alert('일정명을 입력해주세요.');
-  if (!form.value.assignee) return alert('담당자를 선택해주세요.');
+
+  // 공유 일정일 때만 담당자(참여자) 체크
+  if (form.value.type === 'PUBLIC' && !form.value.assigneeId) {
+    return alert('담당자를 선택해주세요.');
+  }
 
   const start = dayjs(`${form.value.startDate} ${form.value.startTime}`);
   const end = dayjs(`${form.value.endDate} ${form.value.endTime}`);
-  const duration = end.diff(start, 'hour', true);
 
-  if (duration <= 0) return alert('종료 일시가 시작 일시보다 빠를 수 없습니다.');
+  if (end.isBefore(start) || end.isSame(start)) {
+    return alert('종료 일시가 시작 일시보다 빠를 수 없습니다.');
+  }
 
+  // 3. 백엔드 DTO 구조에 맞게 데이터 가공하여 emit
   emit('add-event', {
-    ...form.value,
-    id: Date.now(),
-    date: form.value.startDate,
-    duration: duration
+    title: form.value.title,
+    startDate: form.value.startDate,
+    startTime: form.value.startTime,
+    endDate: form.value.endDate,
+    endTime: form.value.endTime,
+    type: form.value.type,
+    location: form.value.location,
+    description: form.value.description,
+    memberUserIds: form.value.assigneeId ? [form.value.assigneeId] : []
   });
 
+  // 폼 초기화
+  resetForm();
+};
+
+const resetForm = () => {
   form.value.title = '';
+  form.value.assigneeId = null;
+  form.value.location = '';
+  form.value.description = '';
 };
 </script>
 
