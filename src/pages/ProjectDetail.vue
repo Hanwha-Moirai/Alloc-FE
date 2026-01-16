@@ -42,6 +42,7 @@
     <TaskAddModal
         v-if="showAddModal"
         :is-open="showAddModal"
+        :milestone-list="milestoneList"
         @close="showAddModal = false"
         @add="handleAddTask"
     />
@@ -77,7 +78,7 @@ import TaskFilterDrawer from '@/components/common/TaskFilterDrawer.vue'
 import MilestoneAddModal from '@/components/common/MilestoneAddModal.vue'
 import DocCreateModal from '@/components/common/DocCreateModal.vue'
 
-import { createMilestone } from '@/api/gantt'
+import { createMilestone, createTask, getGanttMilestones } from '@/api/gantt'
 
 const route = useRoute()
 const router = useRouter()
@@ -89,15 +90,11 @@ const showMilestoneAddModal = ref(false)
 const showDocModal = ref(false)
 const isEditing = ref(false)
 const isFilterOpen = ref(false)
+const milestoneList = ref<any[]>([])
 
 // URL에 'recommend'가 포함되어 있으면 true를 반환하여 template의 UI를 숨김
 const isRecommendPage = computed(() => {
   return route.path.includes('recommend')
-})
-
-// --- Watchers ---
-watch(() => route.path, () => {
-  isEditing.value = false
 })
 
 // --- Methods ---
@@ -109,9 +106,41 @@ const toggleEdit = () => {
   isEditing.value = !isEditing.value
 }
 
-const handleAddTask = (newTask: any) => {
-  console.log('새로운 태스크 데이터:', newTask)
-  showAddModal.value = false
+// 마일스톤 목록 조회
+const fetchMilestones = async () => {
+  try {
+    const res = await getGanttMilestones(Number(projectId))
+    milestoneList.value = res.data?.data || res.data || []
+  } catch (e) {
+    console.error('마일스톤 목록 조회 실패', e)
+  }
+}
+
+const handleAddTask = async (newTask: any) => {
+  try {
+    const requestData = {
+      milestoneId: Number(newTask.milestoneId),
+      taskName: newTask.title,
+      taskDescription: newTask.description,
+      taskCategory: newTask.task_category,
+      startDate: newTask.startDate,
+      endDate: newTask.endDate,
+      assigneeId: 9
+    }
+
+    const res = await createTask(Number(projectId), requestData)
+
+    if (res.status === 200 || res.data?.success) {
+      alert('태스크가 등록되었습니다.')
+      showAddModal.value = false
+
+      // 태스크 목록 새로고침
+      refreshKey.value++
+    }
+  } catch (e: any) {
+    console.error('태스크 등록 실패:', e)
+    alert(e.response?.data?.message || '태스크 등록 중 오류가 발생했습니다.')
+  }
 }
 
 const handleFilter = (filterData: any) => {
@@ -174,6 +203,17 @@ const isActive = (tab: string) => {
   // 기타 탭
   return path.includes(`/projects/${projectId}/${tab}`)
 }
+
+// Watchers
+watch(
+    () => route.path,
+    (path) => {
+      if (path.includes('/tasks')) {
+        fetchMilestones()
+      }
+    },
+    { immediate: true }
+)
 </script>
 
 <style scoped>

@@ -53,9 +53,13 @@
         <div class="input-section">
           <label>마일스톤</label>
           <select v-model="newTask.milestoneId" class="full-input select-input">
-            <option value="" disabled selected>마일스톤 선택</option>
-            <option v-for="ms in milestoneList" :key="ms.id" :value="ms.id">
-              {{ ms.name }}
+            <option value="" disabled>마일스톤 선택</option>
+            <option
+                v-for="ms in milestoneList"
+                :key="ms.milestoneId"
+                :value="ms.milestoneId"
+            >
+              {{ ms.milestoneName }}
             </option>
           </select>
         </div>
@@ -85,7 +89,7 @@ const props = defineProps<{
   milestoneList: any[]
 }>()
 
-const emit = defineEmits(['close', 'add-task'])
+const emit = defineEmits(['close', 'add'])
 
 // 담당자 목록 데이터
 const userList = ['김동리', '이철수', '박영희', '최민수']
@@ -109,7 +113,8 @@ const handleSubmit = () => {
     alert('필수 정보를 모두 입력해주세요.')
     return
   }
-  emit('add-task', { ...newTask, id: Date.now() })
+
+  emit('add', { ...newTask })
   close()
 }
 </script>

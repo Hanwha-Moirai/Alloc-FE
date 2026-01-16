@@ -5,6 +5,11 @@ export const getGanttTasks = (projectId) => {
     return axios.get(`/api/projects/${projectId}/tasks`);
 };
 
+// 태스크 생성
+export const createTask = (projectId, data) => {
+    return axios.post(`/api/projects/${projectId}/tasks`, data);
+};
+
 // 태스크 수정
 export const updateTask = (projectId, taskId, data) => {
     return axios.patch(`/api/projects/${projectId}/tasks/${taskId}`, data);
