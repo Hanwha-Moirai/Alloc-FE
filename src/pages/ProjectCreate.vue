@@ -134,9 +134,9 @@
 
         <select class="input" v-model="tech.level">
           <option disabled value="">LV 선택</option>
-          <option value="L1">L1</option>
-          <option value="L2">L2</option>
-          <option value="L3">L3</option>
+          <option value="LV1">LV1</option>
+          <option value="LV2">LV2</option>
+          <option value="LV3">LV3</option>
         </select>
 
         <button
@@ -196,7 +196,7 @@ const project = ref({
   period: '',
   client: '',
   budget: 0,
-  type: '신규 개발',
+  type: 'NEW',
   description: '',
 })
 
@@ -271,6 +271,9 @@ onMounted(async () => {
 // 저장 버튼 클릭 핸들러
 const handleSave = async () => {
   try {
+    const validRoles = roles.value.filter(r => r.jobId !== null);
+    const validTechs = techs.value.filter(t => t.techId !== null && t.level !== '');
+
     const payload = {
       name: project.value.name,
       startDate: project.value.startDate,
@@ -280,26 +283,26 @@ const handleSave = async () => {
       projectType: project.value.type,
       description: project.value.description,
 
-      jobRequirements: roles.value.map(r => ({
+      jobRequirements: validRoles.map(r => ({
         jobId: r.jobId,
         requiredCount: r.requiredCount
       })),
 
-      techRequirements: techs.value.map(t => ({
+      techRequirements: validTechs.map(t => ({
         techId: t.techId,
-        level: t.level
+        techLevel: t.level
       }))
-    }
+    };
 
-    console.log('📌 프로젝트 등록 payload', payload)
-    await createProject(payload)
+    console.log('📌 전송 직전 최종 데이터:', JSON.stringify(payload));
 
-    alert('프로젝트가 등록되었습니다.')
-    router.push('/projects')
+    await createProject(payload);
+    alert('프로젝트가 등록되었습니다.');
+    router.push('/projects');
 
   } catch (e) {
-    console.error('❌ 프로젝트 등록 실패', e)
-    alert('프로젝트 등록 실패')
+    console.error('❌ 등록 실패 상세:', e.response?.data || e);
+    alert('등록 실패: ' + (e.response?.data?.message || '입력값을 확인하세요.'));
   }
 }
 
