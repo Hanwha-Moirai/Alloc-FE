@@ -284,7 +284,7 @@ const saveNewEvent = async (eventData: any) => {
   try {
     let result;
 
-    // 1. 공유 일정 (PUBLIC / EVENT / work)
+    // 공유 일정 (PUBLIC / EVENT / work)
     if (eventData.type === 'PUBLIC' || eventData.type === 'EVENT' || eventData.type === 'work') {
       result = await createSharedEvent(projectId, {
         eventName: eventData.title,
@@ -295,7 +295,7 @@ const saveNewEvent = async (eventData: any) => {
         memberUserIds: eventData.memberUserIds || [1] // 백엔드 @NotEmpty 대응 (실제 ID 배열 필요)
       });
     }
-    // 2. 개인 일정 (PRIVATE)
+    // 개인 일정 (PRIVATE)
     else if (eventData.type === 'PRIVATE') {
       result = await createPersonalEvent(projectId, {
         eventName: eventData.title,
@@ -305,7 +305,7 @@ const saveNewEvent = async (eventData: any) => {
         description: eventData.description || ''
       });
     }
-    // 3. 휴가 일정 (VACATION)
+    // 휴가 일정 (VACATION)
     else if (eventData.type === 'VACATION') {
       result = await createVacationEvent(projectId, {
         eventName: eventData.title || '휴가',

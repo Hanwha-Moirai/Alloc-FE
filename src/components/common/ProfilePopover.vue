@@ -14,6 +14,7 @@
       <button class="outline" @click="goProfile">
         기본정보
       </button>
+
       <button class="primary" @click="logout">
         로그아웃
       </button>
@@ -27,6 +28,7 @@ import { useRouter } from 'vue-router'
 import { fetchMyProfileSummary } from '@/api/profile';
 
 const router = useRouter()
+const emit = defineEmits(['goProfile', 'logout'])
 
 // 상태
 const profile = ref<{
@@ -61,12 +63,11 @@ const displayRole = computed(() => {
 
 // 액션
 const goProfile = () => {
-  router.push('/my/profile')
+  emit('goProfile')
 }
 
 const logout = () => {
-  localStorage.removeItem('accessToken')
-  router.push('/login')
+  emit('logout')
 }
 </script>
 

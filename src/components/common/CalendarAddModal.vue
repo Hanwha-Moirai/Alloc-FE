@@ -115,7 +115,6 @@ const handleSave = () => {
     return alert('종료 일시가 시작 일시보다 빠를 수 없습니다.');
   }
 
-  // 3. 백엔드 DTO 구조에 맞게 데이터 가공하여 emit
   emit('add-event', {
     title: form.value.title,
     startDate: form.value.startDate,
