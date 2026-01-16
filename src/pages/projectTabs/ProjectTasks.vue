@@ -98,7 +98,7 @@
   <TaskDetailModal
       v-if="showModal"
       :task="selectedTask"
-      :milestone-list="[]"
+      :milestone-list="milestoneList"
       @close="closeModal"
       @save="saveTaskEdit"
       @delete="handleTaskDelete"
@@ -110,7 +110,7 @@ import {ref, onMounted, watch} from 'vue'
 import { useRoute } from 'vue-router'
 import dayjs from 'dayjs'
 import TaskDetailModal from '@/components/common/TaskDetailModal.vue'
-import { getGanttTasks, updateTask, deleteTask, completeTask } from '@/api/gantt'
+import { getGanttTasks, getGanttMilestones, updateTask, deleteTask, completeTask } from '@/api/gantt'
 
 const route = useRoute()
 const projectId = Number(route.params.projectId)
@@ -118,6 +118,7 @@ const tasks = ref<any[]>([])
 const isLoading = ref(false)
 const selectedTask = ref<any>(null)
 const showModal = ref(false)
+const milestoneList = ref<any[]>([])
 
 const props = defineProps({
 
@@ -165,6 +166,7 @@ const fetchTasks = async () => {
         startDate: dayjs(t.startDate).format('YYYY.MM.DD'),
         endDate: dayjs(t.endDate).format('YYYY.MM.DD'),
         userName: t.userName,
+        milestoneId: t.milestoneId,
         description: t.taskDescription,
         task_category: t.taskCategory
       };
@@ -176,9 +178,20 @@ const fetchTasks = async () => {
   }
 };
 
+const fetchMilestones = async () => {
+  try {
+    const res = await getGanttMilestones(projectId)
+    milestoneList.value = res.data?.data || res.data || []
+  } catch (e) {
+    console.error('마일스톤 조회 실패', e)
+  }
+}
+
+
 onMounted(() => {
   if (projectId) {
     fetchTasks()
+    fetchMilestones()
   }
 })
 

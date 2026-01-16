@@ -38,8 +38,12 @@
           <span class="icon">🏁</span>
           <label>마일스톤</label>
           <select v-if="isEdit" v-model="editableTask.milestoneId" class="edit-select">
-            <option v-for="ms in milestoneList" :key="ms.id" :value="ms.id">
-              {{ ms.name }}
+            <option
+                v-for="ms in milestoneList"
+                :key="ms.milestoneId"
+                :value="ms.milestoneId"
+            >
+              {{ ms.milestoneName }}
             </option>
           </select>
           <span v-else class="value">{{ currentMilestoneName }}</span>
@@ -152,8 +156,10 @@ const close = () => {
 }
 
 const currentMilestoneName = computed(() => {
-  const found = props.milestoneList?.find(m => m.id === props.task.milestoneId)
-  return found ? found.name : '지정되지 않음'
+  const found = props.milestoneList?.find(
+      m => m.milestoneId === props.task.milestoneId
+  )
+  return found ? found.milestoneName : '지정되지 않음'
 })
 
 // 담당자 목록
