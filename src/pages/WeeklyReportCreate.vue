@@ -190,19 +190,17 @@ const removeTask = (type: 'completed' | 'incomplete', index: number) => {
 
 // 등록 핸들러
 const handleCreate = async () => {
-  // 유효성 검사
-  if (!form.weekLabel || !form.weekStartDate || !form.weekEndDate) {
-    alert("주차 정보와 보고 기간(시작일/종료일)을 모두 입력해주세요.");
+  // 1. 유효성 검사 수정: 주차 정보만 필수 체크
+  if (!form.weekLabel) {
+    alert("주차 정보를 입력해주세요.");
     return;
   }
 
   try {
-    // 서버 로그의 insert 문에 나열된 필드 순서와 이름을 기준으로 매핑
+    // 2. 전송 데이터(payload)에서 날짜 제거
     const payload = {
-      projectId: Number(projectId),         // 400 에러 방지용
+      projectId: Number(projectId),
       weekLabel: form.weekLabel,
-      weekStartDate: form.weekStartDate,     // 필수! (Column 'week_start_date' cannot be null)
-      weekEndDate: form.weekEndDate,         // 필수! (Column 'week_end_date' cannot be null)
       taskCompletionRate: Number(form.taskCompletionRate),
       summaryText: form.summaryText || '',
       changeOfPlan: form.changeOfPlan || '',
@@ -210,7 +208,7 @@ const handleCreate = async () => {
       incompleteTasks: form.incompleteTasks
     };
 
-    console.log("최종 전송 데이터:", payload);
+    console.log("전송 데이터:", payload);
 
     const response = await createWeeklyReport(projectId, payload);
 
