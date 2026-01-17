@@ -3,19 +3,21 @@
     <div class="summary-cards">
       <div class="card">
         <span class="card-label">프로젝트 인원</span>
-        <div class="card-value">총 <span class="highlight">5 명</span> 선정</div>
+        <div class="card-value">
+          총 <span class="highlight">{{ projectStatus === 'DRAFT' ? 0 : 5 }} 명</span> 선정
+        </div>
       </div>
       <div class="card">
         <span class="card-label">응답 대기</span>
-        <div class="card-value">2</div>
+        <div class="card-value">{{ projectStatus === 'DRAFT' ? '-' : 2 }}</div>
       </div>
       <div class="card">
         <span class="card-label">수락</span>
-        <div class="card-value">3</div>
+        <div class="card-value">{{ projectStatus === 'DRAFT' ? '-' : 3 }}</div>
       </div>
       <div class="card">
         <span class="card-label">면담요청</span>
-        <div class="card-value">1</div>
+        <div class="card-value">{{ projectStatus === 'DRAFT' ? '-' : 1 }}</div>
       </div>
     </div>
 
@@ -23,6 +25,13 @@
       <div class="list-header">
         <h3 class="section-title">인원 리스트</h3>
         <div class="action-buttons">
+          <button
+              v-if="projectStatus === 'DRAFT'"
+              class="btn-gradient"
+              @click="handleRecommend"
+          >
+            ✨ 인재 추천받기
+          </button>
           <button class="btn-outline">인원 추가</button>
           <button class="btn-primary">저장</button>
         </div>
@@ -44,51 +53,88 @@
           </tr>
           </thead>
           <tbody>
-          <tr v-for="(member, index) in memberList" :key="index">
-            <td class="name-cell">
-              <img src="/user.png" alt="user icon" class="user-icon" />
-              {{ member.name }}
-            </td>
-            <td>{{ member.role }}</td>
-            <td>
-              <span class="skill-tag">{{ member.skill }}</span>
-            </td>
-            <td>{{ member.fit }}%</td>
-            <td>{{ member.price.toLocaleString() }}</td>
-            <td>
-              <span class="status-dot ongoing"></span> 투입중
-            </td>
-            <td>
-              <span class="status-dot" :class="member.requestStatusClass"></span>
-              {{ member.requestStatus }}
-            </td>
-            <td>
-              <div class="decision-group">
-                  <span v-for="tag in member.decisions" :key="tag"
-                        class="badge" :class="tag.class">
+          <template v-if="projectStatus !== 'DRAFT'">
+            <tr v-for="(member, index) in memberList" :key="index">
+              <td class="name-cell">
+                <img src="/user.png" alt="user icon" class="user-icon" />
+                {{ member.name }}
+              </td>
+              <td>{{ member.role }}</td>
+              <td><span class="skill-tag">{{ member.skill }}</span></td>
+              <td>{{ member.fit }}%</td>
+              <td>{{ member.price.toLocaleString() }}</td>
+              <td><span class="status-dot ongoing"></span> 투입중</td>
+              <td>
+                <span class="status-dot" :class="member.requestStatusClass"></span>
+                {{ member.requestStatus }}
+              </td>
+              <td>
+                <div class="decision-group">
+                  <span v-for="tag in member.decisions" :key="tag.label" class="badge" :class="tag.class">
                     {{ tag.label }}
                   </span>
-              </div>
-            </td>
-            <td>
-              <div class="decision-group">
-                  <span v-for="tag in member.finalDecisions" :key="tag"
-                        class="badge" :class="tag.class">
+                </div>
+              </td>
+              <td>
+                <div class="decision-group">
+                  <span v-for="tag in member.finalDecisions" :key="tag.label" class="badge" :class="tag.class">
                     {{ tag.label }}
                   </span>
-              </div>
+                </div>
+              </td>
+            </tr>
+          </template>
+
+          <tr v-else>
+            <td colspan="9" class="empty-row">
+              {{ projectStatus === 'DRAFT' ? '인재 추천을 통해 프로젝트 멤버를 구성해보세요.' : '등록된 인원이 없습니다.' }}
             </td>
           </tr>
           </tbody>
         </table>
       </div>
     </div>
+
+    <RecommendModal v-if="showRecommendModal" @close="showRecommendModal = false" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+import RecommendModal from '@/components/common/RecommendModal.vue';
+import { fetchProjectDetail } from '@/api/project';
 
+const router = useRouter();
+const route = useRoute();
+const projectId = route.params.projectId;
+
+// 상태 관리 (테스트를 위해 DRAFT로 초기화)
+const projectStatus = ref('');
+const showRecommendModal = ref(false);
+
+onMounted(async () => {
+  try {
+    const res = await fetchProjectDetail(projectId);
+
+    const statusFromServer = res.data?.status;
+
+    projectStatus.value = statusFromServer;
+  } catch (e) {
+    console.error("데이터 로드 실패", e);
+    projectStatus.value = 'ERROR';
+  }
+});
+
+const handleRecommend = () => {
+  showRecommendModal.value = true;
+  setTimeout(() => {
+    showRecommendModal.value = false;
+    router.push(`/projects/${projectId}/recommend`);
+  }, 3000);
+};
+
+// DRAFT가 아닐 때 보여줄 임시 데이터
 const memberList = ref([
   {
     name: '홍길동',
@@ -189,6 +235,21 @@ const memberList = ref([
   padding: 8px 24px;
   border: none;
   background: #00bcd4;
+  color: #fff;
+  cursor: pointer;
+}
+
+.empty-row {
+  text-align: center;
+  color: #94a3b8;
+  padding: 60px 0 !important;
+  font-size: 14px;
+}
+
+.btn-gradient {
+  padding: 8px 16px;
+  border: none;
+  background: linear-gradient(90deg, #4ab8d8, #8b6cff);
   color: #fff;
   cursor: pointer;
 }

@@ -52,14 +52,11 @@ import { ref, reactive, computed } from 'vue';
 import { useRouter } from 'vue-router';
 const router = useRouter();
 
-const props = defineProps<{ isOpen: boolean }>();
+const props = defineProps<{
+  isOpen: boolean
+  projectList: { id: number; name: string }[]
+}>()
 const emit = defineEmits(['close', 'create']);
-
-// 예시 프로젝트 리스트
-const projectList = ref([
-  { id: 1, name: '웹 플랫폼 고도화 프로젝트' },
-  { id: 2, name: '차세대 ERP 구축' }
-]);
 
 const form = reactive({
   projectId: '',
@@ -69,8 +66,13 @@ const form = reactive({
 const handleCreate = () => {
   if (!form.projectId) return alert('프로젝트를 선택해주세요.');
 
-  const tempDocId = Date.now();
-  router.push(`/projects/${form.projectId}/docs/${form.docType}/${tempDocId}`);
+  if (form.docType === 'meeting') {
+    // 회의록 생성 페이지로 이동
+    router.push(`/projects/${form.projectId}/docs/meeting/create`);
+  } else if (form.docType === 'weekly') {
+    // 주간보고 생성 페이지로 이동
+    router.push(`/projects/${form.projectId}/docs/weekly/create`);
+  }
 
   emit('close');
 };

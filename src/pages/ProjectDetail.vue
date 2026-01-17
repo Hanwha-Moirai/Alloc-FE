@@ -62,6 +62,7 @@
 
     <DocCreateModal
         :is-open="showDocModal"
+        :project-list="myProjectList"
         @close="showDocModal = false"
         @create="handleCreateDoc"
     />
@@ -79,6 +80,7 @@ import MilestoneAddModal from '@/components/common/MilestoneAddModal.vue'
 import DocCreateModal from '@/components/common/DocCreateModal.vue'
 
 import { createMilestone, createTask, getGanttMilestones } from '@/api/gantt'
+import { fetchMyProjectHistory } from '@/api/profile'
 
 const route = useRoute()
 const router = useRouter()
@@ -91,6 +93,7 @@ const showDocModal = ref(false)
 const isEditing = ref(false)
 const isFilterOpen = ref(false)
 const milestoneList = ref<any[]>([])
+const myProjectList = ref<{ id: number; name: string }[]>([])
 
 // URL에 'recommend'가 포함되어 있으면 true를 반환하여 template의 UI를 숨김
 const isRecommendPage = computed(() => {
@@ -99,14 +102,24 @@ const isRecommendPage = computed(() => {
 
 // --- Methods ---
 const toggleEdit = () => {
-  if (isEditing.value) {
-    // 저장 로직 (필요 시 API 호출)
-    alert('저장되었습니다.')
-  }
   isEditing.value = !isEditing.value
 }
 
-// 마일스톤 목록 조회
+//프로젝트 목록 조회
+const fetchMyProjects = async () => {
+  try {
+    const res = await fetchMyProjectHistory()
+
+    myProjectList.value = res.data.data.map((p: any) => ({
+      id: p.projectId,
+      name: p.projectName
+    }))
+  } catch (e) {
+    console.error('내 프로젝트 목록 조회 실패', e)
+  }
+}
+
+//마일스톤 목록 조회
 const fetchMilestones = async () => {
   try {
     const res = await getGanttMilestones(Number(projectId))
@@ -204,13 +217,13 @@ const isActive = (tab: string) => {
   return path.includes(`/projects/${projectId}/${tab}`)
 }
 
-// Watchers
 watch(
-    () => route.path,
-    (path) => {
-      if (path.includes('/tasks')) {
-        fetchMilestones()
-      }
+    () => route.params.projectId,
+    (projectId) => {
+      if (!projectId) return
+
+      fetchMilestones()
+      fetchMyProjects()
     },
     { immediate: true }
 )

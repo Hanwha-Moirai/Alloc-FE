@@ -12,7 +12,7 @@
         <label class="label">기술스택명</label>
         <div class="select-box">
           <select v-model="selectedTechId" class="select-input">
-            <option disabled value="">기술을 선택하세요</option>
+            <option :value="null" disabled hidden>기술을 선택하세요</option>
             <option
                 v-for="tech in techOptions"
                 :key="tech.techId"

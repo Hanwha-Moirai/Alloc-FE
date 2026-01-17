@@ -158,6 +158,8 @@ const fetchGanttData = async () => {
       projectName: ms.milestoneName || '제목 없음',
       startDate: dayjs(ms.startDate).format('YYYY.MM.DD'),
       endDate: dayjs(ms.endDate).format('YYYY.MM.DD'),
+      achievementRate: ms.achievementRate ?? 0,
+      memberUserIds: ms.memberUserIds ?? [],
       expanded: true, // task 펼치기 : true
 
       tasks: (ms.tasks || []).map(t => ({
@@ -287,7 +289,14 @@ const closeHandler = () => {
 
 // 수정/삭제 핸들러
 const isEditModalOpen = ref(false);
-const editingData = ref({ id: 0, projectName: '', startDate: '', endDate: '' });
+const editingData = ref({
+  id: 0,
+  projectName: '',
+  startDate: '',
+  endDate: '',
+  achievementRate: 0,
+  memberUserIds: [] as number[]
+});
 
 const handleEdit = (id: number) => {
   const target = scheduleData.value.find(item => item.id === id);
@@ -305,7 +314,8 @@ const saveEdit = async (updatedData: any) => {
       milestoneName: updatedData.projectName,
       startDate: updatedData.startDate.replace(/\./g, '-'),
       endDate: updatedData.endDate.replace(/\./g, '-'),
-      achievementRate: updatedData.achievementRate || 0
+      achievementRate: updatedData.achievementRate ?? 0,
+      memberUserIds: updatedData.memberUserIds
     };
 
     const response = await updateMilestone(projectId, updatedData.id, requestData);

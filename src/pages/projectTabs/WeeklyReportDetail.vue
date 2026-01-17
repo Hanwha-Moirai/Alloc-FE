@@ -189,6 +189,7 @@
 import {ref, reactive, computed, onMounted} from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from '@/lib/axios';
+import { fetchProjectDetail } from '@/api/project';
 
 const route = useRoute();
 const router = useRouter();
@@ -222,7 +223,23 @@ const nextWeekTasks = ref([]);
 const expandedRow = ref<number | null>(null);
 const isEditing = ref(false);
 
-// 데이터 초기 로드
+const getProjectInfo = async () => {
+  try {
+    const res = await fetchProjectDetail(projectId);
+    const p = res.data.data || res.data;
+
+    form.projectName = p.name || p.projectName;
+    form.client = p.partners || '고객사 정보 없음';
+    form.manager = p.managerName || 'PM 정보 없음';
+
+    if (!form.period || form.period.includes('undefined')) {
+      form.period = `${p.startDate} ~ ${p.endDate}`;
+    }
+  } catch (e) {
+    console.error('프로젝트 메타 정보 로드 실패:', e);
+  }
+};
+
 const fetchDetail = async () => {
   try {
     const response = await axios.get(
@@ -231,22 +248,20 @@ const fetchDetail = async () => {
 
     const data = response.data.data;
 
-    form.projectName = data.projectName;
-    form.period = `${data.weekStartDate} ~ ${data.weekEndDate}`;
-    form.client = 'N/A';
-    form.manager = '-';
     form.week = data.weekLabel ?? '-';
     form.reporter = data.reporterName ?? '-';
     form.progress = Math.round(data.taskCompletionRate ?? 0);
+    form.period = `${data.weekStartDate} ~ ${data.weekEndDate}`;
 
     completedTasks.value = data.completedTasks ?? [];
     uncompletedTasks.value = data.incompleteTasks ?? [];
     nextWeekTasks.value = data.nextWeekTasks ?? [];
+    await getProjectInfo();
+
   } catch (error) {
     console.error('데이터 로드 실패:', error);
   }
 };
-
 
 onMounted(() => {
   if (reportId) fetchDetail();

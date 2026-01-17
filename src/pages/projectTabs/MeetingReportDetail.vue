@@ -74,6 +74,7 @@
 import { ref, reactive, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getMeetingRecordDetail, updateMeetingRecord, deleteMeetingRecord } from '@/api/meetingRecord';
+import { fetchProjectDetail } from '@/api/project'
 
 const route = useRoute();
 const router = useRouter();
@@ -100,14 +101,6 @@ const fetchMeetingDetail = async () => {
   try {
     const res = await getMeetingRecordDetail(projectId, meetingId);
     const data = res.data.data;
-
-    // 메타 정보 매핑
-    form.projectName = data.projectName || data.projectId;
-    form.period = data.period || '기간 정보 없음';
-    form.client = data.client || '고객사 정보 없음';
-    form.meetingDate = formatDate(data.meetingDate);
-    form.reporter = data.createdBy;
-
     const agenda = data.agendas?.[0];
     if (agenda) {
       originalAgendaId = agenda.agendaId;
@@ -115,12 +108,40 @@ const fetchMeetingDetail = async () => {
       form.agendaType = agenda.agendaType;
       form.decision = agenda.discussionResult;
     }
+
+    form.meetingDate = formatDate(data.meetingDate);
+    form.reporter = data.createdBy;
+
+    if (data.projectName) {
+      form.projectName = data.projectName;
+      form.period = data.period;
+      form.client = data.client;
+    } else {
+      await fetchProjectInfo();
+    }
+
   } catch (error) {
     console.error('불러오기 실패:', error);
   }
 };
 
-onMounted(fetchMeetingDetail);
+const fetchProjectInfo = async () => {
+  try {
+    const res = await fetchProjectDetail(projectId);
+    const p = res.data.data || res.data;
+    if (!form.projectName) form.projectName = p.name || p.projectName;
+    if (!form.period) form.period = `${p.startDate} ~ ${p.endDate}`;
+    if (!form.client) form.client = p.partners || '고객사 정보 없음';
+
+    form.manager = p.managerName || 'PM 정보 없음';
+  } catch (e) {
+    console.error('프로젝트 정보 조회 실패', e);
+  }
+};
+
+onMounted(async () => {
+  await fetchMeetingDetail();
+});
 
 const formatDate = (value) => {
   if (!value) return '';

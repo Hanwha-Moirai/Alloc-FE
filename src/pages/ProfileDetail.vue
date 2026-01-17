@@ -95,7 +95,7 @@
                 </div>
 
                 <div class="level-action-group">
-                  <span class="skill-level" :class="`lv-${skill.level}`">L{{ skill.level }}</span>
+                  <span class="skill-level" :class="`lv-${skill.level}`">LV{{ skill.level }}</span>
                   <button
                       v-if="isSkillEditing"
                       class="delete-skill-btn"

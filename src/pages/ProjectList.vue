@@ -32,41 +32,43 @@
         <tbody>
         <tr
             v-for="project in projects"
-            :key="project.id"
-            @click="goDetail(project.id)"
+            :key="project.projectId"
+            @click="goDetail(project.projectId)"
         >
-        <td class="name">
-            {{ project.name }}
+          <td class="name">
+            {{ project.projectName }}
           </td>
-          <td>{{ project.period }}</td>
+          <td>{{ project.startDate }} ~ {{ project.endDate }}</td>
 
           <td>
-              <span
-                  class="badge status"
-                  :class="project.status.toLowerCase()"
-              >
-                {{ project.status }}
-              </span>
-          </td>
-
-          <td>{{ project.progress }}%</td>
-
-          <td>
-              <span
-                  class="badge doc"
-                  :class="project.docStatus.toLowerCase()"
-              >
-                {{ project.docStatus }}
-              </span>
+            <span
+                class="badge status"
+                :class="project.status.toLowerCase()"
+            >
+              {{ project.status }}
+            </span>
           </td>
 
           <td>
-              <span
-                  class="badge risk"
-                  :class="project.risk.toLowerCase()"
-              >
-                {{ project.risk }}
-              </span>
+            {{ project.progressRate ?? '-' }}%
+          </td>
+
+          <td>
+            <span
+                class="badge doc"
+                :class="project.documentStatus?.toLowerCase()"
+            >
+              {{ project.documentStatus ?? '-' }}
+            </span>
+          </td>
+
+          <td>
+            <span
+                class="badge risk"
+                :class="project.riskLevel?.toLowerCase()"
+            >
+              {{ project.riskLevel ?? '-' }}
+            </span>
           </td>
         </tr>
         </tbody>
@@ -87,55 +89,48 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { fetchProjectList } from '@/api/project'
 
 const router = useRouter()
 
-/* ================= 더미 데이터 ================= */
+type ProjectItem = {
+  projectId: number
+  projectName: string
+  startDate: string
+  endDate: string
+  status: string
 
-const projects = [
-  {
-    id: 1,
-    name: '로그 기반 이상 트래픽 자동 감지 시스템',
-    period: '2025.01 - 2026.12',
-    status: 'DRAFT',
-    progress: 0,
-    docStatus: 'DRAFT',
-    risk: 'HIGH',
-  },
-  {
-    id: 2,
-    name: '로그 기반 이상 트래픽 자동 감지 시스템',
-    period: '2025.01 - 2026.12',
-    status: 'ACTIVE',
-    progress: 45,
-    docStatus: 'SENT',
-    risk: 'MEDIUM',
-  },
-  {
-    id: 3,
-    name: '로그 기반 이상 트래픽 자동 감지 시스템',
-    period: '2025.01 - 2026.12',
-    status: 'CLOSED',
-    progress: 100,
-    docStatus: 'DRAFT',
-    risk: 'MEDIUM',
-  },
-  {
-    id: 4,
-    name: '로그 기반 이상 트래픽 자동 감지 시스템',
-    period: '2025.01 - 2026.12',
-    status: 'HOLD',
-    progress: 0,
-    docStatus: 'DRAFT',
-    risk: 'NORMAL',
-  },
-]
-
-const goDetail = (id: number) => {
-  router.push(`/projects/${id}`)
+  progressRate: number | null
+  documentStatus: string | null
+  riskLevel: string | null
 }
 
+const projects = ref<ProjectItem[]>([])
+const loading = ref(false)
+
+const loadProjects = async () => {
+  loading.value = true
+  try {
+    const res = await fetchProjectList()
+    console.log('📌 프로젝트 목록:', res.data)
+
+    projects.value = res.data   // ⭐ 핵심
+  } catch (e) {
+    console.error('❌ 프로젝트 목록 조회 실패', e)
+  } finally {
+    loading.value = false
+  }
+}
+
+const goDetail = (projectId: number) => {
+  router.push(`/projects/${projectId}`)
+}
+
+onMounted(() => {
+  loadProjects()
+})
 </script>
 
 <style scoped>

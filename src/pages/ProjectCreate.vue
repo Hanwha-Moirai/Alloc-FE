@@ -62,9 +62,9 @@
     <div class="form-group">
       <label class="label">프로젝트 유형</label>
       <div class="radio-group">
-        <label v-for="type in projectTypes" :key="type" class="radio-item">
-          <input type="radio" :value="type" v-model="project.type" />
-          <span>{{ type }}</span>
+        <label v-for="type in projectTypes" :key="type.value" class="radio-item">
+          <input type="radio" :value="type.value" v-model="project.type" />
+          <span>{{ type.label }}</span>
         </label>
       </div>
     </div>
@@ -85,20 +85,22 @@
       <label class="label">프로젝트 직군 정의</label>
 
       <div class="line-row" v-for="(role, index) in roles" :key="`role-${index}`">
-        <select class="input" v-model="role.name">
-          <option disabled value="">직군 선택</option>
-          <option>Backend</option>
-          <option>Frontend</option>
-          <option>DevOps</option>
-          <option>PM</option>
-          <option>Designer</option>
+        <select class="input" v-model="role.jobId">
+          <option :value="null" disabled>직군 선택</option>
+          <option
+              v-for="job in jobOptions"
+              :key="job.jobId"
+              :value="job.jobId"
+          >
+            {{ job.jobName }}
+          </option>
         </select>
 
         <input
             type="number"
             class="input"
-            placeholder="필요 인원"
-            v-model="role.count"
+            min="1"
+            v-model.number="role.requiredCount"
         />
 
         <button
@@ -119,20 +121,22 @@
       <label class="label">필요 기술스택 정의</label>
 
       <div class="line-row" v-for="(tech, index) in techs" :key="`tech-${index}`">
-        <select class="input" v-model="tech.name">
-          <option disabled value="">기술 선택</option>
-          <option>Spring Boot</option>
-          <option>Vue</option>
-          <option>React</option>
-          <option>Docker</option>
-          <option>Kubernetes</option>
+        <select class="input" v-model="tech.techId">
+          <option :value="null" disabled>기술 선택</option>
+          <option
+              v-for="techOpt in techOptions"
+              :key="techOpt.techId"
+              :value="techOpt.techId"
+          >
+            {{ techOpt.techName }}
+          </option>
         </select>
 
         <select class="input" v-model="tech.level">
           <option disabled value="">LV 선택</option>
-          <option>L1</option>
-          <option>L2</option>
-          <option>L3</option>
+          <option value="LV1">LV1</option>
+          <option value="LV2">LV2</option>
+          <option value="LV3">LV3</option>
         </select>
 
         <button
@@ -154,9 +158,6 @@
       <button class="primary-btn" @click="handleSave">
         저장
       </button>
-      <button class="gradient-btn" @click="handleRecommend">
-        적합한 인재 추천받기
-      </button>
     </div>
 
     <SaveSuccessModal
@@ -164,44 +165,66 @@
         @close="showSuccessModal = false"
     />
 
-    <RecommendModal
-        v-if="showRecommendModal"
-        @close="showRecommendModal = false"
-    />
-
   </div>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import SaveSuccessModal from '@/components/common/SaveSuccessModal.vue'
-import RecommendModal from '@/components/common/RecommendModal.vue'
+import { fetchJobs, fetchTechStacks } from '@/api/hr'
+import { createProject } from '@/api/project'
 
 // 라우터 인스턴스 생성
 const router = useRouter()
+
+// 모달 표시 상태 변수
+const showSuccessModal = ref(false)
+const showRecommendModal = ref(false)
 
 const project = ref({
   name: '',
   period: '',
   client: '',
   budget: 0,
-  type: '신규 개발',
+  type: 'NEW',
   description: '',
 })
 
-const projectTypes = ['신규 개발', '운영', '유지보수']
+const projectTypes = [
+  { label: '신규 개발', value: 'NEW' },
+  { label: '운영', value: 'OPERATION' },
+  { label: '유지보수', value: 'MAINTENANCE' }
+]
 
-const roles = ref([{ name: '', count: '' }])
-const techs = ref([{ name: '', level: '' }])
+const jobOptions = ref([])
+const techOptions = ref([])
 
-const addRole = () => roles.value.push({ name: '', count: '' })
+const roles = ref([
+  { jobId: null, requiredCount: 1 }
+])
+
+const techs = ref([
+  { techId: null, level: '' }
+])
+
+const addRole = () => {
+  roles.value.push({
+    jobId: null,
+    requiredCount: 1
+  })
+}
 const removeRole = (index) => {
   if (roles.value.length === 1) return
   roles.value.splice(index, 1)
 }
 
-const addTech = () => techs.value.push({ name: '', level: '' })
+const addTech = () => {
+  techs.value.push({
+    techId: null,
+    level: ''
+  })
+}
 const removeTech = (index) => {
   if (techs.value.length === 1) return
   techs.value.splice(index, 1)
@@ -216,46 +239,61 @@ watch(budgetDisplay, (value) => {
   budgetDisplay.value = numeric.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 })
 
-// 모달 표시 상태 변수
-const showSuccessModal = ref(false)
-const showRecommendModal = ref(false)
+onMounted(async () => {
+  try {
+    const [jobRes, techRes] = await Promise.all([
+      fetchJobs(),
+      fetchTechStacks()
+    ])
+
+    jobOptions.value = jobRes.data.data
+
+    const items = techRes.data?.data?.items ?? []
+
+    techOptions.value = items.map(t => ({
+      techId: t.techId,
+      techName: t.techName
+    }))
+  } catch (e) {
+    console.error('직군/기술 목록 조회 실패', e)
+  }
+})
 
 // 저장 버튼 클릭 핸들러
-const handleSave = () => {
-  // 실제로는 여기서 API 통신 등을 처리합니다.
-  showSuccessModal.value = true
-}
-
-// 인재 추천 버튼 클릭 핸들러 수정
-const handleRecommend = async () => {
-  // 1. 유효성 검사 (필요 시)
-  if (!project.value.name) {
-    alert('프로젝트명을 입력해주세요.');
-    return;
-  }
-
-  // 2. 로딩 모달(GIF) 표시
-  showRecommendModal.value = true;
-
+const handleSave = async () => {
   try {
-    // 3. 실제 DB에 저장하고 ID를 받아오는 로직 (예시 API 호출)
-    // const response = await api.post('/projects', project.value);
-    // const newProjectId = response.data.id;
+    const validRoles = roles.value.filter(r => r.jobId !== null);
+    const validTechs = techs.value.filter(t => t.techId !== null && t.level !== '');
 
-    // 테스트용 임시 ID (실제 연동 시 위 API 결과값 사용)
-    const tempId = 1;
+    const payload = {
+      name: project.value.name,
+      startDate: project.value.startDate,
+      endDate: project.value.endDate,
+      partners: project.value.client,
+      predictedCost: project.value.budget,
+      projectType: project.value.type,
+      description: project.value.description,
 
-    // 4. GIF가 충분히 보일 시간(3초) 대기
-    setTimeout(() => {
-      showRecommendModal.value = false;
+      jobRequirements: validRoles.map(r => ({
+        jobId: r.jobId,
+        requiredCount: r.requiredCount
+      })),
 
-      router.push(`/projects/${tempId}/recommend`);
-    }, 3000);
+      techRequirements: validTechs.map(t => ({
+        techId: t.techId,
+        techLevel: t.level
+      }))
+    };
 
-  } catch (error) {
-    console.error('저장 실패:', error);
-    showRecommendModal.value = false;
-    alert('프로젝트 저장 중 오류가 발생했습니다.');
+    console.log('📌 전송 직전 최종 데이터:', JSON.stringify(payload));
+
+    await createProject(payload);
+    alert('프로젝트가 등록되었습니다.');
+    router.push('/projects');
+
+  } catch (e) {
+    console.error('❌ 등록 실패 상세:', e.response?.data || e);
+    alert('등록 실패: ' + (e.response?.data?.message || '입력값을 확인하세요.'));
   }
 }
 </script>
@@ -380,14 +418,6 @@ const handleRecommend = async () => {
   color: #fff;
   border: none;
   padding: 10px 16px;
-  cursor: pointer;
-}
-
-.gradient-btn {
-  background: linear-gradient(90deg, #4ab5d8, #8b6cff);
-  color: #fff;
-  border: none;
-  padding: 10px 18px;
   cursor: pointer;
 }
 </style>
