@@ -158,19 +158,11 @@
       <button class="primary-btn" @click="handleSave">
         저장
       </button>
-      <button class="gradient-btn" @click="handleRecommend">
-        적합한 인재 추천받기
-      </button>
     </div>
 
     <SaveSuccessModal
         v-if="showSuccessModal"
         @close="showSuccessModal = false"
-    />
-
-    <RecommendModal
-        v-if="showRecommendModal"
-        @close="showRecommendModal = false"
     />
 
   </div>
@@ -180,7 +172,6 @@
 import { ref, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import SaveSuccessModal from '@/components/common/SaveSuccessModal.vue'
-import RecommendModal from '@/components/common/RecommendModal.vue'
 import { fetchJobs, fetchTechStacks } from '@/api/hr'
 import { createProject } from '@/api/project'
 
@@ -305,39 +296,6 @@ const handleSave = async () => {
     alert('등록 실패: ' + (e.response?.data?.message || '입력값을 확인하세요.'));
   }
 }
-
-// 인재 추천 버튼 클릭 핸들러 수정
-const handleRecommend = async () => {
-  // 1. 유효성 검사 (필요 시)
-  if (!project.value.name) {
-    alert('프로젝트명을 입력해주세요.');
-    return;
-  }
-
-  // 2. 로딩 모달(GIF) 표시
-  showRecommendModal.value = true;
-
-  try {
-    // 3. 실제 DB에 저장하고 ID를 받아오는 로직 (예시 API 호출)
-    // const response = await api.post('/projects', project.value);
-    // const newProjectId = response.data.id;
-
-    // 테스트용 임시 ID (실제 연동 시 위 API 결과값 사용)
-    const tempId = 1;
-
-    // 4. GIF가 충분히 보일 시간(3초) 대기
-    setTimeout(() => {
-      showRecommendModal.value = false;
-
-      router.push(`/projects/${tempId}/recommend`);
-    }, 3000);
-
-  } catch (error) {
-    console.error('저장 실패:', error);
-    showRecommendModal.value = false;
-    alert('프로젝트 저장 중 오류가 발생했습니다.');
-  }
-}
 </script>
 
 <style scoped>
@@ -460,14 +418,6 @@ const handleRecommend = async () => {
   color: #fff;
   border: none;
   padding: 10px 16px;
-  cursor: pointer;
-}
-
-.gradient-btn {
-  background: linear-gradient(90deg, #4ab5d8, #8b6cff);
-  color: #fff;
-  border: none;
-  padding: 10px 18px;
   cursor: pointer;
 }
 </style>
