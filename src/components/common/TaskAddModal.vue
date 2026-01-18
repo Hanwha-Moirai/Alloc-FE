@@ -52,10 +52,14 @@
 
         <div class="input-section">
           <label>마일스톤</label>
-          <select v-model="newTask.milestoneId" class="full-input select-input">
+          <select
+              v-model="newTask.milestoneId"
+              class="full-input select-input"
+              @focus="handleMilestoneFocus"
+          >
             <option value="" disabled>마일스톤 선택</option>
             <option
-                v-for="ms in milestoneList"
+                v-for="ms in milestoneOptions"
                 :key="ms.milestoneId"
                 :value="ms.milestoneId"
             >
@@ -83,16 +87,23 @@
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { getGanttMilestones } from '@/api/gantt'
 
 const props = defineProps<{
   milestoneList: any[]
 }>()
 
 const emit = defineEmits(['close', 'add'])
+const route = useRoute()
 
 // 담당자 목록 데이터
 const userList = ['김동리', '이철수', '박영희', '최민수']
+
+const milestoneOptions = ref<any[]>([])
+const hasLoadedMilestones = ref(false)
+const isLoadingMilestones = ref(false)
 
 // 새 태스크 데이터 초기값
 const newTask = reactive({
@@ -107,6 +118,41 @@ const newTask = reactive({
 })
 
 const close = () => emit('close')
+
+const handleMilestoneFocus = async () => {
+  if (hasLoadedMilestones.value || isLoadingMilestones.value) {
+    return
+  }
+
+  const projectId = Number(route.params.projectId)
+  if (!projectId) {
+    milestoneOptions.value = props.milestoneList || []
+    hasLoadedMilestones.value = true
+    return
+  }
+
+  isLoadingMilestones.value = true
+  try {
+    const res = await getGanttMilestones(projectId)
+    milestoneOptions.value = res.data?.data || res.data || []
+  } catch (error) {
+    milestoneOptions.value = props.milestoneList || []
+    console.error(error)
+  } finally {
+    hasLoadedMilestones.value = true
+    isLoadingMilestones.value = false
+  }
+}
+
+watch(
+  () => props.milestoneList,
+  (nextList) => {
+    if (!hasLoadedMilestones.value) {
+      milestoneOptions.value = nextList || []
+    }
+  },
+  { immediate: true }
+)
 
 const handleSubmit = () => {
   if (!newTask.title || !newTask.startDate || !newTask.endDate) {
