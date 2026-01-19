@@ -50,57 +50,81 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref, computed } from 'vue';
+<script setup>
+import { ref, onMounted, computed } from 'vue';
+import {
+  fetchNotifications,
+  fetchUnreadCount,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  deleteNotification,
+  deleteAllReadNotifications,
+  getNotificationSubscribeUrl
+} from '@/api/notification';
 
-/* 알림 데이터 타입 정의 */
-interface NotiItem {
-  id: number;
-  message: string;
-  createdAt: string;
-  isRead: boolean;
-}
+const notifications = ref([]);
+const unreadCount = ref(0);
+const activeTab = ref('unread');
 
-const activeTab = ref<'unread' | 'read'>('unread');
+// 데이터 로드 로직 수정
+const loadData = async () => {
+  try {
+    const [listRes, countRes] = await Promise.all([
+      fetchNotifications({ page: 0, size: 20 }),
+      fetchUnreadCount()
+    ]);
 
-// 임시 데이터 (실제로는 API에서 가져오게 됩니다)
-const notifications = ref<NotiItem[]>([
-  { id: 1, message: '‘알림 서버 재시작 스케줄 적용’ 태스크가 배정되었습니다.', createdAt: '2026.01.08. 12:35:11', isRead: false },
-  { id: 2, message: '06.10 ~ 06.16 주간보고가 저장되었습니다.', createdAt: '2026.01.08. 12:35:11', isRead: false },
-  { id: 3, message: '‘장애 대응 리뷰 회의’가 06.20 10:00에 예정되어 있습니다.', createdAt: '2026.01.08. 12:35:11', isRead: true },
-]);
-
-// 필터링된 목록들
-const unreadNotifications = computed(() => notifications.value.filter(n => !n.isRead));
-const readNotifications = computed(() => notifications.value.filter(n => n.isRead));
-
-// 현재 탭에 보여줄 데이터
-const displayedNotifications = computed(() =>
-    activeTab.value === 'unread' ? unreadNotifications.value : readNotifications.value
-);
-
-/* 액션 핸들러 */
-
-// 개별 처리 (읽음으로 변경 또는 삭제)
-const handleSingleAction = (noti: NotiItem) => {
-  if (activeTab.value === 'unread') {
-    noti.isRead = true; // 실제로는 여기서 API 호출 (PATCH /read)
-  } else {
-    notifications.value = notifications.value.filter(n => n.id !== noti.id); // 실제로는 여기서 API 호출 (DELETE)
+    notifications.value = listRes.data.data.content || [];
+    unreadCount.value = countRes.data.data || 0;
+  } catch (error) {
+    console.error("알림 데이터 로딩 실패:", error);
   }
 };
 
-// 모두 읽음 처리
-const markAllAsRead = () => {
-  notifications.value.forEach(n => n.isRead = true);
-  // API 연동: POST /api/notifications/read-all
+// 개별 액션 처리 수정
+const handleSingleAction = async (noti) => {
+  try {
+    if (activeTab.value === 'unread') {
+      await markNotificationAsRead(noti.id);
+      noti.isRead = true;
+      unreadCount.value = Math.max(0, unreadCount.value - 1);
+    } else {
+      await deleteNotification(noti.id);
+      notifications.value = notifications.value.filter(n => n.id !== noti.id);
+    }
+  } catch (error) {
+    console.error("알림 처리 실패:", error);
+  }
 };
 
-// 모두 삭제 처리
-const deleteAllRead = () => {
-  notifications.value = notifications.value.filter(n => !n.isRead);
-  // API 연동: DELETE /api/notifications/read
+// 전체 읽음 처리
+const markAllAsRead = async () => {
+  try {
+    await markAllNotificationsAsRead();
+    notifications.value.forEach(n => n.isRead = true);
+    unreadCount.value = 0;
+  } catch (error) {
+    console.error("전체 읽음 처리 실패:", error);
+  }
 };
+
+// 읽은 알림 전체 삭제
+const deleteAllRead = async () => {
+  try {
+    await deleteAllReadNotifications();
+    notifications.value = notifications.value.filter(n => !n.isRead);
+  } catch (error) {
+    console.error("전체 삭제 실패:", error);
+  }
+};
+
+const unreadNotifications = computed(() => notifications.value.filter(n => !n.isRead));
+const readNotifications = computed(() => notifications.value.filter(n => n.isRead));
+const displayedNotifications = computed(() => activeTab.value === 'unread' ? unreadNotifications.value : readNotifications.value);
+
+onMounted(() => {
+  loadData();
+});
 </script>
 
 <style scoped>
