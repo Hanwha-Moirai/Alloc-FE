@@ -83,7 +83,6 @@ import MilestoneAddModal from '@/components/common/MilestoneAddModal.vue'
 import DocCreateModal from '@/components/common/DocCreateModal.vue'
 
 import { createMilestone, createTask, getGanttMilestones } from '@/api/gantt'
-import { fetchMyProjectHistory } from '@/api/profile'
 import { getAssignedMembers, fetchProjectList } from '@/api/project';
 
 const route = useRoute()
