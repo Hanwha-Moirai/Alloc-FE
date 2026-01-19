@@ -34,9 +34,15 @@
 
         <div class="input-section">
           <label>담당자</label>
-          <select v-model="newTask.assignee" class="full-input select-input">
-            <option value="" disabled selected>담당자 선택</option>
-            <option v-for="user in userList" :key="user" :value="user">{{ user }}</option>
+          <select v-model="newTask.assigneeId" class="full-input select-input">
+            <option :value="null" disabled selected>담당자 선택</option>
+            <option
+                v-for="member in memberList"
+                :key="member.userId"
+                :value="member.userId"
+            >
+              {{ member.employeeName }} ({{ member.jobName }})
+            </option>
           </select>
         </div>
 
@@ -86,20 +92,18 @@
 import { reactive } from 'vue'
 
 const props = defineProps<{
-  milestoneList: any[]
+  milestoneList: any[],
+  memberList: any[]
 }>()
 
 const emit = defineEmits(['close', 'add'])
-
-// 담당자 목록 데이터
-const userList = ['김동리', '이철수', '박영희', '최민수']
 
 // 새 태스크 데이터 초기값
 const newTask = reactive({
   title: '',
   startDate: '',
   endDate: '',
-  assignee: '',
+  assigneeId: null,
   task_category: 'DEVELOPMENT',
   milestoneId: '',
   description: '',

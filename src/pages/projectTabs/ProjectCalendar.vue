@@ -171,7 +171,7 @@
 
     <CalendarAddModal
         :is-open="isModalOpen"
-        @close="isModalOpen = false"
+        :member-list="memberList"  @close="isModalOpen = false"
         @add-event="saveNewEvent"
     />
   </div>
@@ -188,6 +188,10 @@ dayjs.locale('ko')
 
 const route = useRoute()
 const projectId = Number(route.params.projectId)
+
+const props = defineProps<{
+  memberList: any[]
+}>();
 
 // 상태 및 데이터 정의
 const viewMode = ref('week')
@@ -317,8 +321,8 @@ const saveNewEvent = async (eventData: any) => {
 
     if (result) {
       alert('일정이 등록되었습니다.');
-      await fetchCalendarData(); // 목록 갱신
-      isModalOpen.value = false;  // 모달 닫기
+      await fetchCalendarData();
+      isModalOpen.value = false;
     }
   } catch (error: any) {
     console.error('❌ 등록 실패:', error.response?.data || error.message);

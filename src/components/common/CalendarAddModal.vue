@@ -47,9 +47,13 @@
             <label class="form-label">담당자</label>
             <div class="form-input-group">
               <select v-model="form.assigneeId" class="full-input select-input">
-                <option :value="null" disabled>담당자를 선택하세요</option>
-                <option v-for="user in userList" :key="user.id" :value="user.id">
-                  {{ user.name }}
+                <option :value="null" disabled selected>담당자를 선택하세요</option>
+                <option
+                    v-for="member in memberList"
+                    :key="member.userId"
+                    :value="member.userId"
+                >
+                  {{ member.employeeName }} ({{ member.jobName }})
                 </option>
               </select>
             </div>
@@ -76,17 +80,11 @@
 import { ref } from 'vue';
 import dayjs from 'dayjs';
 
-const props = defineProps<{ isOpen: boolean }>();
+const props = defineProps<{
+  isOpen: boolean,
+  memberList: any[]
+}>();
 const emit = defineEmits(['close', 'add-event']);
-
-const userList = ref([
-  { id: 1, name: '김현수' },
-  { id: 2, name: '이민지' },
-  { id: 3, name: '박철수' },
-  { id: 4, name: '최유진' },
-  { id: 5, name: '홍길동' },
-  { id: 9, name: '프로젝트매니저' }
-]);
 
 const form = ref({
   title: '',
