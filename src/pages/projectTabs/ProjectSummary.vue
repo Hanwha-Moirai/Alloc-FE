@@ -266,7 +266,7 @@ watch(
           const payload = {
             projectId: projectId,
             projectName: form.projectName,
-            status: form.status,
+            projectStatus: form.status,
             projectType: form.type,
             startDate: form.startDate,
             endDate: form.endDate,
