@@ -84,7 +84,7 @@ import DocCreateModal from '@/components/common/DocCreateModal.vue'
 
 import { createMilestone, createTask, getGanttMilestones } from '@/api/gantt'
 import { fetchMyProjectHistory } from '@/api/profile'
-import { getAssignedMembers } from '@/api/project';
+import { getAssignedMembers, fetchProjectList } from '@/api/project';
 
 const route = useRoute()
 const router = useRouter()
@@ -113,14 +113,15 @@ const toggleEdit = () => {
 //프로젝트 목록 조회
 const fetchMyProjects = async () => {
   try {
-    const res = await fetchMyProjectHistory()
+    const res = await fetchProjectList()
+    const list = res.data.data ?? res.data
 
-    myProjectList.value = res.data.data.map((p: any) => ({
+    myProjectList.value = list.map((p: any) => ({
       id: p.projectId,
-      name: p.projectName
+      name: p.name ?? p.projectName
     }))
   } catch (e) {
-    console.error('내 프로젝트 목록 조회 실패', e)
+    console.error('프로젝트 목록 조회 실패', e)
   }
 }
 
