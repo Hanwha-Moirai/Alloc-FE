@@ -1,20 +1,22 @@
 <template>
   <header class="topbar">
-    <!-- 왼쪽 로고 -->
     <div class="left">
       <img src="/alloc-logo.png" class="logo" />
     </div>
 
-    <!-- 오른쪽 영역 -->
     <div class="right">
-      <!-- 알림 아이콘 -->
-      <img src="/alert.png" class="icon" />
+      <div class="noti-wrapper" @click.stop="toggleNoti">
+        <img src="/alert.png" class="icon" />
+        <span class="badge">2</span>
 
-      <!-- 프로필 아이콘 -->
+        <NotificationDropdown
+            v-if="isNotiOpen"
+            @close="closeNoti"
+        />
+      </div>
+
       <div class="profile-wrapper" @click.stop="toggleProfile">
         <img src="/user.png" class="icon" />
-
-        <!-- 프로필 팝오버 -->
         <ProfilePopover
             v-if="isProfileOpen"
             @logout="handleLogout"
@@ -25,25 +27,39 @@
   </header>
 
   <div
-      v-if="isProfileOpen"
+      v-if="isProfileOpen || isNotiOpen"
       class="overlay"
-      @click="closeProfile"
+      @click="allClose"
   />
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import ProfilePopover from './ProfilePopover.vue'
+import ProfilePopover from '@/components/common/ProfilePopover.vue'
+import NotificationDropdown from '@/pages/notification/NotificationDropdown.vue'
 
 const router = useRouter()
 const isProfileOpen = ref(false)
-
-/* 예시 사용자 ID */
-const myUserId = 1
+const isNotiOpen = ref(false)
 
 const toggleProfile = () => {
+  isNotiOpen.value = false // 프로필 열 때 알림창은 닫기
   isProfileOpen.value = !isProfileOpen.value
+}
+
+const toggleNoti = () => {
+  isProfileOpen.value = false // 알림 열 때 프로필은 닫기
+  isNotiOpen.value = !isNotiOpen.value
+}
+
+const allClose = () => {
+  isProfileOpen.value = false
+  isNotiOpen.value = false
+}
+
+const closeNoti = () => {
+  isNotiOpen.value = false
 }
 
 const closeProfile = () => {
@@ -131,5 +147,24 @@ const handleLogout = () => {
   position: fixed;
   inset: 0;
   z-index: 900;
+}
+
+.noti-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.badge {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  background-color: #ff4d4f;
+  color: white;
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 10px;
+  line-height: 1;
 }
 </style>

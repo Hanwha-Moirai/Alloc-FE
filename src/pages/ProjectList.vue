@@ -167,13 +167,6 @@ onMounted(() => {
   gap: 16px;
 }
 
-/* ================= 헤더 ================= */
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
 .page-title {
   margin: 0;
   font-size: 22px;
@@ -190,7 +183,6 @@ onMounted(() => {
   cursor: pointer;
 }
 
-/* ================= 탭 ================= */
 .tabs {
   display: flex;
 }
@@ -214,14 +206,12 @@ onMounted(() => {
   margin-bottom: 12px;
 }
 
-/* ================= 카드 ================= */
 .card {
   background: #fff;
   border-radius: 8px;
   padding: 0;
 }
 
-/* ================= 테이블 ================= */
 .project-table {
   width: 100%;
   border-collapse: separate;
@@ -249,10 +239,6 @@ onMounted(() => {
   color: #333;
   text-align: center;
   border-bottom: 1px solid #e5e7eb;
-}
-
-.project-table td.name {
-  font-weight: 600;
 }
 
 .project-table tbody tr {
