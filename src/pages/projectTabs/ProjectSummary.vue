@@ -264,6 +264,7 @@ watch(
       if (prev === true && now === false) {
         try {
           const payload = {
+            projectId: projectId,
             projectName: form.projectName,
             status: form.status,
             projectType: form.type,
