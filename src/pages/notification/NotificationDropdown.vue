@@ -66,7 +66,6 @@ const notifications = ref([]);
 const unreadCount = ref(0);
 const activeTab = ref('unread');
 
-// 데이터 로드 로직 수정
 const loadData = async () => {
   try {
     const [listRes, countRes] = await Promise.all([
@@ -81,7 +80,6 @@ const loadData = async () => {
   }
 };
 
-// 개별 액션 처리 수정
 const handleSingleAction = async (noti) => {
   try {
     if (activeTab.value === 'unread') {
