@@ -50,7 +50,15 @@
           </td>
 
           <td>
-            {{ project.progressRate ?? '-' }}%
+            <div class="progress-wrapper">
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill"
+                     :style="{ width: project.progressRate + '%' }"
+                     :class="getRiskByRate(project.progressRate).class">
+                </div>
+              </div>
+              <span>{{ project.progressRate }}%</span>
+            </div>
           </td>
 
           <td>
@@ -63,11 +71,8 @@
           </td>
 
           <td>
-            <span
-                class="badge risk"
-                :class="project.riskLevel?.toLowerCase()"
-            >
-              {{ project.riskLevel ?? '-' }}
+            <span class="badge risk" :class="getRiskByRate(project.progressRate).class">
+              {{ getRiskByRate(project.progressRate).label }}
             </span>
           </td>
         </tr>
@@ -91,7 +96,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { fetchProjectList } from '@/api/project'
+import { fetchProjectList, fetchProjectAchievementRate } from '@/api/project'
 
 const router = useRouter()
 
@@ -111,18 +116,40 @@ const projects = ref<ProjectItem[]>([])
 const loading = ref(false)
 
 const loadProjects = async () => {
-  loading.value = true
+  loading.value = true;
   try {
-    const res = await fetchProjectList()
-    console.log('📌 프로젝트 목록:', res.data)
+    const res = await fetchProjectList();
+    const projectList = res.data;
 
-    projects.value = res.data   // ⭐ 핵심
+    // 각 프로젝트의 상세 진행률을 가져오기
+    const projectsWithRate = await Promise.all(
+        projectList.map(async (project: any) => {
+          try {
+            const rateRes = await fetchProjectAchievementRate(project.projectId);
+            return {
+              ...project,
+              progressRate: rateRes.data !== null ? Math.round(rateRes.data) : 0
+            };
+          } catch (err) {
+            return { ...project, progressRate: 0 };
+          }
+        })
+    );
+
+    projects.value = projectsWithRate;
   } catch (e) {
-    console.error('❌ 프로젝트 목록 조회 실패', e)
+    console.error('❌ 프로젝트 목록 조회 실패', e);
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
+
+// 진행률(달성률)에 따른 리스크 레벨 자동 계산 함수
+const getRiskByRate = (rate: number) => {
+  if (rate < 30) return { label: 'HIGH', class: 'high' };
+  if (rate < 70) return { label: 'MEDIUM', class: 'medium' };
+  return { label: 'NORMAL', class: 'normal' };
+};
 
 const goDetail = (projectId: number) => {
   router.push(`/projects/${projectId}`)
