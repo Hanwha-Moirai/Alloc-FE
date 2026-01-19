@@ -209,16 +209,27 @@ const fetchCalendarData = async () => {
     const to = selectedDate.value.endOf(viewMode.value === 'month' ? 'month' : 'week').format('YYYY-MM-DD');
 
     const response = await getCalendarData(projectId, from, to, viewMode.value);
-
     const items = response.data?.items || [];
 
     eventItems.value = items.map(item => {
-      // 로그에서 확인된 대로 eventType과 eventId를 사용합니다.
       const type = item.eventType;
-      const id = item.eventId;
 
-      // 제목에 '연차'가 포함되거나 타입이 'VACATION'인 경우 체크
-      const isVacation = type === 'VACATION' || (item.title && item.title.includes('연차'));
+      const member = props.memberList.find(
+          m => Number(m.userId) === Number(item.ownerUserId)
+      );
+
+      const finalUserName =
+          item.userName ||
+          member?.name ||
+          member?.employeeName ||
+          '';
+
+      const isVacation = type === 'VACATION';
+
+      let displayTitle = item.title || '제목 없음';
+      if (isVacation && finalUserName) {
+        displayTitle = `${displayTitle} (${finalUserName})`;
+      }
 
       const startDayjs = dayjs(item.start);
       const endDayjs = dayjs(item.end);
@@ -226,11 +237,9 @@ const fetchCalendarData = async () => {
       const startTime = isVacation ? '08:00' : startDayjs.format('HH:mm');
       const duration = isVacation ? 10 : endDayjs.diff(startDayjs, 'hour', true);
 
-      console.log(`[매핑 확인] ${item.title} -> 타입: ${type}, ID: ${id}`);
-
       return {
-        id: id,
-        title: item.title || '제목 없음',
+        id: item.eventId,
+        title: displayTitle,
         date: startDayjs.format('YYYY-MM-DD'),
         startTime: startTime,
         duration: duration || 1,
@@ -239,7 +248,6 @@ const fetchCalendarData = async () => {
         borderColor: getCategoryBorderColor(type, item.title)
       };
     });
-
   } catch (error) {
     console.error("데이터 로딩 실패:", error);
   }
@@ -457,6 +465,16 @@ const getEventStyle = (event: any) => {
     marginLeft: '5px'
   };
 }
+
+watch(
+    () => props.memberList,
+    (newList) => {
+      if (newList && newList.length > 0) {
+        fetchCalendarData();
+      }
+    },
+    { immediate: false }
+);
 </script>
 
 <style scoped>

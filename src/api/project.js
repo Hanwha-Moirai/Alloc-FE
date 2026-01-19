@@ -24,3 +24,8 @@ export const createProject = (data) => {
 export const getAssignedMembers = (projectId) => {
     return axios.get(`/api/projects/${projectId}/assignments/assigned`)
 }
+
+// 프로젝트별 달성률(진행률) 조회
+export const fetchProjectAchievementRate = (projectId) => {
+    return axios.get(`/api/projects/${projectId}/achievement-rate`);
+};

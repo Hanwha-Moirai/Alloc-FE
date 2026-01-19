@@ -90,7 +90,7 @@ import {onMounted, ref, watch} from 'vue';
 import MyWeeklyReports from '@/pages/documentTabs/MyWeeklyReports.vue';
 import MyMeetingReports from '@/pages/documentTabs/MyMeetingReports.vue';
 import DocCreateModal from '@/components/common/DocCreateModal.vue';
-import { fetchMyProjectHistory } from '@/api/profile'
+import { fetchProjectList } from '@/api/project'
 
 const currentTab = ref('weekly');
 const searchQuery = ref('');
@@ -107,14 +107,16 @@ const handleCreateDoc = (data: any) => {
 
 const fetchMyProjects = async () => {
   try {
-    const res = await fetchMyProjectHistory()
+    const res = await fetchProjectList()
 
-    myProjectList.value = res.data.data.map((p: any) => ({
+    const list = res.data.data ?? res.data
+
+    myProjectList.value = list.map((p: any) => ({
       id: p.projectId,
-      name: p.projectName
+      name: p.name ?? p.projectName
     }))
   } catch (e) {
-    console.error('내 프로젝트 목록 조회 실패', e)
+    console.error('프로젝트 목록 조회 실패', e)
   }
 }
 
