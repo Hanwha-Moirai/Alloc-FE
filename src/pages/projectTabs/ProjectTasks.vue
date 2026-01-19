@@ -99,7 +99,7 @@
       v-if="showModal"
       :task="selectedTask"
       :milestone-list="milestoneList"
-      @close="closeModal"
+      :member-list="memberList"  @close="closeModal"
       @save="saveTaskEdit"
       @delete="handleTaskDelete"
   />
@@ -129,6 +129,10 @@ const props = defineProps({
   refreshTrigger: {
     type: Number,
     default: 0
+  },
+  memberList: {
+    type: Array,
+    default: () => []
   }
 });
 
@@ -166,6 +170,7 @@ const fetchTasks = async () => {
         startDate: dayjs(t.startDate).format('YYYY.MM.DD'),
         endDate: dayjs(t.endDate).format('YYYY.MM.DD'),
         userName: t.userName,
+        assigneeId: t.assigneeId,
         milestoneId: t.milestoneId,
         description: t.taskDescription,
         task_category: t.taskCategory

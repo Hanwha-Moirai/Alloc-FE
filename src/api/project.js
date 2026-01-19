@@ -19,3 +19,8 @@ export const updateProject = (projectId, payload) => {
 export const createProject = (data) => {
     return axios.post('/api/projects', data)
 }
+
+//참여된 프로젝트 인원 조회
+export const getAssignedMembers = (projectId) => {
+    return axios.get(`/api/projects/${projectId}/assignments/assigned`)
+}

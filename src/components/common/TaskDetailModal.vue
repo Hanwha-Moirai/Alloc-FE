@@ -79,9 +79,15 @@
         <div class="row">
           <span class="icon">👤</span>
           <label>담당자</label>
-          <select v-if="isEdit" v-model="editableTask.userName" class="edit-select">
-            <option value="" disabled>담당자 선택</option>
-            <option v-for="user in userList" :key="user" :value="user">{{ user }}</option>
+          <select v-if="isEdit" v-model="editableTask.assigneeId" class="edit-select">
+            <option :value="null" disabled>담당자 선택</option>
+            <option
+                v-for="member in memberList"
+                :key="member.userId"
+                :value="member.userId"
+            >
+              {{ member.employeeName }} ({{ member.jobName }})
+            </option>
           </select>
           <span v-else class="value">{{ task.userName }}</span>
         </div>
@@ -113,7 +119,8 @@ import { ref, reactive, watch, computed } from 'vue'
 
 const props = defineProps<{
   task: any,
-  milestoneList: any[]
+  milestoneList: any[],
+  memberList: any[]
 }>()
 
 const emit = defineEmits(['close', 'save', 'delete'])
@@ -123,7 +130,11 @@ const editableTask = reactive<any>({})
 
 watch(() => props.task, (newTask) => {
   if (newTask) {
-    Object.assign(editableTask, JSON.parse(JSON.stringify(newTask)))
+    const copy = JSON.parse(JSON.stringify(newTask));
+
+    copy.assigneeId = copy.assigneeId ? Number(copy.assigneeId) : null;
+
+    Object.assign(editableTask, copy);
   }
 }, { immediate: true, deep: true })
 
@@ -134,7 +145,11 @@ const toggleEdit = () => {
     if (taskCopy.startDate) taskCopy.startDate = taskCopy.startDate.replace(/\./g, '-');
     if (taskCopy.endDate) taskCopy.endDate = taskCopy.endDate.replace(/\./g, '-');
 
+    editableTask.assigneeId = taskCopy.assigneeId ? Number(taskCopy.assigneeId) : null;
+
     Object.assign(editableTask, taskCopy);
+
+    console.log("수정 모드 전환 데이터:", editableTask);
   }
   isEdit.value = !isEdit.value;
 };
@@ -161,9 +176,6 @@ const currentMilestoneName = computed(() => {
   )
   return found ? found.milestoneName : '지정되지 않음'
 })
-
-// 담당자 목록
-const userList = ['김동리', '이철수', '박영희', '최민수']
 
 // 매핑 상수
 const statusLabel = { TO_DO: 'To Do', IN_PROGRESS: 'In Progress', DONE: 'Done' }

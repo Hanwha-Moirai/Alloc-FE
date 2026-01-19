@@ -37,14 +37,17 @@
       </div>
     </div>
 
-    <router-view :is-editing="isEditing" :refresh-trigger="refreshKey" />
+    <router-view
+        :is-editing="isEditing"
+        :refresh-trigger="refreshKey"
+        :member-list="memberList"
+    />
 
     <TaskAddModal
         v-if="showAddModal"
-        :is-open="showAddModal"
         :milestone-list="milestoneList"
-        @close="showAddModal = false"
-        @add="handleAddTask"
+        :member-list="memberList"  @close="closeAddModal"
+        @add="handleTaskAdd"
     />
 
     <TaskFilterDrawer
@@ -71,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import {ref, watch, computed, onMounted} from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import TaskAddModal from '@/components/common/TaskAddModal.vue'
@@ -81,10 +84,12 @@ import DocCreateModal from '@/components/common/DocCreateModal.vue'
 
 import { createMilestone, createTask, getGanttMilestones } from '@/api/gantt'
 import { fetchMyProjectHistory } from '@/api/profile'
+import { getAssignedMembers } from '@/api/project';
 
 const route = useRoute()
 const router = useRouter()
 const projectId = route.params.projectId
+const memberList = ref([]);
 
 // --- 모달 및 상태 관리 ---
 const showAddModal = ref(false)
@@ -129,32 +134,47 @@ const fetchMilestones = async () => {
   }
 }
 
-const handleAddTask = async (newTask: any) => {
+// 등록된 담당자 조회
+const fetchProjectMembers = async () => {
+  try {
+    const res = await getAssignedMembers(projectId);
+    memberList.value = res.data || [];
+    console.log("멤버 로드 성공:", memberList.value);
+  } catch (e) {
+    console.error("멤버 로드 실패:", e);
+  }
+};
+
+// 모달 닫기 함수
+const closeAddModal = () => {
+  showAddModal.value = false
+}
+
+// 태스크 등록 처리 함수
+const handleTaskAdd = async (newTaskData: any) => {
   try {
     const requestData = {
-      milestoneId: Number(newTask.milestoneId),
-      taskName: newTask.title,
-      taskDescription: newTask.description,
-      taskCategory: newTask.task_category,
-      startDate: newTask.startDate,
-      endDate: newTask.endDate,
-      assigneeId: 9
-    }
+      milestoneId: newTaskData.milestoneId ? Number(newTaskData.milestoneId) : 1,
+      taskName: newTaskData.title,
+      taskDescription: newTaskData.description || "",
+      taskCategory: newTaskData.task_category || newTaskData.taskCategory,
+      startDate: newTaskData.startDate,
+      endDate: newTaskData.endDate,
+      assigneeId: newTaskData.assigneeId ? Number(newTaskData.assigneeId) : null
+    };
 
-    const res = await createTask(Number(projectId), requestData)
+    const res = await createTask(Number(projectId), requestData);
 
     if (res.status === 200 || res.data?.success) {
-      alert('태스크가 등록되었습니다.')
-      showAddModal.value = false
-
-      // 태스크 목록 새로고침
-      refreshKey.value++
+      alert('태스크가 성공적으로 등록되었습니다.');
+      showAddModal.value = false;
+      refreshKey.value++;
     }
-  } catch (e: any) {
-    console.error('태스크 등록 실패:', e)
-    alert(e.response?.data?.message || '태스크 등록 중 오류가 발생했습니다.')
+  } catch (error: any) {
+    console.error("서버 응답 에러 데이터:", error.response?.data);
+    alert(`등록 실패: ${error.response?.data?.message || '입력 데이터를 확인해주세요.'}`);
   }
-}
+};
 
 const handleFilter = (filterData: any) => {
   console.log('적용할 필터:', filterData)
@@ -227,6 +247,13 @@ watch(
     },
     { immediate: true }
 )
+
+
+onMounted(() => {
+  if (projectId) {
+    fetchProjectMembers()
+  }
+})
 </script>
 
 <style scoped>
