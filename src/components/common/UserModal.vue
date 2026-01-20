@@ -157,7 +157,7 @@ const emit = defineEmits(['close', 'confirm']);
 const jobOptions = ['백엔드 개발자', '프론트엔드 개발자', 'UI/UX 디자이너', '기획자', '데브옵스'];
 const positionOptions = ['사원', '대리', '과장', '차장', '부장'];
 const deptOptions = ['정보보안팀', '플랫폼개발팀', '인프라팀', '디자인팀', '기획팀'];
-const employmentOptions = ['정규직', '계약직', '프리랜서', '인턴']; // 추가된 옵션
+const employmentOptions = ['정규직', '계약직', '프리랜서', '인턴'];
 
 const fileInput = ref<HTMLInputElement | null>(null);
 const imagePreview = ref<string | null>(null);
