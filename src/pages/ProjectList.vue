@@ -125,16 +125,18 @@ const loadProjects = async () => {
     const projectsWithRate = await Promise.all(
         projectList.map(async (project: any) => {
           try {
-            const rateRes = await fetchProjectAchievementRate(project.projectId);
+            const rateRes = await fetchProjectAchievementRate(project.projectId)
+            const rawRate = rateRes.data?.data
+
             return {
               ...project,
-              progressRate: rateRes.data !== null ? Math.round(rateRes.data) : 0
-            };
+              progressRate: Number.isFinite(rawRate) ? rawRate : 0
+            }
           } catch (err) {
-            return { ...project, progressRate: 0 };
+            return { ...project, progressRate: 0 }
           }
         })
-    );
+    )
 
     projects.value = projectsWithRate;
   } catch (e) {
