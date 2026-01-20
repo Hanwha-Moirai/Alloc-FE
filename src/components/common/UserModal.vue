@@ -45,6 +45,17 @@
           </div>
 
           <div class="form-group">
+            <label class="input-label">입사일</label>
+            <div class="input-wrapper date-field-wrapper">
+              <input
+                  type="date"
+                  v-model="formData.joinDate"
+                  class="form-input date-input"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
             <label class="input-label">생년월일</label>
             <div class="input-wrapper date-field-wrapper">
               <input
@@ -52,6 +63,15 @@
                   v-model="formData.birthDate"
                   class="form-input date-input"
               />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="input-label">근무형태</label>
+            <div class="input-wrapper select-wrapper">
+              <select v-model="formData.employmentType" class="form-input">
+                <option v-for="type in employmentOptions" :key="type" :value="type">{{ type }}</option>
+              </select>
             </div>
           </div>
 
@@ -137,9 +157,13 @@ const emit = defineEmits(['close', 'confirm']);
 const jobOptions = ['백엔드 개발자', '프론트엔드 개발자', 'UI/UX 디자이너', '기획자', '데브옵스'];
 const positionOptions = ['사원', '대리', '과장', '차장', '부장'];
 const deptOptions = ['정보보안팀', '플랫폼개발팀', '인프라팀', '디자인팀', '기획팀'];
+const employmentOptions = ['정규직', '계약직', '프리랜서', '인턴']; // 추가된 옵션
 
 const fileInput = ref<HTMLInputElement | null>(null);
 const imagePreview = ref<string | null>(null);
+
+// 오늘 날짜 기본값 설정 (YYYY-MM-DD)
+const getToday = () => new Date().toISOString().split('T')[0];
 
 const formData = ref({
   userId: '',
@@ -147,10 +171,12 @@ const formData = ref({
   name: '',
   email: '',
   phone: '',
+  joinDate: getToday(),
   birthDate: '2000-01-01',
-  jobGroup: '백엔드 개발자', // 초기값
-  position: '대리',        // 초기값
-  department: '정보보안팀',  // 초기값
+  employmentType: '정규직',
+  jobGroup: '백엔드 개발자',
+  position: '대리',
+  department: '정보보안팀',
   role: 'ADMIN',
   profileImage: null as File | null
 });
@@ -163,8 +189,9 @@ watch(() => props.show, (newVal) => {
     } else {
       formData.value = {
         userId: '', password: '', name: '', email: '',
-        phone: '', birthDate: '2000-01-01',
-        jobGroup: '백엔드 개발자', position: '대리', department: '정보보안팀',
+        phone: '', joinDate: getToday(), birthDate: '2000-01-01',
+        employmentType: '정규직', jobGroup: '백엔드 개발자',
+        position: '대리', department: '정보보안팀',
         role: 'ADMIN', profileImage: null
       };
       imagePreview.value = null;
@@ -240,11 +267,11 @@ const handleConfirm = () => emit('confirm', { ...formData.value });
 }
 
 .date-input {
-  flex: 1; /* 남은 공간을 모두 차지 */
+  flex: 1;
   cursor: pointer;
   position: relative;
   background: transparent;
-  padding-right: 10px; /* 아이콘과 텍스트 사이 여백 */
+  padding-right: 10px;
 }
 
 .date-input::-webkit-calendar-picker-indicator {
@@ -252,7 +279,6 @@ const handleConfirm = () => emit('confirm', { ...formData.value });
   margin-left: 0;
   padding: 0;
   opacity: 0.6;
-  /* 아이콘을 입력란 안쪽 오른쪽 끝에 고정 */
   position: absolute;
   right: 10px;
   top: 50%;

@@ -60,11 +60,6 @@ const menu = computed(() => [
     icon: '/icons/report.png',
     label: '문서',
   },
-  {
-    path: '/risk',
-    icon: '/icons/risk.png',
-    label: '리스크',
-  },
 ])
 </script>
 
