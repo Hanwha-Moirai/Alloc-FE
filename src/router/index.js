@@ -14,10 +14,6 @@ const router = createRouter({
             component: () => import('@/pages/Login.vue'),
         },
         {
-            path: '/admin/login',
-            component: () => import('@/pages/AdminLogin.vue'),
-        },
-        {
             path: '/password-reset',
             component: () => import('@/pages/PasswordReset.vue'),
         },
@@ -181,7 +177,7 @@ router.beforeEach((to, from, next) => {
     const token = localStorage.getItem('accessToken');
 
     // 인증이 필요 없는 경로 설정
-    const publicPages = ['/login', '/admin/login', '/password-reset'];
+    const publicPages = ['/login', '/password-reset'];
     const authRequired = !publicPages.includes(to.path);
 
     // 인증이 필요한 페이지에 접근하는데 토큰이 없는 경우

@@ -125,16 +125,18 @@ const loadProjects = async () => {
     const projectsWithRate = await Promise.all(
         projectList.map(async (project: any) => {
           try {
-            const rateRes = await fetchProjectAchievementRate(project.projectId);
+            const rateRes = await fetchProjectAchievementRate(project.projectId)
+            const rawRate = rateRes.data?.data
+
             return {
               ...project,
-              progressRate: rateRes.data !== null ? Math.round(rateRes.data) : 0
-            };
+              progressRate: Number.isFinite(rawRate) ? rawRate : 0
+            }
           } catch (err) {
-            return { ...project, progressRate: 0 };
+            return { ...project, progressRate: 0 }
           }
         })
-    );
+    )
 
     projects.value = projectsWithRate;
   } catch (e) {
@@ -167,13 +169,6 @@ onMounted(() => {
   gap: 16px;
 }
 
-/* ================= 헤더 ================= */
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
 .page-title {
   margin: 0;
   font-size: 22px;
@@ -190,7 +185,6 @@ onMounted(() => {
   cursor: pointer;
 }
 
-/* ================= 탭 ================= */
 .tabs {
   display: flex;
 }
@@ -214,14 +208,12 @@ onMounted(() => {
   margin-bottom: 12px;
 }
 
-/* ================= 카드 ================= */
 .card {
   background: #fff;
   border-radius: 8px;
   padding: 0;
 }
 
-/* ================= 테이블 ================= */
 .project-table {
   width: 100%;
   border-collapse: separate;
@@ -249,10 +241,6 @@ onMounted(() => {
   color: #333;
   text-align: center;
   border-bottom: 1px solid #e5e7eb;
-}
-
-.project-table td.name {
-  font-weight: 600;
 }
 
 .project-table tbody tr {

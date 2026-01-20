@@ -40,13 +40,6 @@
       <button class="login-btn" type="submit">
         로그인
       </button>
-
-      <!-- 관리자 로그인 -->
-      <div class="admin">
-        <RouterLink to="/admin/login">
-          관리자 로그인
-        </RouterLink>
-      </div>
     </form>
   </div>
 </template>
@@ -77,7 +70,9 @@ const login = async () => {
     const payload: any = jwtDecode(accessToken)
     const role = payload.role
 
-    if (role === 'PM') {
+    if (role === 'ADMIN') {
+      router.push('/admin/users')
+    } else if (role === 'PM') {
       router.push('/home/pm')
     } else {
       router.push('/home/user')
