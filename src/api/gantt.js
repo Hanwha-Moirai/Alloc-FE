@@ -1,8 +1,11 @@
 import axios from '@/lib/axios';
 
-// 태스크 목록 조회
-export const getGanttTasks = (projectId) => {
-    return axios.get(`/api/projects/${projectId}/tasks`);
+// 태스크 목록 조회 (필터 대응)
+export const getGanttTasks = (projectId, params = {}) => {
+    return axios.get(
+        `/api/projects/${projectId}/tasks`,
+        { params }
+    );
 };
 
 // 태스크 생성
