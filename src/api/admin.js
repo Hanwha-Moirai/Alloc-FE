@@ -72,3 +72,18 @@ export const updateAdminTechStack = (stackId, data) => {
 export const deleteAdminTechStack = (stackId) => {
     return axios.delete(`/api/admin/tech-stacks/${stackId}`);
 };
+
+// 직급 목록 조회
+export const getAdminTitles = (params) => {
+    return axios.get('/api/admin/title_standard', { params });
+};
+
+// 직급 등록
+export const createAdminTitle = (data) => {
+    return axios.post('/api/admin/titles', data);
+};
+
+// 직급 수정
+export const updateAdminTitle = (id, data) => {
+    return axios.patch(`/api/admin/titles/${id}`, data);
+};

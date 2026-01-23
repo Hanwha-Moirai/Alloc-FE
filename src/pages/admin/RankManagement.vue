@@ -35,11 +35,11 @@
         </tr>
         </thead>
         <tbody>
-        <tr v-for="(item, index) in positions" :key="index">
+        <tr v-for="(item, index) in positions" :key="item.titleStandardId">
           <td><input type="checkbox" /></td>
-          <td class="pos-name">{{ item.name }}</td>
-          <td class="price-text">{{ item.price.toLocaleString() }}</td>
-          <td class="date-text">{{ item.updatedAt }}</td>
+          <td class="pos-name">{{ item.titleName }}</td>
+          <td class="price-text">{{ item.monthlyCost?.toLocaleString() }}원</td>
+          <td class="date-text">{{ item.updatedAt || '-' }}</td>
           <td class="more-cell">
             <button class="more-btn" @click.stop="openContextMenu($event, item, index)">•••</button>
           </td>
@@ -48,18 +48,20 @@
       </table>
     </div>
 
-    <div class="pagination">
-      <button class="p-nav">〈 Previous</button>
+    <div class="pagination" v-if="totalPages > 0">
+      <button :disabled="currentPage === 0" @click="goToPage(currentPage - 1)">〈 Previous</button>
       <div class="p-numbers">
-        <button class="p-num">1</button>
-        <button class="p-num active">2</button>
-        <button class="p-num">3</button>
-        <button class="p-num">4</button>
-        <button class="p-num">5</button>
-        <span class="p-dots">...</span>
-        <button class="p-num">11</button>
+        <button
+            v-for="p in totalPages"
+            :key="p"
+            class="p-num"
+            :class="{ active: currentPage === p - 1 }"
+            @click="goToPage(p - 1)"
+        >
+          {{ p }}
+        </button>
       </div>
-      <button class="p-nav">Next 〉</button>
+      <button :disabled="currentPage >= totalPages - 1" @click="goToPage(currentPage + 1)">Next 〉</button>
     </div>
 
     <div v-if="activeMenuIndex !== null" class="context-menu" :style="menuPos">
@@ -80,71 +82,129 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import PositionModal from '@/components/common/RankModal.vue';
+import {
+  getAdminTitles,
+  createAdminTitle,
+  updateAdminTitle
+} from '@/api/admin';
 
-const searchText = ref('')
+// 상태 관리
+const positions = ref([]);
+const loading = ref(false);
+const searchText = ref('');
+const currentPage = ref(0);
+const totalPages = ref(0);
+const pageSize = 10;
+
 const isModalOpen = ref(false);
 const isEditMode = ref(false);
-const selectedItem = ref({ id: -1, name: '', price: 0 });
-
-// 이미지 데이터 기반 가상 데이터
-const positions = ref([
-  { id: 1, name: '사원', price: 3000000, updatedAt: 'yyyy.MM.dd HH:mm:ss' },
-  { id: 2, name: '대리', price: 4000000, updatedAt: 'yyyy.MM.dd HH:mm:ss' },
-  { id: 3, name: '과장', price: 5000000, updatedAt: 'yyyy.MM.dd HH:mm:ss' },
-  { id: 4, name: '차장', price: 6000000, updatedAt: 'yyyy.MM.dd HH:mm:ss' },
-])
+const selectedItem = ref({ titleStandardId: -1, titleName: '', monthlyCost: 0 });
 
 const activeMenuIndex = ref<number | null>(null);
 const menuPos = ref({ top: '0px', left: '0px' });
 
+// [목록 로드] 백엔드 연결 (AdminTitleStandardQueryController 호출)
+const loadPositions = async () => {
+  loading.value = true;
+  try {
+    const res = await getAdminTitles({
+      page: currentPage.value,
+      size: pageSize,
+      q: searchText.value || undefined
+    });
+
+    if (res.data?.data) {
+      // 백엔드 PageResponse 구조에 맞춰 매핑
+      positions.value = res.data.data.content || [];
+      totalPages.value = res.data.data.totalPages || 0;
+    }
+  } catch (error) {
+    console.error('직급 목록 로드 실패:', error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+onMounted(loadPositions);
+
+// 페이징 이동
+const goToPage = (page: number) => {
+  currentPage.value = page;
+  loadPositions();
+};
+
+// 검색
+const handleSearch = () => {
+  currentPage.value = 0;
+  loadPositions();
+};
+
+// 저장/수정
+const onConfirm = async (data: { name: string, price: number }) => {
+  try {
+    const payload = {
+      titleName: data.name,
+      monthlyCost: data.price
+    };
+
+    if (isEditMode.value) {
+      await updateAdminTitle(selectedItem.value.titleStandardId, payload);
+      alert('성공적으로 수정되었습니다.');
+    } else {
+      await createAdminTitle(payload);
+      alert('성공적으로 등록되었습니다.');
+    }
+
+    isModalOpen.value = false;
+    loadPositions(); // 목록 새로고침
+  } catch (error) {
+    console.error('저장 실패:', error);
+    alert('데이터 저장 중 오류가 발생했습니다.');
+  }
+};
+
+// 컨텍스트 메뉴 및 모달 열기 로직
 const openContextMenu = (event: MouseEvent, item: any, index: number) => {
   activeMenuIndex.value = index;
+  selectedItem.value = { ...item }; // titleStandardId 포함 객체 복사
   menuPos.value = { top: `${event.clientY + 10}px`, left: `${event.clientX - 120}px` };
   setTimeout(() => window.addEventListener('click', closeHandler), 0);
+};
+
+const openAddModal = () => {
+  isEditMode.value = false;
+  selectedItem.value = { titleStandardId: -1, titleName: '', monthlyCost: 0 };
+  isModalOpen.value = true;
+};
+
+const handleEdit = () => {
+  isEditMode.value = true;
+
+  const item = selectedItem.value;
+  selectedItem.value = {
+    ...item,
+    name: item.titleName,
+    price: item.monthlyCost
+  };
+
+  isModalOpen.value = true;
+  activeMenuIndex.value = null;
+};
+
+// 삭제 로직
+const handleDelete = async () => {
+  if (confirm('정말 삭제하시겠습니까?')) {
+    // 백엔드에 Delete 엔드포인트가 정의되면 호출 코드 추가
+    console.log('삭제 요청 ID:', selectedItem.value.titleStandardId);
+  }
+  activeMenuIndex.value = null;
 };
 
 const closeHandler = () => {
   activeMenuIndex.value = null;
   window.removeEventListener('click', closeHandler);
-};
-
-const openAddModal = () => {
-  isEditMode.value = false;
-  selectedItem.value = { id: -1, name: '', price: 0 };
-  isModalOpen.value = true;
-};
-
-const handleEdit = (index: number) => {
-  isEditMode.value = true;
-  selectedItem.value = { ...positions.value[index] };
-  isModalOpen.value = true;
-};
-
-const handleDelete = (index: number) => {
-  if (confirm('정말 삭제하시겠습니까?')) {
-    positions.value.splice(index, 1);
-  }
-  activeMenuIndex.value = null;
-};
-
-const onConfirm = (data: { name: string, price: number }) => {
-  if (isEditMode.value) {
-    const idx = positions.value.findIndex(p => p.id === selectedItem.value.id);
-    if (idx !== -1) {
-      positions.value[idx].name = data.name;
-      positions.value[idx].price = data.price;
-    }
-  } else {
-    positions.value.push({
-      id: Date.now(),
-      name: data.name,
-      price: data.price,
-      updatedAt: '2026.01.12 15:00:00'
-    });
-  }
-  isModalOpen.value = false;
 };
 </script>
 

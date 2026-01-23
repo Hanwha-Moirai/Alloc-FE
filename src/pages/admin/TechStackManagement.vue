@@ -158,7 +158,7 @@ const loadTechStacks = async () => {
 // 초기 로드
 onMounted(loadTechStacks);
 
-// [검색] 엔터키 또는 클릭 시
+// 검색 엔터키 또는 클릭 시
 const handleSearch = () => {
   currentPage.value = 0;
   loadTechStacks();
