@@ -11,10 +11,15 @@
 
       <div class="action-group">
         <div class="search-bar">
-          <input type="text" placeholder="검색하기" v-model="searchText" />
+          <input
+              type="text"
+              placeholder="검색하기"
+              v-model="searchText"
+              @keyup.enter="handleSearch"
+          />
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2">
             <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            <line x1="21" cy="21" x2="16.65" y2="16.65"></line>
           </svg>
         </div>
         <button class="add-btn" @click="openAddModal">
