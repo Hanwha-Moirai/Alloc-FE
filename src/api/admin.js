@@ -87,3 +87,33 @@ export const createAdminTitle = (data) => {
 export const updateAdminTitle = (id, data) => {
     return axios.patch(`/api/admin/titles/${id}`, data);
 };
+
+// 직무 목록 조회
+export const getAdminJobs = (params) => {
+    return axios.get('/api/admin/jobs', {
+        params: {
+            page: params.page ?? 0,
+            size: params.size ?? 10,
+            q: params.q ?? null // 검색어
+        }
+    });
+};
+
+// 직무 신규 등록
+export const createAdminJob = (data) => {
+    return axios.post('/api/admin/jobs', {
+        jobName: data.jobName
+    });
+};
+
+// 직무 정보 수정
+export const updateAdminJob = (jobId, data) => {
+    return axios.patch(`/api/admin/jobs/${jobId}`, {
+        jobName: data.jobName
+    });
+};
+
+// 직무 삭제
+export const deleteAdminJob = (jobId) => {
+    return axios.delete(`/api/admin/jobs/${jobId}`);
+};

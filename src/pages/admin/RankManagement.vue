@@ -49,7 +49,14 @@
     </div>
 
     <div class="pagination" v-if="totalPages > 0">
-      <button :disabled="currentPage === 0" @click="goToPage(currentPage - 1)">〈 Previous</button>
+      <button
+          class="p-nav"
+          :disabled="currentPage === 0"
+          @click="goToPage(currentPage - 1)"
+      >
+        〈 Previous
+      </button>
+
       <div class="p-numbers">
         <button
             v-for="p in totalPages"
@@ -61,7 +68,14 @@
           {{ p }}
         </button>
       </div>
-      <button :disabled="currentPage >= totalPages - 1" @click="goToPage(currentPage + 1)">Next 〉</button>
+
+      <button
+          class="p-nav"
+          :disabled="currentPage >= totalPages - 1"
+          @click="goToPage(currentPage + 1)"
+      >
+        Next 〉
+      </button>
     </div>
 
     <div v-if="activeMenuIndex !== null" class="context-menu" :style="menuPos">
@@ -105,7 +119,6 @@ const selectedItem = ref({ titleStandardId: -1, titleName: '', monthlyCost: 0 })
 const activeMenuIndex = ref<number | null>(null);
 const menuPos = ref({ top: '0px', left: '0px' });
 
-// [목록 로드] 백엔드 연결 (AdminTitleStandardQueryController 호출)
 const loadPositions = async () => {
   loading.value = true;
   try {
@@ -116,7 +129,6 @@ const loadPositions = async () => {
     });
 
     if (res.data?.data) {
-      // 백엔드 PageResponse 구조에 맞춰 매핑
       positions.value = res.data.data.content || [];
       totalPages.value = res.data.data.totalPages || 0;
     }
@@ -158,7 +170,7 @@ const onConfirm = async (data: { name: string, price: number }) => {
     }
 
     isModalOpen.value = false;
-    loadPositions(); // 목록 새로고침
+    loadPositions();
   } catch (error) {
     console.error('저장 실패:', error);
     alert('데이터 저장 중 오류가 발생했습니다.');
