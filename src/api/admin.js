@@ -47,3 +47,28 @@ export const updateAdminUser = (userId, data) => {
 export const deleteAdminUser = (userId) => {
     return axios.delete(`/api/admin/users/${userId}`);
 };
+
+// 사용자 등록/수정 시 필요한 메타 데이터(근무형태, 권한, 상태 등) 조회
+export const getAdminUserMeta = () => {
+    return axios.get('/api/admin/users/meta');
+};
+
+//기술 스택 목록 조회
+export const getAdminTechStacks = (params) => {
+    return axios.get('/api/admin/tech-stacks', { params });
+};
+
+//기술 스택 신규 등록
+export const createAdminTechStack = (data) => {
+    return axios.post('/api/admin/tech-stacks', data);
+};
+
+//기술 스택 정보 수정
+export const updateAdminTechStack = (stackId, data) => {
+    return axios.patch(`/api/admin/tech-stacks/${stackId}`, data);
+};
+
+//기술 스택 삭제
+export const deleteAdminTechStack = (stackId) => {
+    return axios.delete(`/api/admin/tech-stacks/${stackId}`);
+};
