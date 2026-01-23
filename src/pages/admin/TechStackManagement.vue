@@ -131,6 +131,7 @@ const activeMenuIndex = ref(null);
 const menuPos = ref({ top: '0px', left: '0px' });
 
 const loadTechStacks = async () => {
+  console.log(`요청 페이지 번호: ${currentPage.value}`);
   loading.value = true;
   try {
     const res = await getAdminTechStacks({
@@ -141,16 +142,14 @@ const loadTechStacks = async () => {
 
     if (res.data?.data) {
       techStacks.value = res.data.data.content || [];
-      // 백엔드에서 준 totalPages를 그대로 반영
       totalPages.value = res.data.data.totalPages || 0;
     } else {
-      // 데이터 자체가 없을 경우 초기화
       techStacks.value = [];
       totalPages.value = 0;
     }
   } catch (error) {
     console.error('데이터 로드 실패:', error);
-    totalPages.value = 0; // 에러 시에도 0으로
+    totalPages.value = 0;
   } finally {
     loading.value = false;
   }
@@ -165,37 +164,50 @@ const handleSearch = () => {
   loadTechStacks();
 };
 
-// [페이징] 페이지 이동
+// 페이지 이동
 const goToPage = (page) => {
   currentPage.value = page;
   loadTechStacks();
 };
 
-// [등록/수정] 모달 처리
+// 등록/수정 모달 처리
 const onConfirm = async (name) => {
   try {
     if (isEditMode.value) {
-      // 수정 API 호출 (AdminTechStackSaveRequest 형식)
-      await updateAdminTechStack(selectedItem.value.stackId, { techName: name });
+      await updateAdminTechStack(selectedItem.value.techId, { techName: name });
     } else {
-      // 등록 API 호출
       await createAdminTechStack({ techName: name });
     }
     isModalOpen.value = false;
-    loadTechStacks(); // 목록 새로고침
+    loadTechStacks();
   } catch (error) {
     alert('저장 중 오류가 발생했습니다.');
   }
 };
 
-// [삭제] 처리
+// 삭제 처리
 const handleDeleteAction = async () => {
-  if (confirm(`'${selectedItem.value.techName}'을(를) 삭제하시겠습니까?`)) {
+  // 로그에서 확인된 techId 필드를 사용해야 합니다.
+  const targetId = selectedItem.value.techId;
+  const targetName = selectedItem.value.techName;
+
+  if (!targetId) {
+    alert('삭제할 대상을 찾을 수 없습니다.');
+    return;
+  }
+
+  if (confirm(`'${targetName}'을(를) 삭제하시겠습니까?`)) {
     try {
-      await deleteAdminTechStack(selectedItem.value.stackId);
+      // DELETE /api/admin/tech-stacks/{stack_id}
+      await deleteAdminTechStack(targetId);
+      alert('삭제되었습니다.');
+
+      if (techStacks.value.length === 1 && currentPage.value > 0) {
+        currentPage.value -= 1;
+      }
       loadTechStacks();
     } catch (error) {
-      console.error('삭제 실패:', error);
+      alert('삭제 중 오류가 발생했습니다.');
     }
   }
   activeMenuIndex.value = null;
@@ -204,8 +216,13 @@ const handleDeleteAction = async () => {
 // 컨텍스트 메뉴 관련 함수들
 const openContextMenu = (event, item, index) => {
   activeMenuIndex.value = index;
+
   selectedItem.value = { ...item };
-  menuPos.value = { top: `${event.clientY + 10}px`, left: `${event.clientX - 120}px` };
+
+  menuPos.value = {
+    top: `${event.clientY + 10}px`,
+    left: `${event.clientX - 120}px`
+  };
   setTimeout(() => window.addEventListener('click', closeHandler), 0);
 };
 

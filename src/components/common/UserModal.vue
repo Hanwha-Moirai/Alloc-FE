@@ -11,55 +11,42 @@
           <div class="form-group">
             <label class="input-label">사용자 ID</label>
             <div class="input-wrapper">
-              <input type="text" v-model="formData.userId" placeholder="ID 입력" class="form-input" :disabled="isEdit" />
+              <input type="text" v-model="formData.loginId" placeholder="ID 입력" class="form-input" :disabled="isEdit" />
             </div>
           </div>
-
           <div class="form-group">
             <label class="input-label">비밀번호</label>
             <div class="input-wrapper">
               <input type="password" v-model="formData.password" placeholder="비밀번호 입력" class="form-input" />
             </div>
-            <p class="helper-text">영문, 숫자, 특수문자 중 2종류 이상을 조합하여 최소 10자리 이상</p>
           </div>
-
           <div class="form-group">
             <label class="input-label">이름</label>
             <div class="input-wrapper">
-              <input type="text" v-model="formData.name" placeholder="이름 입력" class="form-input" />
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="input-label">이메일</label>
-            <div class="input-wrapper">
-              <input type="email" v-model="formData.email" placeholder="이메일 입력" class="form-input" />
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="input-label">연락처</label>
-            <div class="input-wrapper">
-              <input type="text" v-model="formData.phone" placeholder="연락처 입력" class="form-input" />
+              <input type="text" v-model="formData.userName" placeholder="이름 입력" class="form-input" />
             </div>
           </div>
 
           <div class="form-group">
             <label class="input-label">생년월일</label>
-            <div class="input-wrapper date-field-wrapper">
-              <input
-                  type="date"
-                  v-model="formData.birthDate"
-                  class="form-input date-input"
-              />
+            <div class="input-wrapper">
+              <input type="date" v-model="formData.birthday" class="form-input" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="input-label">입사일</label>
+            <div class="input-wrapper">
+              <input type="date" v-model="formData.hiringDate" class="form-input" />
             </div>
           </div>
 
           <div class="form-group">
             <label class="input-label">직군</label>
             <div class="input-wrapper select-wrapper">
-              <select v-model="formData.jobGroup" class="form-input">
-                <option v-for="job in jobOptions" :key="job" :value="job">{{ job }}</option>
+              <select v-model="formData.jobId" class="form-input">
+                <option v-for="job in jobs" :key="job.jobId" :value="job.jobId">
+                  {{ job.jobName }}
+                </option>
               </select>
             </div>
           </div>
@@ -67,8 +54,10 @@
           <div class="form-group">
             <label class="input-label">직급</label>
             <div class="input-wrapper select-wrapper">
-              <select v-model="formData.position" class="form-input">
-                <option v-for="pos in positionOptions" :key="pos" :value="pos">{{ pos }}</option>
+              <select v-model="formData.titleStandardId" class="form-input">
+                <option v-for="title in titles" :key="title.titleStandardId" :value="title.titleStandardId">
+                  {{ title.titleName }}
+                </option>
               </select>
             </div>
           </div>
@@ -76,8 +65,21 @@
           <div class="form-group">
             <label class="input-label">부서</label>
             <div class="input-wrapper select-wrapper">
-              <select v-model="formData.department" class="form-input">
-                <option v-for="dept in deptOptions" :key="dept" :value="dept">{{ dept }}</option>
+              <select v-model="formData.deptId" class="form-input">
+                <option :value="1">정보보안팀</option>
+                <option :value="2">플랫폼개발팀</option>
+                <option :value="3">인프라팀</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="input-label">근무형태</label>
+            <div class="input-wrapper select-wrapper">
+              <select v-model="formData.employeeType" class="form-input">
+                <option v-for="type in metaData.employeeTypes" :key="type.code" :value="type.code">
+                  {{ type.label }}
+                </option>
               </select>
             </div>
           </div>
@@ -85,10 +87,10 @@
           <div class="form-group">
             <label class="input-label">권한</label>
             <div class="input-wrapper select-wrapper">
-              <select v-model="formData.role" class="form-input">
-                <option value="ADMIN">ADMIN</option>
-                <option value="PM">PM</option>
-                <option value="USER">USER</option>
+              <select v-model="formData.auth" class="form-input">
+                <option v-for="auth in metaData.auths" :key="auth.code" :value="auth.code">
+                  {{ auth.label }}
+                </option>
               </select>
             </div>
           </div>
@@ -123,64 +125,84 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
+import { getAdminUserMeta } from '@/api/admin';
+import { fetchJobs } from '@/api/hr';
 
-const props = defineProps<{
-  show: boolean;
-  isEdit: boolean;
-  initialData?: any;
-}>();
-
+const props = defineProps<{ show: boolean; isEdit: boolean; initialData?: any; }>();
 const emit = defineEmits(['close', 'confirm']);
 
-// --- 옵션 데이터 리스트 ---
-const jobOptions = ['백엔드 개발자', '프론트엔드 개발자', 'UI/UX 디자이너', '기획자', '데브옵스'];
-const positionOptions = ['사원', '대리', '과장', '차장', '부장'];
-const deptOptions = ['정보보안팀', '플랫폼개발팀', '인프라팀', '디자인팀', '기획팀'];
+const jobs = ref<any[]>([]);
+const titles = ref<any[]>([]);
+const metaData = ref({ employeeTypes: [] as any[], auths: [] as any[], statuses: [] as any[] });
 
 const fileInput = ref<HTMLInputElement | null>(null);
 const imagePreview = ref<string | null>(null);
 
 const formData = ref({
-  userId: '',
-  password: '',
-  name: '',
-  email: '',
-  phone: '',
-  birthDate: '2000-01-01',
-  jobGroup: '백엔드 개발자', // 초기값
-  position: '대리',        // 초기값
-  department: '정보보안팀',  // 초기값
-  role: 'ADMIN',
-  profileImage: null as File | null
+  loginId: '', password: '', userName: '', email: '', phone: '',
+  birthday: '2000-01-01', hiringDate: new Date().toISOString().split('T')[0],
+  employeeType: '', jobId: null as number | null, deptId: 1, titleStandardId: null as number | null,
+  auth: '', status: 'ACTIVE', profileImg: ''
 });
+
+const resetForm = () => {
+  formData.value = {
+    loginId: '', password: '', userName: '', email: '', phone: '',
+    birthday: '2000-01-01', hiringDate: new Date().toISOString().split('T')[0],
+    employeeType: metaData.value.employeeTypes[0]?.code || 'FULL_TIME',
+    jobId: jobs.value.length > 0 ? jobs.value[0].jobId : null,
+    deptId: 1,
+    titleStandardId: titles.value.length > 0 ? titles.value[0].titleStandardId : null,
+    auth: metaData.value.auths[0]?.code || 'USER',
+    status: 'ACTIVE',
+    profileImg: ''
+  };
+  imagePreview.value = null;
+};
+
+const loadInitialData = async () => {
+  try {
+    const [metaRes, jobsRes, titlesRes] = await Promise.all([
+      getAdminUserMeta(),
+      fetchJobs(),
+    ]);
+
+    if (metaRes.data?.data) metaData.value = metaRes.data.data;
+    if (jobsRes.data?.data) jobs.value = jobsRes.data.data;
+    if (titlesRes.data?.data) titles.value = titlesRes.data.data;
+
+    if (!props.isEdit) resetForm();
+  } catch (error) {
+    console.error("데이터 로드 실패:", error);
+  }
+};
 
 watch(() => props.show, (newVal) => {
   if (newVal) {
     if (props.isEdit && props.initialData) {
       formData.value = { ...props.initialData, password: '' };
-      imagePreview.value = props.initialData.profileImageUrl || null;
+      imagePreview.value = props.initialData.profileImg || null;
     } else {
-      formData.value = {
-        userId: '', password: '', name: '', email: '',
-        phone: '', birthDate: '2000-01-01',
-        jobGroup: '백엔드 개발자', position: '대리', department: '정보보안팀',
-        role: 'ADMIN', profileImage: null
-      };
-      imagePreview.value = null;
+      resetForm();
     }
   }
-});
+}, { immediate: true });
 
+onMounted(loadInitialData);
+
+// 이미지 핸들링 로직
 const triggerFileInput = () => fileInput.value?.click();
 const onFileChange = (e: Event) => {
   const file = (e.target as HTMLInputElement).files?.[0];
   if (file) {
-    formData.value.profileImage = file;
     imagePreview.value = URL.createObjectURL(file);
   }
 };
-const handleConfirm = () => emit('confirm', { ...formData.value });
+
+const handleConfirm = () => {
+  emit('confirm', { ...formData.value });
+};
 </script>
 
 <style scoped>
