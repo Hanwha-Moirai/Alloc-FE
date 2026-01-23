@@ -6,15 +6,25 @@
 
     <div class="control-panel">
       <div class="tab-group">
-        <button class="tab-item active">전체보기</button>
-        <button class="tab-item">권한별 보기</button>
-        <button class="tab-item">계정 상태별 보기</button>
+        <button
+            v-for="tab in roleTabs"
+            :key="tab.value"
+            :class="['tab-item', { active: currentRole === tab.value }]"
+            @click="changeRole(tab.value)"
+        >
+          {{ tab.label }}
+        </button>
       </div>
 
       <div class="action-group">
         <div class="search-bar">
-          <input type="text" placeholder="검색하기" v-model="searchText" />
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2">
+          <input
+              type="text"
+              placeholder="이름 또는 이메일 검색"
+              v-model="searchText"
+              @keyup.enter="handleSearch"
+          />
+          <svg @click="handleSearch" style="cursor:pointer" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2">
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
@@ -30,7 +40,7 @@
         <thead>
         <tr>
           <th width="40"><input type="checkbox" /></th>
-          <th>이름 <span class="sort-icon">↓</span></th>
+          <th>이름</th>
           <th>이메일</th>
           <th>소속 / 팀</th>
           <th>직급</th>
@@ -41,43 +51,46 @@
         </tr>
         </thead>
         <tbody>
-        <tr v-for="(user, index) in users" :key="index">
+        <tr v-for="(user, index) in users" :key="user.userId || index">
           <td><input type="checkbox" /></td>
           <td class="user-info-cell">
             <div class="user-avatar"></div>
-            <span class="user-name">{{ user.name }}</span>
-          </td>
+            <span class="user-name">{{ user.userName }}</span> </td>
           <td class="email-text">{{ user.email }}</td>
-          <td class="dept-text">{{ user.team }}</td>
+          <td class="dept-text">{{ user.deptName || '소속 없음' }}</td> <td>
+          <span class="position-badge">{{ user.titleName }}</span> </td>
+          <td class="job-text">{{ user.jobName }}</td> <td>
+          <span :class="['role-badge', (user.auth || '').toLowerCase()]">{{ user.auth }}</span>
+        </td>
           <td>
-            <span class="position-badge">{{ user.position }}</span>
-          </td>
-          <td class="job-text">{{ user.jobGroup }}</td>
-          <td>
-            <span :class="['role-badge', user.role.toLowerCase()]">{{ user.role }}</span>
-          </td>
-
-          <td>
-          <span :class="['status-tag', user.status.toLowerCase()]">
-            <i class="dot"></i> {{ user.status }}
-          </span>
+    <span :class="['status-tag', (user.status || '').toLowerCase()]">
+      <i class="dot"></i> {{ user.status }}
+    </span>
           </td>
           <td class="more-cell">
             <button class="more-btn" @click.stop="openContextMenu($event, user, index)">•••</button>
           </td>
         </tr>
+        <tr v-if="users.length === 0">
+          <td colspan="9" style="text-align:center; padding: 40px; color: #94a3b8;">데이터가 없습니다.</td>
+        </tr>
         </tbody>
       </table>
     </div>
 
-    <div class="pagination">
-      <button class="p-nav">〈 Previous</button>
+    <div class="pagination" v-if="totalPages > 0">
+      <button class="p-nav" :disabled="currentPage === 0" @click="goToPage(currentPage - 1)">〈 Previous</button>
       <div class="p-numbers">
-        <button v-for="n in [1, 2, 3, 4, 5]" :key="n" :class="['p-num', { active: n === 2 }]">{{ n }}</button>
-        <span class="p-dots">...</span>
-        <button class="p-num">11</button>
+        <button
+            v-for="pageIdx in totalPages"
+            :key="pageIdx"
+            :class="['p-num', { active: currentPage === pageIdx - 1 }]"
+            @click="goToPage(pageIdx - 1)"
+        >
+          {{ pageIdx }}
+        </button>
       </div>
-      <button class="p-nav">Next 〉</button>
+      <button class="p-nav" :disabled="currentPage === totalPages - 1" @click="goToPage(currentPage + 1)">Next 〉</button>
     </div>
 
     <div v-if="activeMenuIndex !== null" class="context-menu" :style="menuPos">
@@ -89,6 +102,7 @@
   </div>
 
   <UserModal
+      v-if="isModalOpen"
       :show="isModalOpen"
       :isEdit="isEditMode"
       :initialData="selectedUser"
@@ -98,22 +112,75 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import UserModal from '@/components/common/UserModal.vue';
+import {
+  getAdminUsers,
+  createAdminUser,
+  updateAdminUser,
+  deleteAdminUser
+} from '@/api/admin'; // 작성하신 API 파일 경로
 
+// 상태 관리
+const users = ref([]);
+const totalPages = ref(0);
+const currentPage = ref(0);
 const searchText = ref('');
+const currentRole = ref(null);
+
 const isModalOpen = ref(false);
 const isEditMode = ref(false);
 const selectedUser = ref(null);
 const activeMenuIndex = ref<number | null>(null);
 const menuPos = ref({ top: '0px', left: '0px' });
 
-// 이미지 데이터 기반 가상 데이터
-const users = ref([
-  { id: 1, name: '홍길동', jobGroup: '백엔드 개발자', position: '대리', email: 'test@alloc.com', role: 'PM', team: '플랫폼팀', status: 'ACTIVE' },
-  { id: 2, name: '김철수', jobGroup: '프론트엔드 개발자', position: '사원', email: 'chul@alloc.com', role: 'USER', team: '디자인팀', status: 'SUSPENDED' },
-  { id: 3, name: '이영희', jobGroup: 'UI/UX 디자이너', position: '과장', email: 'young@alloc.com', role: 'ADMIN', team: '기획팀', status: 'ACTIVE' },
-]);
+const roleTabs = [
+  { label: '전체보기', value: null },
+  { label: 'ADMIN', value: 'ADMIN' },
+  { label: 'PM', value: 'PM' },
+  { label: 'USER', value: 'USER' },
+];
+
+// 데이터 로드
+const fetchUsers = async () => {
+  try {
+    const params = {
+      page: currentPage.value,
+      size: 10,
+      q: searchText.value || null, // 백엔드 파라미터명이 'q'임
+      role: currentRole.value || null,
+      status: null
+    };
+
+    const res = await getAdminUsers(params);
+    // ApiResponse 객체의 data 필드 내부에서 PageResponse를 가져옴
+    const pageData = res.data.data;
+
+    users.value = pageData.content; // AdminUserListItem 리스트
+    totalPages.value = pageData.totalPages;
+  } catch (error) {
+    console.error("데이터 로드 실패:", error);
+  }
+};
+
+onMounted(fetchUsers);
+
+// 검색 및 필터 제어
+const handleSearch = () => {
+  currentPage.value = 0;
+  fetchUsers();
+};
+
+const changeRole = (role) => {
+  currentRole.value = role;
+  currentPage.value = 0;
+  fetchUsers();
+};
+
+const goToPage = (page) => {
+  currentPage.value = page;
+  fetchUsers();
+};
 
 // 등록 모달 열기
 const openAddModal = () => {
@@ -132,40 +199,49 @@ const handleEdit = (index: number) => {
 };
 
 // 삭제 처리
-const handleDelete = (index: number) => {
-  if (confirm('정말 계정을 삭제하시겠습니까?')) {
-    users.value.splice(index, 1);
+const handleDelete = async (index: number) => {
+  const target = users.value[index];
+  if (confirm(`정말 ${target.name} 계정을 삭제하시겠습니까?`)) {
+    try {
+      await deleteAdminUser(target.userId);
+      alert('삭제되었습니다.');
+      fetchUsers();
+    } catch (error) {
+      alert('삭제에 실패했습니다.');
+    }
   }
   activeMenuIndex.value = null;
 };
 
-// 모달에서 등록/수정 완료 버튼 눌렀을 때
-const onConfirm = (userData: any) => {
-  if (isEditMode.value) {
-    const idx = users.value.findIndex(u => u.id === selectedUser.value.id);
-    if (idx !== -1) {
-      users.value[idx] = { ...users.value[idx], ...userData };
+// 모달 확인(등록/수정)
+const onConfirm = async (userData: any) => {
+  try {
+    if (isEditMode.value) {
+      // selectedUser.value.userId를 사용하여 수정
+      await updateAdminUser(selectedUser.value.userId, userData);
+      alert('수정되었습니다.');
+    } else {
+      await createAdminUser(userData);
+      alert('등록되었습니다.');
     }
-  } else {
-    users.value.unshift({
-      id: Date.now(),
-      ...userData,
-      team: userData.department,
-      status: 'ACTIVE'
-    });
+    isModalOpen.value = false;
+    fetchUsers(); // 목록 새로고침
+  } catch (error) {
+    console.error("저장 실패:", error);
+    alert('처리에 실패했습니다.');
   }
-  isModalOpen.value = false;
 };
 
+// 컨텍스트 메뉴 제어
 const openContextMenu = (event: MouseEvent, user: any, index: number) => {
   activeMenuIndex.value = index;
   menuPos.value = { top: `${event.clientY + 10}px`, left: `${event.clientX - 120}px` };
-  setTimeout(() => window.addEventListener('click', closeHandler), 0);
-};
 
-const closeHandler = () => {
-  activeMenuIndex.value = null;
-  window.removeEventListener('click', closeHandler);
+  const closeHandler = () => {
+    activeMenuIndex.value = null;
+    window.removeEventListener('click', closeHandler);
+  };
+  setTimeout(() => window.addEventListener('click', closeHandler), 0);
 };
 </script>
 
