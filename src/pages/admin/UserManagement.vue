@@ -119,7 +119,7 @@ import {
   createAdminUser,
   updateAdminUser,
   deleteAdminUser
-} from '@/api/admin'; // 작성하신 API 파일 경로
+} from '@/api/admin';
 
 // 상태 관리
 const users = ref([]);
@@ -147,16 +147,15 @@ const fetchUsers = async () => {
     const params = {
       page: currentPage.value,
       size: 10,
-      q: searchText.value || null, // 백엔드 파라미터명이 'q'임
+      q: searchText.value,
       role: currentRole.value || null,
       status: null
     };
 
     const res = await getAdminUsers(params);
-    // ApiResponse 객체의 data 필드 내부에서 PageResponse를 가져옴
     const pageData = res.data.data;
 
-    users.value = pageData.content; // AdminUserListItem 리스트
+    users.value = pageData.content;
     totalPages.value = pageData.totalPages;
   } catch (error) {
     console.error("데이터 로드 실패:", error);

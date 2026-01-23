@@ -96,6 +96,17 @@
           </div>
 
           <div class="form-group">
+            <label class="input-label">계정 상태</label>
+            <div class="input-wrapper select-wrapper">
+              <select v-model="formData.status" class="form-input">
+                <option v-for="st in metaData.statuses" :key="st.code" :value="st.code">
+                  {{ st.label }}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
             <label class="input-label">프로필 이미지</label>
             <div class="image-upload-box">
               <div v-if="!imagePreview" class="placeholder-img">

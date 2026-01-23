@@ -6,9 +6,9 @@ export const getAdminUsers = (params = {}) => {
         params: {
             page: params.page ?? 0,
             size: params.size ?? 10,
-            keyword: params.keyword ?? null,
-            auth: params.auth ?? null,     // ADMIN | PM | USER
-            status: params.status ?? null  // ACTIVE | SUSPENDED | DELETED
+            q: params.q ?? params.keyword ?? null,
+            role: params.role ?? params.auth ?? null,
+            status: params.status ?? null
         }
     });
 };
