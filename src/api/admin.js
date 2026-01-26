@@ -13,7 +13,7 @@ export const getAdminUsers = (params = {}) => {
     });
 };
 
-//사용자 단건 조회
+// 사용자 상세 조회 (Admin)
 export const getAdminUserDetail = (userId) => {
     return axios.get(`/api/admin/users/${userId}`);
 };

@@ -117,8 +117,7 @@ import UserModal from '@/components/common/UserModal.vue';
 import {
   getAdminUsers,
   createAdminUser,
-  updateAdminUser,
-  deleteAdminUser
+  updateAdminUser
 } from '@/api/admin';
 
 // 상태 관리
@@ -191,25 +190,62 @@ const openAddModal = () => {
 // 수정 모달 열기
 const handleEdit = (index: number) => {
   const target = users.value[index];
+
   isEditMode.value = true;
-  selectedUser.value = { ...target };
+
+  selectedUser.value = {
+    userId: target.userId,
+
+    loginId: target.loginId,
+    userName: target.userName,
+    email: target.email,
+    phone: target.phone,
+
+    birthday: target.birthday ?? '',
+    hiringDate: target.hiringDate ?? '',
+
+    jobId: target.jobId ?? target.job?.jobId ?? null,
+    deptId: target.deptId ?? target.department?.deptId ?? null,
+    titleStandardId:
+        target.titleStandardId ?? target.title?.titleStandardId ?? null,
+
+    employeeType: target.employeeType,
+    auth: target.auth,
+    status: target.status,
+
+    password: ''
+  };
+
   isModalOpen.value = true;
   activeMenuIndex.value = null;
 };
 
-// 삭제 처리
+// 삭제 처리 (계정상태 deleted로 변경)
 const handleDelete = async (index: number) => {
   const target = users.value[index];
-  if (confirm(`정말 ${target.name} 계정을 삭제하시겠습니까?`)) {
-    try {
-      await deleteAdminUser(target.userId);
-      alert('삭제되었습니다.');
-      fetchUsers();
-    } catch (error) {
-      alert('삭제에 실패했습니다.');
-    }
+
+  if (!target?.userId) {
+    alert('userId가 없습니다.');
+    return;
   }
-  activeMenuIndex.value = null;
+
+  if (!confirm(`정말 ${target.userName} 계정을 삭제하시겠습니까?`)) {
+    activeMenuIndex.value = null;
+    return;
+  }
+
+  try {
+    await updateAdminUser(target.userId, {
+      status: 'DELETED'
+    });
+
+    alert('계정이 삭제되었습니다.');
+    activeMenuIndex.value = null;
+    fetchUsers();
+  } catch (error) {
+    console.error(error);
+    alert('계정 삭제에 실패했습니다.');
+  }
 };
 
 // 모달 확인(등록/수정)
