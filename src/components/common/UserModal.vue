@@ -33,6 +33,31 @@
               <input type="date" v-model="formData.birthday" class="form-input" />
             </div>
           </div>
+
+          <div class="form-group">
+            <label class="input-label">이메일</label>
+            <div class="input-wrapper">
+              <input
+                  type="email"
+                  v-model="formData.email"
+                  class="form-input"
+                  placeholder="이메일 입력"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="input-label">전화번호</label>
+            <div class="input-wrapper">
+              <input
+                  type="text"
+                  v-model="formData.phone"
+                  class="form-input"
+                  placeholder="01012345678"
+              />
+            </div>
+          </div>
+
           <div class="form-group">
             <label class="input-label">입사일</label>
             <div class="input-wrapper">
@@ -167,10 +192,23 @@ const fileInput = ref<HTMLInputElement | null>(null);
 const imagePreview = ref<string | null>(null);
 
 const formData = ref({
-  loginId: '', password: '', userName: '', email: '', phone: '',
-  birthday: '2000-01-01', hiringDate: new Date().toISOString().split('T')[0],
-  employeeType: '', jobId: null as number | null, deptId: 1, titleStandardId: null as number | null,
-  auth: '', status: 'ACTIVE', profileImg: ''
+  loginId: '',
+  password: '',
+  userName: '',
+
+  email: '',
+  phone: '',
+
+  birthday: '2000-01-01',
+  hiringDate: new Date().toISOString().split('T')[0],
+
+  employeeType: '',
+  jobId: null,
+  deptId: null,
+  titleStandardId: null,
+
+  auth: '',
+  status: 'ACTIVE'
 });
 
 const resetForm = () => {
@@ -179,6 +217,8 @@ const resetForm = () => {
     password: '',
     userName: '',
     birthday: '2000-01-01',
+    email: '',
+    phone: '',
     hiringDate: new Date().toISOString().split('T')[0],
     employeeType: metaData.value.employeeTypes[0]?.code,
     jobId: jobs.value[0]?.jobId,
@@ -252,7 +292,31 @@ const onFileChange = (e: Event) => {
 };
 
 const handleConfirm = () => {
-  emit('confirm', { ...formData.value });
+  if (!props.isEdit && !formData.value.password) {
+    alert('비밀번호는 필수입니다.');
+    return;
+  }
+
+  const payload = {
+    loginId: formData.value.loginId,
+    password: formData.value.password,
+    userName: formData.value.userName,
+    email: formData.value.email,
+    phone: formData.value.phone,
+
+    birthday: formData.value.birthday,
+    hiringDate: formData.value.hiringDate,
+
+    employeeType: formData.value.employeeType,
+    auth: formData.value.auth,
+    status: formData.value.status,
+
+    jobId: Number(formData.value.jobId),
+    deptId: Number(formData.value.deptId),
+    titleStandardId: Number(formData.value.titleStandardId)
+  };
+
+  emit('confirm', payload);
 };
 </script>
 

@@ -213,21 +213,18 @@ const handleDelete = async (index: number) => {
 };
 
 // 모달 확인(등록/수정)
-const onConfirm = async (userData: any) => {
+const onConfirm = async (payload) => {
   try {
-    if (isEditMode.value) {
-      // selectedUser.value.userId를 사용하여 수정
-      await updateAdminUser(selectedUser.value.userId, userData);
-      alert('수정되었습니다.');
-    } else {
-      await createAdminUser(userData);
-      alert('등록되었습니다.');
-    }
+    console.log('🔥 서버로 최종 전송', payload);
+
+    await createAdminUser(payload);
+
+    alert('사용자가 등록되었습니다.');
     isModalOpen.value = false;
-    fetchUsers(); // 목록 새로고침
-  } catch (error) {
-    console.error("저장 실패:", error);
-    alert('처리에 실패했습니다.');
+    fetchUsers();
+  } catch (e) {
+    console.error(e);
+    alert('사용자 등록에 실패했습니다.');
   }
 };
 

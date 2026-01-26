@@ -21,14 +21,22 @@ export const getAdminUserDetail = (userId) => {
 //사용자 생성 (Admin only)
 export const createAdminUser = (data) => {
     return axios.post('/api/admin/users', {
-        userName: data.userName,
         loginId: data.loginId,
+        password: data.password,
+        userName: data.userName,
         email: data.email,
         phone: data.phone,
-        password: data.password,
-        auth: data.auth,           // ADMIN | PM | USER
-        status: data.status,       // ACTIVE | SUSPENDED
-        birthday: data.birthday    // YYYY-MM-DD
+
+        birthday: data.birthday,
+        hiringDate: data.hiringDate,
+
+        employeeType: data.employeeType,
+        auth: data.auth,
+        status: data.status,
+
+        jobId: data.jobId,
+        deptId: data.deptId,
+        titleStandardId: data.titleStandardId
     });
 };
 
