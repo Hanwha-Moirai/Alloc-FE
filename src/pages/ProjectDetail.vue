@@ -11,6 +11,7 @@
         <button class="tab" :class="{ active: isActive('calendar') }" @click="goTab('calendar')">캘린더</button>
         <button class="tab" :class="{ active: isActive('docs') }" @click="goTab('docs')">문서</button>
         <button class="tab" :class="{ active: isActive('members') }" @click="goTab('members')">인력</button>
+        <button class="tab" :class="{ active: isActive('risk') }" @click="goTab('risk')">리스크</button>
       </div>
 
       <div class="header-actions">
