@@ -21,7 +21,9 @@
       </div>
       <div class="info-card">
         <span class="label">주차</span>
-        <input type="text" v-model="form.weekLabel" class="edit-input" placeholder="예: 2026년 1월 3주차" />
+        <div class="value" style="color:#9ca3af">
+          등록 시 자동 생성됩니다.
+        </div>
       </div>
       <div class="info-card">
         <span class="label">보고자</span>
@@ -120,6 +122,7 @@ import { ref, reactive, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { fetchProjectDetail } from '@/api/project';
 import { createWeeklyReport } from '@/api/weeklyReport';
+import { getGanttTasks } from '@/api/gantt';
 
 const route = useRoute();
 const router = useRouter();
@@ -144,6 +147,23 @@ const form = reactive({
   summaryText: '',
   changeOfPlan: ''
 });
+
+// 지연 경과 계산
+const calcDelayDays = (endDate: string) => {
+  if (!endDate) return '';
+
+  const today = new Date();
+  const end = new Date(endDate);
+
+  today.setHours(0,0,0,0);
+  end.setHours(0,0,0,0);
+
+  const diff = Math.floor(
+      (today.getTime() - end.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  return diff > 0 ? `${diff}일` : '';
+};
 
 // 프로젝트 데이터 불러오기
 const getProjectInfo = async () => {
@@ -172,7 +192,49 @@ const getProjectInfo = async () => {
   }
 };
 
-onMounted(getProjectInfo);
+const getProjectTasks = async () => {
+  const res = await getGanttTasks(Number(projectId));
+  const tasks = res.data.data || res.data || [];
+
+  form.completedTasks = [];
+  form.incompleteTasks = [];
+
+  tasks.forEach(task => {
+    const isDone =
+        task.taskStatus === 'DONE' || task.isCompleted === true;
+
+    if (isDone) {
+      form.completedTasks.push({
+        taskId: task.taskId,
+        name: task.taskName,
+        manager: task.userName,
+        type: task.taskCategory,
+        note: task.taskDescription || ''
+      });
+    } else {
+      form.incompleteTasks.push({
+        taskId: task.taskId,
+        name: task.taskName,
+        manager: task.userName,
+        type: task.taskCategory,
+        delay: calcDelayDays(task.endDate), // ✅ 지연 경과
+        reason: ''
+      });
+    }
+  });
+
+  // 진행률 자동 계산
+  const total = tasks.length;
+  const done = form.completedTasks.length;
+  form.taskCompletionRate =
+      total === 0 ? 0 : Math.round((done / total) * 100);
+};
+
+onMounted(() => {
+  getProjectInfo();
+  getProjectTasks();
+});
+
 
 // 행 추가/삭제
 const addTask = (type: 'completed' | 'incomplete') => {
@@ -190,17 +252,9 @@ const removeTask = (type: 'completed' | 'incomplete', index: number) => {
 
 // 등록 핸들러
 const handleCreate = async () => {
-  // 1. 유효성 검사 수정: 주차 정보만 필수 체크
-  if (!form.weekLabel) {
-    alert("주차 정보를 입력해주세요.");
-    return;
-  }
-
   try {
-    // 2. 전송 데이터(payload)에서 날짜 제거
     const payload = {
       projectId: Number(projectId),
-      weekLabel: form.weekLabel,
       taskCompletionRate: Number(form.taskCompletionRate),
       summaryText: form.summaryText || '',
       changeOfPlan: form.changeOfPlan || '',
@@ -211,6 +265,7 @@ const handleCreate = async () => {
     console.log("전송 데이터:", payload);
 
     const response = await createWeeklyReport(projectId, payload);
+    form.weekLabel = response.data.data.weekLabel;
 
     if (response.data.success || response.status === 200) {
       alert('성공적으로 등록되었습니다.');
