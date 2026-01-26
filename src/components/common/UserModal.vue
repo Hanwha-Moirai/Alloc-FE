@@ -55,10 +55,15 @@
             <label class="input-label">직급</label>
             <div class="input-wrapper select-wrapper">
               <select v-model="formData.titleStandardId" class="form-input">
-                <option v-for="title in titles" :key="title.titleStandardId" :value="title.titleStandardId">
+                <option
+                    v-for="title in metaData.titles"
+                    :key="title.titleStandardId"
+                    :value="title.titleStandardId"
+                >
                   {{ title.titleName }}
                 </option>
               </select>
+
             </div>
           </div>
 
@@ -66,10 +71,15 @@
             <label class="input-label">부서</label>
             <div class="input-wrapper select-wrapper">
               <select v-model="formData.deptId" class="form-input">
-                <option :value="1">정보보안팀</option>
-                <option :value="2">플랫폼개발팀</option>
-                <option :value="3">인프라팀</option>
+                <option
+                    v-for="dept in metaData.departments"
+                    :key="dept.deptId"
+                    :value="dept.deptId"
+                >
+                  {{ dept.deptName }}
+                </option>
               </select>
+
             </div>
           </div>
 
@@ -145,7 +155,13 @@ const emit = defineEmits(['close', 'confirm']);
 
 const jobs = ref<any[]>([]);
 const titles = ref<any[]>([]);
-const metaData = ref({ employeeTypes: [] as any[], auths: [] as any[], statuses: [] as any[] });
+const metaData = ref({
+  employeeTypes: [],
+  auths: [],
+  statuses: [],
+  departments: [],
+  titles: []
+});
 
 const fileInput = ref<HTMLInputElement | null>(null);
 const imagePreview = ref<string | null>(null);
@@ -159,33 +175,57 @@ const formData = ref({
 
 const resetForm = () => {
   formData.value = {
-    loginId: '', password: '', userName: '', email: '', phone: '',
-    birthday: '2000-01-01', hiringDate: new Date().toISOString().split('T')[0],
-    employeeType: metaData.value.employeeTypes[0]?.code || 'FULL_TIME',
-    jobId: jobs.value.length > 0 ? jobs.value[0].jobId : null,
-    deptId: 1,
-    titleStandardId: titles.value.length > 0 ? titles.value[0].titleStandardId : null,
-    auth: metaData.value.auths[0]?.code || 'USER',
-    status: 'ACTIVE',
+    loginId: '',
+    password: '',
+    userName: '',
+    birthday: '2000-01-01',
+    hiringDate: new Date().toISOString().split('T')[0],
+    employeeType: metaData.value.employeeTypes[0]?.code,
+    jobId: jobs.value[0]?.jobId,
+    deptId: metaData.value.departments[0]?.deptId,
+    titleStandardId: metaData.value.titles[0]?.titleStandardId,
+    auth: metaData.value.auths[0]?.code,
+    status: metaData.value.statuses[0]?.code,
     profileImg: ''
   };
-  imagePreview.value = null;
 };
 
 const loadInitialData = async () => {
   try {
-    const [metaRes, jobsRes, titlesRes] = await Promise.all([
+    const [metaRes, jobsRes] = await Promise.all([
       getAdminUserMeta(),
-      fetchJobs(),
+      fetchJobs()
     ]);
 
-    if (metaRes.data?.data) metaData.value = metaRes.data.data;
-    if (jobsRes.data?.data) jobs.value = jobsRes.data.data;
-    if (titlesRes.data?.data) titles.value = titlesRes.data.data;
+    const meta = metaRes?.data?.data;
+    if (!meta) {
+      console.error('❌ 메타 데이터 없음', metaRes);
+      return;
+    }
 
-    if (!props.isEdit) resetForm();
+    metaData.value = {
+      employeeTypes: meta.employeeTypes ?? [],
+      auths: meta.auths ?? [],
+      statuses: meta.statuses ?? [],
+      titles: (meta.titles ?? []).map((t: any) => ({
+        titleStandardId: t.id,
+        titleName: t.label
+      })),
+      departments: (meta.departments ?? []).map((d: any) => ({
+        deptId: d.id,
+        deptName: d.label
+      }))
+    };
+
+    if (jobsRes?.data?.data) {
+      jobs.value = jobsRes.data.data;
+    }
+
+    if (!props.isEdit) {
+      resetForm();
+    }
   } catch (error) {
-    console.error("데이터 로드 실패:", error);
+    console.error('❌ 데이터 로드 실패:', error);
   }
 };
 
