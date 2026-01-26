@@ -15,6 +15,7 @@
                 v-model="techName"
                 placeholder="기술스택 입력"
                 class="tech-input"
+                @keyup.enter="handleConfirm"
             />
           </div>
         </div>
@@ -43,7 +44,6 @@ const emit = defineEmits(['close', 'confirm']);
 
 const techName = ref('');
 
-// 모달이 열릴 때마다 이름 초기화 (수정 시에는 기존값 노출)
 watch(() => props.show, (newVal) => {
   if (newVal) {
     techName.value = props.isEdit ? (props.initialName || '') : '';
@@ -51,11 +51,14 @@ watch(() => props.show, (newVal) => {
 });
 
 const handleConfirm = () => {
-  if (!techName.value.trim()) {
+  const trimmedName = techName.value.trim();
+
+  if (!trimmedName) {
     alert('기술스택명을 입력해주세요.');
     return;
   }
-  emit('confirm', techName.value);
+
+  emit('confirm', trimmedName);
 };
 </script>
 

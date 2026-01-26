@@ -11,7 +11,7 @@
 
       <div class="action-group">
         <div class="search-bar">
-          <input type="text" placeholder="검색하기" v-model="searchText" />
+          <input type="text" placeholder="검색하기" v-model="searchText" @keyup.enter="handleSearch" />
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2">
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -35,9 +35,9 @@
         </tr>
         </thead>
         <tbody>
-        <tr v-for="(item, index) in jobGroups" :key="index">
+        <tr v-for="(item, index) in jobGroups" :key="item.jobId">
           <td><input type="checkbox" /></td>
-          <td class="job-name">{{ item.name }}</td>
+          <td class="job-name">{{ item.jobName }}</td>
           <td class="date-text">{{ item.createdAt }}</td>
           <td class="date-text">{{ item.updatedAt }}</td>
           <td class="more-cell">
@@ -48,24 +48,26 @@
       </table>
     </div>
 
-    <div class="pagination">
-      <button class="p-nav">〈 Previous</button>
+    <div class="pagination" v-if="totalPages > 0">
+      <button class="p-nav" :disabled="currentPage === 0" @click="goToPage(currentPage - 1)">〈 Previous</button>
       <div class="p-numbers">
-        <button class="p-num">1</button>
-        <button class="p-num active">2</button>
-        <button class="p-num">3</button>
-        <button class="p-num">4</button>
-        <button class="p-num">5</button>
-        <span class="p-dots">...</span>
-        <button class="p-num">11</button>
+        <button
+            v-for="p in totalPages"
+            :key="p"
+            class="p-num"
+            :class="{ active: currentPage === p - 1 }"
+            @click="goToPage(p - 1)"
+        >
+          {{ p }}
+        </button>
       </div>
-      <button class="p-nav">Next 〉</button>
+      <button class="p-nav" :disabled="currentPage >= totalPages - 1" @click="goToPage(currentPage + 1)">Next 〉</button>
     </div>
 
     <div v-if="activeMenuIndex !== null" class="context-menu" :style="menuPos">
       <ul>
-        <li @click="handleEdit(activeMenuIndex)"><span>✏️</span> 수정하기</li>
-        <li @click="handleDelete(activeMenuIndex)" class="delete"><span>🗑️</span> 삭제하기</li>
+        <li @click="handleEdit(selectedItem)"><span>✏️</span> 수정하기</li>
+        <li @click="handleDelete"><span>🗑️</span> 삭제하기</li>
       </ul>
     </div>
   </div>
@@ -73,82 +75,117 @@
   <JobModal
       :show="isModalOpen"
       :isEdit="isEditMode"
-      :initialName="selectedItem.name"
+      :initialName="selectedItem.jobName"
       @close="isModalOpen = false"
       @confirm="onConfirm"
   />
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import JobModal from '@/components/common/JobModal.vue'; // 직무용 모달 따로 혹은 공통 모달
+import { ref, onMounted } from 'vue'
+import JobModal from '@/components/common/JobModal.vue';
+import {
+  getAdminJobs,
+  createAdminJob,
+  updateAdminJob,
+  deleteAdminJob
+} from '@/api/admin.js';
 
 const searchText = ref('')
 const isModalOpen = ref(false);
 const isEditMode = ref(false);
-const selectedItem = ref({ id: -1, name: '' });
+const selectedItem = ref({ jobId: -1, jobName: '' });
 
-// 가상 데이터 (이미지 기반)
-const jobGroups = ref(Array(12).fill(null).map((_, i) => ({
-  id: i,
-  name: '백엔드 엔지니어',
-  createdAt: 'yyyy.MM.dd HH:mm:ss',
-  updatedAt: 'yyyy.MM.dd HH:mm:ss'
-})))
+const jobGroups = ref([]); // 빈 배열로 초기화
+const currentPage = ref(0);
+const totalPages = ref(0);
+const pageSize = 10;
 
-const activeMenuIndex = ref<number | null>(null);
+// 목록 조회
+const loadJobs = async () => {
+  try {
+    const res = await getAdminJobs({
+      page: currentPage.value,
+      size: pageSize,
+      q: searchText.value || null
+    });
+    jobGroups.value = res.data.data.content;
+    totalPages.value = res.data.data.totalPages;
+  } catch (error) {
+    console.error('조회 실패:', error);
+  }
+};
+
+onMounted(loadJobs);
+
+// 페이징/검색
+const goToPage = (page) => {
+  currentPage.value = page;
+  loadJobs();
+};
+
+const handleSearch = () => {
+  currentPage.value = 0;
+  loadJobs();
+};
+
+// 추가 모달 열기
+const openAddModal = () => {
+  isEditMode.value = false;
+  selectedItem.value = { jobId: -1, jobName: '' };
+  isModalOpen.value = true;
+};
+
+// 수정 모달 열기
+const handleEdit = (item) => {
+  isEditMode.value = true;
+  selectedItem.value = { ...item };
+  isModalOpen.value = true;
+  activeMenuIndex.value = null;
+};
+
+// 등록/수정
+const onConfirm = async (name) => {
+  try {
+    if (isEditMode.value) {
+      await updateAdminJob(selectedItem.value.jobId, { jobName: name });
+    } else {
+      await createAdminJob({ jobName: name });
+    }
+    isModalOpen.value = false;
+    loadJobs();
+  } catch (error) {
+    alert('저장에 실패했습니다.');
+  }
+};
+
+// 삭제
+const handleDelete = async () => {
+  if (confirm('정말 삭제하시겠습니까?')) {
+    try {
+      await deleteAdminJob(selectedItem.value.jobId);
+      loadJobs();
+    } catch (error) {
+      alert('삭제 실패');
+    }
+  }
+  activeMenuIndex.value = null;
+};
+
+// 컨텍스트 메뉴 관련 로직
+const activeMenuIndex = ref(null);
 const menuPos = ref({ top: '0px', left: '0px' });
 
-const openContextMenu = (event: MouseEvent, item: any, index: number) => {
+const openContextMenu = (event, item, index) => {
   activeMenuIndex.value = index;
-  menuPos.value = {
-    top: `${event.clientY + 10}px`,
-    left: `${event.clientX - 120}px`
-  };
-  setTimeout(() => {
-    window.addEventListener('click', closeHandler);
-  }, 0);
+  selectedItem.value = { ...item }; // 선택된 아이템 저장
+  menuPos.value = { top: `${event.clientY + 10}px`, left: `${event.clientX - 120}px` };
+  setTimeout(() => window.addEventListener('click', closeHandler), 0);
 };
 
 const closeHandler = () => {
   activeMenuIndex.value = null;
   window.removeEventListener('click', closeHandler);
-};
-
-const openAddModal = () => {
-  isEditMode.value = false;
-  selectedItem.value = { id: -1, name: '' };
-  isModalOpen.value = true;
-};
-
-const handleEdit = (index: number) => {
-  const target = jobGroups.value[index];
-  isEditMode.value = true;
-  selectedItem.value = { ...target };
-  isModalOpen.value = true;
-  activeMenuIndex.value = null;
-};
-
-const handleDelete = (index: number) => {
-  if (confirm('정말 삭제하시겠습니까?')) {
-    jobGroups.value.splice(index, 1);
-  }
-  activeMenuIndex.value = null;
-};
-
-const onConfirm = (name: string) => {
-  if (isEditMode.value) {
-    const index = jobGroups.value.findIndex(item => item.id === selectedItem.value.id);
-    if (index !== -1) jobGroups.value[index].name = name;
-  } else {
-    jobGroups.value.unshift({
-      id: Date.now(),
-      name: name,
-      createdAt: '2026.01.12 16:00:00',
-      updatedAt: '2026.01.12 16:00:00'
-    });
-  }
-  isModalOpen.value = false;
 };
 </script>
 
