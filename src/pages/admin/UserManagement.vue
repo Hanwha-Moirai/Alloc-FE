@@ -118,7 +118,7 @@ import {
   getAdminUsers,
   createAdminUser,
   updateAdminUser,
-  deleteAdminUser
+  getAdminUserDetail
 } from '@/api/admin';
 
 // 상태 관리
@@ -189,45 +189,98 @@ const openAddModal = () => {
 };
 
 // 수정 모달 열기
-const handleEdit = (index: number) => {
+const handleEdit = async (index: number) => {
   const target = users.value[index];
-  isEditMode.value = true;
-  selectedUser.value = { ...target };
-  isModalOpen.value = true;
-  activeMenuIndex.value = null;
+
+  if (!target?.userId) {
+    alert('userId가 없습니다.');
+    return;
+  }
+
+  try {
+    isEditMode.value = true;
+
+    const res = await getAdminUserDetail(target.userId);
+    const user = res.data.data;
+
+    selectedUser.value = {
+      userId: user.userId,
+
+      loginId: user.loginId,
+      userName: user.userName,
+      email: user.email,
+      phone: user.phone,
+
+      birthday: user.birthday,
+      hiringDate: user.hiringDate,
+
+      jobId: user.jobId,
+      deptId: user.deptId,
+      titleStandardId: user.titleId,
+
+      employeeType: user.employeeType,
+      auth: user.auth,
+      status: user.status,
+
+      password: '' // 수정 시 비밀번호는 항상 비움
+    };
+
+    isModalOpen.value = true;
+    activeMenuIndex.value = null;
+  } catch (e) {
+    console.error(e);
+    alert('사용자 정보를 불러오는데 실패했습니다.');
+  }
 };
 
-// 삭제 처리
+// 삭제 처리 (계정상태 deleted로 변경)
 const handleDelete = async (index: number) => {
   const target = users.value[index];
-  if (confirm(`정말 ${target.name} 계정을 삭제하시겠습니까?`)) {
-    try {
-      await deleteAdminUser(target.userId);
-      alert('삭제되었습니다.');
-      fetchUsers();
-    } catch (error) {
-      alert('삭제에 실패했습니다.');
-    }
+
+  if (!target?.userId) {
+    alert('userId가 없습니다.');
+    return;
   }
-  activeMenuIndex.value = null;
+
+  if (!confirm(`정말 ${target.userName} 계정을 삭제하시겠습니까?`)) {
+    activeMenuIndex.value = null;
+    return;
+  }
+
+  try {
+    await updateAdminUser(target.userId, {
+      status: 'DELETED'
+    });
+
+    alert('계정이 삭제되었습니다.');
+    activeMenuIndex.value = null;
+    fetchUsers();
+  } catch (error) {
+    console.error(error);
+    alert('계정 삭제에 실패했습니다.');
+  }
 };
 
 // 모달 확인(등록/수정)
-const onConfirm = async (userData: any) => {
+const onConfirm = async (payload) => {
   try {
+    console.log('🔥 서버로 최종 전송', payload);
+
     if (isEditMode.value) {
-      // selectedUser.value.userId를 사용하여 수정
-      await updateAdminUser(selectedUser.value.userId, userData);
-      alert('수정되었습니다.');
+      // 수정
+      await updateAdminUser(payload.userId, payload);
+      alert('사용자 정보가 수정되었습니다.');
     } else {
-      await createAdminUser(userData);
-      alert('등록되었습니다.');
+      // 신규 등록
+      await createAdminUser(payload);
+      alert('사용자가 등록되었습니다.');
     }
+
     isModalOpen.value = false;
-    fetchUsers(); // 목록 새로고침
-  } catch (error) {
-    console.error("저장 실패:", error);
-    alert('처리에 실패했습니다.');
+    fetchUsers();
+  } catch (e) {
+    console.error(e);
+    alert(isEditMode.value ? '사용자 수정에 실패했습니다.' : '사용자 등록에 실패했습니다.');
   }
 };
 

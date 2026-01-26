@@ -22,9 +22,14 @@
 
         <div class="filter-group">
           <h3>담당자별 검색</h3>
-          <div v-for="user in users" :key="user" class="checkbox-item">
-            <input type="checkbox" :id="user" v-model="filters.assignees" :value="user">
-            <label :for="user">{{ user }}</label>
+          <div v-for="user in users" :key="user.id" class="checkbox-item">
+            <input
+                type="checkbox"
+                :id="`user-${user.id}`"
+                v-model="filters.assignees"
+                :value="user.name"
+            />
+            <label :for="`user-${user.id}`">{{ user.name }}</label>
           </div>
         </div>
 
@@ -47,22 +52,20 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
 
-defineProps<{ isOpen: boolean }>()
+const props = defineProps<{
+  isOpen: boolean
+  categories: { label: string; value: string }[]
+  users: { id: number; name: string }[]
+}>()
+
 const emit = defineEmits(['close', 'filter'])
 
-const categories = [
-  { label: '개발', value: 'DEVELOPMENT' },
-  { label: '테스트', value: 'TESTING' },
-  { label: '버그', value: 'BUGFIXING' },
-  { label: '배포', value: 'DISTRIBUTION' }
-]
-const users = ['김명진', '김동리', '김현수', '박연수', '배창민']
 const periods = ['지연됨', 'D-7', 'D-14', 'D-21']
 
 const filters = reactive({
-  categories: [],
-  assignees: [],
-  periods: []
+  categories: [] as string[],
+  assignees: [] as string[],
+  periods: [] as string[]
 })
 
 const resetFilters = () => {

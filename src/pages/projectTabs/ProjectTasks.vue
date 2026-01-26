@@ -106,7 +106,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref, onMounted, watch} from 'vue'
+import {ref, onMounted, watch, toRaw} from 'vue'
 import { useRoute } from 'vue-router'
 import dayjs from 'dayjs'
 import TaskDetailModal from '@/components/common/TaskDetailModal.vue'
@@ -133,6 +133,18 @@ const props = defineProps({
   memberList: {
     type: Array,
     default: () => []
+  },
+  taskFilters: {
+    type: Object as () => {
+      categories: string[]
+      assignees: string[]
+      periods: string[]
+    },
+    default: () => ({
+      categories: [],
+      assignees: [],
+      periods: []
+    })
   }
 });
 
@@ -155,13 +167,27 @@ const categoryClass: Record<string, string> = {
 const fetchTasks = async () => {
   isLoading.value = true;
   try {
-    const response = await getGanttTasks(projectId);
-    const rawData = response.data?.data || response.data || [];
+    const params: any = {}
+
+    if (props.taskFilters.categories.length) {
+      params.taskCategory = [...props.taskFilters.categories]
+    }
+
+    if (props.taskFilters.assignees.length) {
+      params.assigneeName = [...props.taskFilters.assignees]
+    }
+
+    if (props.taskFilters.periods.length) {
+      params.period = [...props.taskFilters.periods]
+    }
+
+    const response = await getGanttTasks(projectId, params)
+    const rawData = response.data?.data || response.data || []
 
     tasks.value = rawData.map((t: any) => {
-      let mappedStatus = t.taskStatus;
-      if (t.taskStatus === 'TODO') mappedStatus = 'TO_DO';
-      if (t.taskStatus === 'INPROGRESS') mappedStatus = 'IN_PROGRESS';
+      let mappedStatus = t.taskStatus
+      if (t.taskStatus === 'TODO') mappedStatus = 'TO_DO'
+      if (t.taskStatus === 'INPROGRESS') mappedStatus = 'IN_PROGRESS'
 
       return {
         id: t.taskId,
@@ -174,14 +200,14 @@ const fetchTasks = async () => {
         milestoneId: t.milestoneId,
         description: t.taskDescription,
         task_category: t.taskCategory
-      };
-    });
+      }
+    })
   } catch (error) {
-    console.error("조회 실패:", error);
+    console.error('조회 실패:', error)
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
-};
+}
 
 const fetchMilestones = async () => {
   try {
@@ -200,9 +226,13 @@ onMounted(() => {
   }
 })
 
-watch(() => props.refreshTrigger, () => {
-  fetchTasks();
-});
+watch(
+    () => [props.refreshTrigger, props.taskFilters],
+    () => {
+      fetchTasks()
+    },
+    { deep: true }
+);
 
 const openTask = (task: any) => {
   selectedTask.value = task

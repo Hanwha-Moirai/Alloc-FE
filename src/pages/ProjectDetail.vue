@@ -41,6 +41,7 @@
         :is-editing="isEditing"
         :refresh-trigger="refreshKey"
         :member-list="memberList"
+        :task-filters="taskFilters"
     />
 
     <TaskAddModal
@@ -52,6 +53,8 @@
 
     <TaskFilterDrawer
         :is-open="isFilterOpen"
+        :categories="taskCategories"
+        :users="filterUsers"
         @close="isFilterOpen = false"
         @filter="handleFilter"
     />
@@ -176,8 +179,35 @@ const handleTaskAdd = async (newTaskData: any) => {
   }
 };
 
+//태스크 필터
+const taskFilters = ref({
+  categories: [],
+  assignees: [],
+  periods: []
+})
+
+const taskCategories = [
+  { label: '개발', value: 'DEVELOPMENT' },
+  { label: '테스트', value: 'TESTING' },
+  { label: '버그', value: 'BUGFIXING' },
+  { label: '배포', value: 'DISTRIBUTION' }
+]
+
+const filterUsers = computed(() =>
+    memberList.value.map((m: any) => ({
+      id: m.employeeName,
+      name: m.employeeName
+    }))
+)
+
 const handleFilter = (filterData: any) => {
-  console.log('적용할 필터:', filterData)
+  taskFilters.value = {
+    categories: filterData.categories ?? [],
+    assignees: filterData.assignees ?? [],
+    periods: filterData.periods ?? []
+  }
+
+  refreshKey.value++
 }
 
 const refreshKey = ref(0)
