@@ -117,7 +117,8 @@ import UserModal from '@/components/common/UserModal.vue';
 import {
   getAdminUsers,
   createAdminUser,
-  updateAdminUser
+  updateAdminUser,
+  getAdminUserDetail
 } from '@/api/admin';
 
 // 상태 관리
@@ -188,36 +189,48 @@ const openAddModal = () => {
 };
 
 // 수정 모달 열기
-const handleEdit = (index: number) => {
+const handleEdit = async (index: number) => {
   const target = users.value[index];
 
-  isEditMode.value = true;
+  if (!target?.userId) {
+    alert('userId가 없습니다.');
+    return;
+  }
 
-  selectedUser.value = {
-    userId: target.userId,
+  try {
+    isEditMode.value = true;
 
-    loginId: target.loginId,
-    userName: target.userName,
-    email: target.email,
-    phone: target.phone,
+    const res = await getAdminUserDetail(target.userId);
+    const user = res.data.data;
 
-    birthday: target.birthday ?? '',
-    hiringDate: target.hiringDate ?? '',
+    selectedUser.value = {
+      userId: user.userId,
 
-    jobId: target.jobId ?? target.job?.jobId ?? null,
-    deptId: target.deptId ?? target.department?.deptId ?? null,
-    titleStandardId:
-        target.titleStandardId ?? target.title?.titleStandardId ?? null,
+      loginId: user.loginId,
+      userName: user.userName,
+      email: user.email,
+      phone: user.phone,
 
-    employeeType: target.employeeType,
-    auth: target.auth,
-    status: target.status,
+      birthday: user.birthday,
+      hiringDate: user.hiringDate,
 
-    password: ''
-  };
+      jobId: user.jobId,
+      deptId: user.deptId,
+      titleStandardId: user.titleId,
 
-  isModalOpen.value = true;
-  activeMenuIndex.value = null;
+      employeeType: user.employeeType,
+      auth: user.auth,
+      status: user.status,
+
+      password: '' // 수정 시 비밀번호는 항상 비움
+    };
+
+    isModalOpen.value = true;
+    activeMenuIndex.value = null;
+  } catch (e) {
+    console.error(e);
+    alert('사용자 정보를 불러오는데 실패했습니다.');
+  }
 };
 
 // 삭제 처리 (계정상태 deleted로 변경)
@@ -253,14 +266,21 @@ const onConfirm = async (payload) => {
   try {
     console.log('🔥 서버로 최종 전송', payload);
 
-    await createAdminUser(payload);
+    if (isEditMode.value) {
+      // 수정
+      await updateAdminUser(payload.userId, payload);
+      alert('사용자 정보가 수정되었습니다.');
+    } else {
+      // 신규 등록
+      await createAdminUser(payload);
+      alert('사용자가 등록되었습니다.');
+    }
 
-    alert('사용자가 등록되었습니다.');
     isModalOpen.value = false;
     fetchUsers();
   } catch (e) {
     console.error(e);
-    alert('사용자 등록에 실패했습니다.');
+    alert(isEditMode.value ? '사용자 수정에 실패했습니다.' : '사용자 등록에 실패했습니다.');
   }
 };
 

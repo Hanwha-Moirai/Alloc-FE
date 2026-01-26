@@ -13,7 +13,7 @@ export const getAdminUsers = (params = {}) => {
     });
 };
 
-// 사용자 상세 조회 (Admin)
+// 유저 상세 조회
 export const getAdminUserDetail = (userId) => {
     return axios.get(`/api/admin/users/${userId}`);
 };
@@ -40,14 +40,19 @@ export const createAdminUser = (data) => {
     });
 };
 
-//사용자 정보 수정
+// 사용자 정보 수정
 export const updateAdminUser = (userId, data) => {
     return axios.patch(`/api/admin/users/${userId}`, {
         userName: data.userName,
         phone: data.phone,
         auth: data.auth,
         status: data.status,
-        birthday: data.birthday
+        birthday: data.birthday,
+
+        employeeType: data.employeeType,
+        jobId: data.jobId,
+        deptId: data.deptId,
+        titleStandardId: data.titleStandardId
     });
 };
 

@@ -192,6 +192,7 @@ const fileInput = ref<HTMLInputElement | null>(null);
 const imagePreview = ref<string | null>(null);
 
 const formData = ref({
+  userId: null,
   loginId: '',
   password: '',
   userName: '',
@@ -298,6 +299,7 @@ const handleConfirm = () => {
   }
 
   const payload = {
+    userId: formData.value.userId,
     loginId: formData.value.loginId,
     password: formData.value.password,
     userName: formData.value.userName,
@@ -313,7 +315,7 @@ const handleConfirm = () => {
 
     jobId: Number(formData.value.jobId),
     deptId: Number(formData.value.deptId),
-    titleStandardId: Number(formData.value.titleStandardId)
+    titleStandardId: Number(formData.value.titleStandardId),
   };
 
   emit('confirm', payload);
