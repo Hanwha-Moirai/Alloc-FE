@@ -111,6 +111,7 @@ import { useRoute } from 'vue-router'
 import dayjs from 'dayjs'
 import TaskDetailModal from '@/components/common/TaskDetailModal.vue'
 import { getGanttTasks, getGanttMilestones, updateTask, deleteTask, completeTask } from '@/api/gantt'
+import { jwtDecode } from 'jwt-decode'
 
 const route = useRoute()
 const projectId = Number(route.params.projectId)
@@ -161,6 +162,20 @@ const categoryClass: Record<string, string> = {
   TESTING: 'test',
   BUGFIXING: 'bug',
   DISTRIBUTION: 'dist'
+}
+
+// role 계산
+const getUserRole = (): string => {
+  const token = localStorage.getItem('accessToken')
+  if (!token) return 'USER'
+
+  try {
+    const payload: any = jwtDecode(token)
+    return payload.role || 'USER'
+  } catch (e) {
+    console.error('토큰 디코딩 실패', e)
+    return 'USER'
+  }
 }
 
 // 데이터 로드
@@ -248,37 +263,56 @@ const closeModal = () => {
 // 태스크 수정 저장 로직
 const saveTaskEdit = async (updatedData: any) => {
   try {
-    const formatDate = (date: string) => date?.replace(/\./g, '-') || null;
+    const userRole = getUserRole()
+
+    const formatDate = (date: string) =>
+        date?.replace(/\./g, '-') || null
 
     const statusMap: Record<string, string> = {
-      'IN_PROGRESS': 'INPROGRESS',
-      'TO_DO': 'TODO'
-    };
+      TO_DO: 'TODO',
+      IN_PROGRESS: 'INPROGRESS',
+      DONE: 'DONE'
+    }
 
-    const requestData = {
-      milestoneId: Number(updatedData.milestoneId || 1),
-      assigneeId: Number(updatedData.assigneeId || 9),
-      taskCategory: updatedData.task_category,
-      taskName: updatedData.title,
-      taskDescription: updatedData.description,
-      taskStatus: statusMap[updatedData.status] || updatedData.status,
-      startDate: formatDate(updatedData.startDate),
-      endDate: formatDate(updatedData.endDate)
-    };
+    let requestData: any = {}
 
-    const { status, data } = await updateTask(projectId, updatedData.id, requestData);
+    if (userRole === 'PM') {
+      // PM : 전체 수정 가능
+      requestData = {
+        milestoneId: Number(updatedData.milestoneId || 1),
+        assigneeId: Number(updatedData.assigneeId || null),
+        taskCategory: updatedData.task_category,
+        taskName: updatedData.title,
+        taskDescription: updatedData.description,
+        taskStatus: statusMap[updatedData.status] || updatedData.status,
+        startDate: formatDate(updatedData.startDate),
+        endDate: formatDate(updatedData.endDate)
+      }
+    } else {
+      // 일반 유저 : 상태만 변경
+      requestData = {
+        taskStatus: statusMap[updatedData.status] || updatedData.status
+      }
+    }
+
+    const { status, data } = await updateTask(
+        projectId,
+        updatedData.id,
+        requestData
+    )
 
     if (status === 200 || data.success) {
-      alert('성공적으로 수정되었습니다.');
-      showModal.value = false;
-      await fetchTasks();
+      alert('성공적으로 수정되었습니다.')
+      showModal.value = false
+      await fetchTasks()
     }
   } catch (error: any) {
-    const errorMsg = error.response?.data?.message || '수정 중 오류가 발생했습니다.';
-    console.error("수정 실패:", error.response?.data);
-    alert(`수정 실패: ${errorMsg}`);
+    const errorMsg =
+        error.response?.data?.message || '수정 중 오류가 발생했습니다.'
+    console.error('수정 실패:', error.response?.data)
+    alert(`수정 실패: ${errorMsg}`)
   }
-};
+}
 
 // 태스크 삭제 로직
 const handleTaskDelete = async (taskId: number) => {
