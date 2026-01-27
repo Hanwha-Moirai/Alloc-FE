@@ -130,45 +130,6 @@
       </table>
     </div>
 
-    <div class="section-card">
-      <h3 class="section-title">다음주 진행사항</h3>
-      <table class="task-table">
-        <thead>
-        <tr>
-          <th>태스크명 ↓</th>
-          <th>담당자</th>
-          <th>지연 경과</th>
-          <th>생성 날짜</th>
-          <th>최신 수정 날짜</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr v-for="(next, idx) in nextWeekTasks" :key="idx">
-          <td class="text-left">
-            <input v-if="isEditing" v-model="next.name" class="edit-input-table" />
-            <span v-else>{{ next.name }}</span>
-          </td>
-          <td>
-            <input v-if="isEditing" v-model="next.manager" class="edit-input-table" />
-            <span v-else>{{ next.manager }}</span>
-          </td>
-          <td>
-            <input v-if="isEditing" v-model="next.delay" class="edit-input-table" />
-            <span v-else>{{ next.delay }}</span>
-          </td>
-          <td>
-            <input v-if="isEditing" v-model="next.created" class="edit-input-table" />
-            <span v-else>{{ next.created }}</span>
-          </td>
-          <td>
-            <input v-if="isEditing" v-model="next.updated" class="edit-input-table" />
-            <span v-else>{{ next.updated }}</span>
-          </td>
-        </tr>
-        </tbody>
-      </table>
-    </div>
-
     <div class="bottom-actions">
       <template v-if="isEditing">
         <button class="btn-grey" @click="isEditing = false">취소</button>
@@ -242,20 +203,38 @@ const getProjectInfo = async () => {
 
 const fetchDetail = async () => {
   try {
+    console.log('🔥 fetchDetail CALLED');
     const response = await axios.get(
         `/api/projects/${projectId}/docs/report/${reportId}`
     );
+    console.log('🔥 RAW RESPONSE:', response.data);
 
     const data = response.data.data;
+    console.log('🔥 data keys:', Object.keys(data));
+    console.log('🔥 completedTasks raw:', data.completedTasks);
+    console.log('🔥 incompleteTasks raw:', data.incompleteTasks);
+
 
     form.week = data.weekLabel ?? '-';
     form.reporter = data.reporterName ?? '-';
     form.progress = Math.round(data.taskCompletionRate ?? 0);
     form.period = `${data.weekStartDate} ~ ${data.weekEndDate}`;
 
-    completedTasks.value = data.completedTasks ?? [];
-    uncompletedTasks.value = data.incompleteTasks ?? [];
-    nextWeekTasks.value = data.nextWeekTasks ?? [];
+    completedTasks.value = (data.completedTasks ?? []).map(t => ({
+      name: t.taskName,
+      manager: t.managerName,
+      type: t.taskCategory,
+      note: t.note || ''
+    }));
+
+    uncompletedTasks.value = (data.incompleteTasks ?? []).map(t => ({
+      name: t.taskName,
+      manager: t.managerName,
+      type: t.taskCategory,
+      delay: t.delayDays ? `${t.delayDays}일` : '',
+      reason: t.reason || ''
+    }));
+
     await getProjectInfo();
 
   } catch (error) {
