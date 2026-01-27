@@ -55,7 +55,7 @@
         </thead>
         <tbody>
         <tr v-for="(task, idx) in completedTasks" :key="idx">
-          <td class="text-left">
+          <td>
             <input v-if="isEditing" v-model="task.name" class="edit-input-table" />
             <span v-else>{{ task.name }}</span>
           </td>
@@ -91,7 +91,7 @@
         <tbody>
         <template v-for="(item, index) in uncompletedTasks" :key="index">
           <tr class="clickable-row" :class="{ 'active-row': expandedRow === index }" @click="toggleRow(index)">
-            <td class="text-left">
+            <td>
               <input v-if="isEditing" v-model="item.name" class="edit-input-table" @click.stop />
               <span v-else>{{ item.name }}</span>
             </td>
@@ -107,7 +107,7 @@
               <input v-if="isEditing" v-model="item.delay" class="edit-input-table" @click.stop />
               <span v-else>{{ item.delay }}</span>
             </td>
-            <td class="text-left">
+            <td>
               <div class="reason-ellipsis" v-if="expandedRow !== index">
                 {{ item.reason }}
               </div>
@@ -203,40 +203,36 @@ const getProjectInfo = async () => {
 
 const fetchDetail = async () => {
   try {
-    console.log('🔥 fetchDetail CALLED');
     const response = await axios.get(
         `/api/projects/${projectId}/docs/report/${reportId}`
     );
-    console.log('🔥 RAW RESPONSE:', response.data);
 
     const data = response.data.data;
-    console.log('🔥 data keys:', Object.keys(data));
-    console.log('🔥 completedTasks raw:', data.completedTasks);
-    console.log('🔥 incompleteTasks raw:', data.incompleteTasks);
-
 
     form.week = data.weekLabel ?? '-';
     form.reporter = data.reporterName ?? '-';
     form.progress = Math.round(data.taskCompletionRate ?? 0);
     form.period = `${data.weekStartDate} ~ ${data.weekEndDate}`;
 
+    const weeklyTasks = data.weeklyTasks ?? [];
+
+    // 완료 태스크
     completedTasks.value = (data.completedTasks ?? []).map(t => ({
       name: t.taskName,
-      manager: t.managerName,
+      manager: t.assigneeName,
       type: t.taskCategory,
       note: t.note || ''
     }));
 
     uncompletedTasks.value = (data.incompleteTasks ?? []).map(t => ({
       name: t.taskName,
-      manager: t.managerName,
+      manager: t.assigneeName,
       type: t.taskCategory,
-      delay: t.delayDays ? `${t.delayDays}일` : '',
-      reason: t.reason || ''
+      delay: `${t.delayDays ?? 0}일`,
+      reason: t.delayReason || ''
     }));
 
     await getProjectInfo();
-
   } catch (error) {
     console.error('데이터 로드 실패:', error);
   }
