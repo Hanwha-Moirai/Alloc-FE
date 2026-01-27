@@ -11,6 +11,7 @@
         <button class="tab" :class="{ active: isActive('calendar') }" @click="goTab('calendar')">캘린더</button>
         <button class="tab" :class="{ active: isActive('docs') }" @click="goTab('docs')">문서</button>
         <button class="tab" :class="{ active: isActive('members') }" @click="goTab('members')">인력</button>
+        <button class="tab" :class="{ active: isActive('risk') }" @click="goTab('risk')">리스크</button>
       </div>
 
       <div class="header-actions">
@@ -34,6 +35,16 @@
         <div v-if="isActive('docs')">
           <button class="add-btn btn-gradient" @click="showDocModal = true">+ 주간보고/회의록 생성</button>
         </div>
+
+        <div v-if="isActive('risk')">
+          <button
+              class="add-btn btn-gradient"
+              @click="handleCreateRisk"
+          >
+            + 리스크 분석 생성
+          </button>
+        </div>
+
       </div>
     </div>
 
@@ -245,6 +256,12 @@ const handleAddMilestone = async (newMilestone: any) => {
 const handleCreateDoc = (data: any) => {
   console.log('생성 데이터:', data)
 }
+
+const handleCreateRisk = () => {
+  // 지금은 화면만 → 나중에 API 연결
+  console.log("리스크 분석 생성 클릭");
+  alert("리스크 분석 생성 (추후 API 연동)");
+};
 
 // --- Navigation ---
 const goTab = (tab: string) => {

@@ -55,7 +55,7 @@
         </thead>
         <tbody>
         <tr v-for="(task, idx) in completedTasks" :key="idx">
-          <td class="text-left">
+          <td>
             <input v-if="isEditing" v-model="task.name" class="edit-input-table" />
             <span v-else>{{ task.name }}</span>
           </td>
@@ -91,7 +91,7 @@
         <tbody>
         <template v-for="(item, index) in uncompletedTasks" :key="index">
           <tr class="clickable-row" :class="{ 'active-row': expandedRow === index }" @click="toggleRow(index)">
-            <td class="text-left">
+            <td>
               <input v-if="isEditing" v-model="item.name" class="edit-input-table" @click.stop />
               <span v-else>{{ item.name }}</span>
             </td>
@@ -107,7 +107,7 @@
               <input v-if="isEditing" v-model="item.delay" class="edit-input-table" @click.stop />
               <span v-else>{{ item.delay }}</span>
             </td>
-            <td class="text-left">
+            <td>
               <div class="reason-ellipsis" v-if="expandedRow !== index">
                 {{ item.reason }}
               </div>
@@ -126,45 +126,6 @@
             </td>
           </tr>
         </template>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="section-card">
-      <h3 class="section-title">다음주 진행사항</h3>
-      <table class="task-table">
-        <thead>
-        <tr>
-          <th>태스크명 ↓</th>
-          <th>담당자</th>
-          <th>지연 경과</th>
-          <th>생성 날짜</th>
-          <th>최신 수정 날짜</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr v-for="(next, idx) in nextWeekTasks" :key="idx">
-          <td class="text-left">
-            <input v-if="isEditing" v-model="next.name" class="edit-input-table" />
-            <span v-else>{{ next.name }}</span>
-          </td>
-          <td>
-            <input v-if="isEditing" v-model="next.manager" class="edit-input-table" />
-            <span v-else>{{ next.manager }}</span>
-          </td>
-          <td>
-            <input v-if="isEditing" v-model="next.delay" class="edit-input-table" />
-            <span v-else>{{ next.delay }}</span>
-          </td>
-          <td>
-            <input v-if="isEditing" v-model="next.created" class="edit-input-table" />
-            <span v-else>{{ next.created }}</span>
-          </td>
-          <td>
-            <input v-if="isEditing" v-model="next.updated" class="edit-input-table" />
-            <span v-else>{{ next.updated }}</span>
-          </td>
-        </tr>
         </tbody>
       </table>
     </div>
@@ -253,11 +214,25 @@ const fetchDetail = async () => {
     form.progress = Math.round(data.taskCompletionRate ?? 0);
     form.period = `${data.weekStartDate} ~ ${data.weekEndDate}`;
 
-    completedTasks.value = data.completedTasks ?? [];
-    uncompletedTasks.value = data.incompleteTasks ?? [];
-    nextWeekTasks.value = data.nextWeekTasks ?? [];
-    await getProjectInfo();
+    const weeklyTasks = data.weeklyTasks ?? [];
 
+    // 완료 태스크
+    completedTasks.value = (data.completedTasks ?? []).map(t => ({
+      name: t.taskName,
+      manager: t.assigneeName,
+      type: t.taskCategory,
+      note: t.note || ''
+    }));
+
+    uncompletedTasks.value = (data.incompleteTasks ?? []).map(t => ({
+      name: t.taskName,
+      manager: t.assigneeName,
+      type: t.taskCategory,
+      delay: `${t.delayDays ?? 0}일`,
+      reason: t.delayReason || ''
+    }));
+
+    await getProjectInfo();
   } catch (error) {
     console.error('데이터 로드 실패:', error);
   }

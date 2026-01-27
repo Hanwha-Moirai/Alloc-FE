@@ -117,6 +117,10 @@ const router = createRouter({
                             component: () => import('@/pages/projectTabs/ProjectMembers.vue'),
                         },
                         {
+                            path: 'risk',
+                            component: () => import('@/pages/projectTabs/ProjectRisk.vue')
+                        },
+                        {
                             path: 'recommend',
                             name: 'ProjectRecommend',
                             component: () => import('@/pages/RecommendResultView.vue'),
