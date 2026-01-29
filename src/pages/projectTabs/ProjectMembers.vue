@@ -9,15 +9,21 @@
       </div>
       <div class="card">
         <span class="card-label">응답 대기</span>
-        <div class="card-value">{{ projectStatus === 'DRAFT' ? '-' : 2 }}</div>
+        <div class="card-value">
+          {{ memberList.length === 1 ? '-' : waitingCount }}
+        </div>
       </div>
       <div class="card">
         <span class="card-label">수락</span>
-        <div class="card-value">{{ projectStatus === 'DRAFT' ? '-' : 3 }}</div>
+        <div class="card-value">
+          {{ memberList.length === 1 ? '-' : acceptedCount }}
+        </div>
       </div>
       <div class="card">
         <span class="card-label">면담요청</span>
-        <div class="card-value">{{ projectStatus === 'DRAFT' ? '-' : 1 }}</div>
+        <div class="card-value">
+          {{ memberList.length === 1 ? '-' : interviewCount }}
+        </div>
       </div>
     </div>
 
@@ -26,14 +32,14 @@
         <h3 class="section-title">인원 리스트</h3>
         <div class="action-buttons">
           <button
-              v-if="memberList.length === 1"
+              v-if="myRole === 'PM' && memberList.length === 1"
               class="btn-gradient"
               @click="handleRecommend"
           >
             ✨ 인재 추천받기
           </button>
-          <button class="btn-outline">인원 추가</button>
-          <button class="btn-primary">저장</button>
+          <button v-if="myRole === 'PM'" class="btn-outline">인원 추가</button>
+          <button v-if="myRole === 'PM'" class="btn-primary">저장</button>
         </div>
       </div>
 
@@ -53,29 +59,112 @@
           </tr>
           </thead>
 
-          <!-- DRAFT가 아닐 때 -->
-          <tbody v-if="projectStatus !== 'DRAFT'">
+          <tbody v-if="memberList.length !== 1">
           <tr v-for="member in memberList" :key="member.userId">
             <td class="name-cell">
               <img src="/user.png" class="user-icon" />
               {{ member.name }}
             </td>
+
             <td>{{ member.role }}</td>
+
             <td>
               <span class="skill-tag">{{ member.skill || '-' }}</span>
             </td>
-            <td>{{ member.fit }}%</td>
+
+            <td>{{ member.fit ?? '-' }}%</td>
+
             <td>{{ member.price?.toLocaleString?.() || '-' }}</td>
-            <td>{{ member.workStatus === 'AVAILABLE' ? '대기중' : '투입중' }}</td>
+
             <td>
-              <span class="badge bright-green">투입</span>
+              <span v-if="member.workStatus === 'AVAILABLE'" class="badge red">대기중</span>
+              <span v-else-if="member.workStatus === 'ASSIGNED'" class="badge green">투입중</span>
+              <span v-else>-</span>
             </td>
-            <td>-</td>
-            <td>-</td>
+
+            <!-- 요청 상태 -->
+            <td>
+                <span
+                    class="badge red"
+                    v-if="member.requestStatus === 'REQUESTED'"
+                >
+                  투입 요청됨
+                </span>
+
+              <span
+                  class="badge blue"
+                  v-else-if="member.requestStatus === 'INTERVIEW_REQUESTED'"
+              >
+                  면담 요청됨
+                </span>
+
+              <span
+                  class="badge green"
+                  v-else-if="member.requestStatus === 'ACCEPTED'"
+              >
+                  수락
+                </span>
+
+              <span v-else>-</span>
+            </td>
+
+            <!-- 의사 결정 -->
+            <td>
+              <!-- USER만 버튼 가능 -->
+              <template
+                  v-if="myRole === 'USER' && member.requestStatus === 'REQUESTED'"
+              >
+                <div class="button-group">
+                  <button
+                      class="btn btn-blue"
+                      @click="onRequestInterview(member)"
+                  >
+                    면담 요청
+                  </button>
+                  <button
+                      class="btn btn-green"
+                      @click="onAcceptAssignment(member)"
+                  >
+                    수락
+                  </button>
+                </div>
+              </template>
+
+              <!-- PM이거나 처리된 상태 -->
+              <template v-else>
+                -
+              </template>
+            </td>
+
+            <!-- 최종 결정 -->
+            <td>
+              <template
+                  v-if="myRole === 'PM' &&
+                  member.requestStatus === 'INTERVIEW_REQUESTED'"
+              >
+                <div class="button-group">
+                  <button
+                      class="btn btn-green"
+                      @click="onFinalDecision(member, 'ASSIGNED')"
+                  >
+                    투입
+                  </button>
+                  <button
+                      class="btn btn-red"
+                      @click="onFinalDecision(member, 'EXCLUDED')"
+                  >
+                    제외
+                  </button>
+                </div>
+              </template>
+
+              <template v-else>
+                -
+              </template>
+            </td>
           </tr>
           </tbody>
 
-          <!-- DRAFT일 때 -->
           <tbody v-else>
           <tr>
             <td colspan="9" class="empty-row">
@@ -87,17 +176,28 @@
       </div>
     </div>
 
-    <RecommendModal v-if="showRecommendModal" @close="showRecommendModal = false" />
+    <!-- 인재 추천 로딩 모달 -->
+    <RecommendModal
+        v-if="showRecommendModal"
+        @close="showRecommendModal = false"
+    />
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import RecommendModal from '@/components/common/RecommendModal.vue';
 import { fetchProjectDetail } from '@/api/project';
-import { fetchAssignmentManagementPage } from '@/api/projectAssign';
+import {
+  fetchAssignmentManagementPage,
+  respondAssignment,
+  decideFinalAssignment
+} from '@/api/projectAssign';
+import { jwtDecode } from 'jwt-decode'
 
+const myRole = ref<'PM' | 'USER' | ''>('')
 const router = useRouter();
 const route = useRoute();
 const projectId = route.params.projectId as string;
@@ -121,68 +221,94 @@ const mapStatus = (status: string) => {
   }
 };
 
-const mapDecision = (status: string) => {
-  if (status === '요청') {
-    return [
-      { label: '면담 요청', class: 'red' },
-      { label: '수락', class: 'green' }
-    ];
-  }
-  if (status === '면담 요청') {
-    return [{ label: '면담 요청', class: 'red' }];
-  }
-  if (status === '수락') {
-    return [{ label: '수락', class: 'green' }];
-  }
-  return [];
-};
+const waitingCount = computed(() =>
+    memberList.value.filter(m => m.requestStatus === 'REQUESTED').length
+)
 
-const mapFinalDecision = (finalStatus?: string) => {
-  if (!finalStatus) return [];
-  if (finalStatus === '투입') {
-    return [{ label: '투입', class: 'bright-green' }];
-  }
-  if (finalStatus === '제외') {
-    return [{ label: '제외', class: 'dark-red' }];
-  }
-  return [];
-};
+const acceptedCount = computed(() =>
+    memberList.value.filter(m => m.requestStatus === 'ACCEPTED').length
+)
+
+const interviewCount = computed(() =>
+    memberList.value.filter(m => m.requestStatus === 'INTERVIEW_REQUESTED').length
+)
+
+const onRequestInterview = async (member: any) => {
+  await respondAssignment(
+      projectId,
+      member.assignmentId,
+      'INTERVIEW_REQUESTED'
+  )
+  await fetchMembers()
+}
+
+const onAcceptAssignment = async (member: any) => {
+  await respondAssignment(
+      projectId,
+      member.assignmentId,
+      'ACCEPTED'
+  )
+  await fetchMembers()
+}
+
+const onFinalDecision = async (member: any, decision: 'ASSIGNED' | 'EXCLUDED') => {
+  await decideFinalAssignment(
+      projectId,
+      member.assignmentId,
+      decision
+  )
+  await fetchMembers()
+}
+
 
 // 프로젝트 인원 조회
 const fetchMembers = async () => {
   const res = await fetchAssignmentManagementPage(projectId);
 
-  console.log('📡 members raw response', res.data);
+  memberList.value = res.data.members.map((m: any) => {
 
-  const list = res.data.members;
-
-  memberList.value = res.data.members.map((m: any) => ({
-    userId: m.userId,
-    name: m.userName,
-    role: m.jobName,
-    skill: m.mainSkill,
-    fit: m.skillScore,
-    price: m.monthlyWage,
-    workStatus: m.workStatus,
-    selected: m.selected
-  }));
+    return {
+      assignmentId: m.assignmentId,
+      userId: m.userId,
+      name: m.userName,
+      role: m.jobName,
+      skill: m.mainSkill,
+      fit: m.skillScore,
+      price: m.monthlyWage,
+      workStatus: m.finalDecision === 'ASSIGNED'
+          ? 'ASSIGNED'
+          : 'AVAILABLE',
+      selected: m.selected,
+      requestStatus: m.assignmentStatus ?? m.requestStatus,
+    };
+  });
 };
 
 
 // 인재 추천 처리
 const handleRecommend = () => {
-  // 인력 배치 시작 화면으로 이동
-  router.push(`/projects/${projectId}/assign`);
-};
+  showRecommendModal.value = true
+
+  setTimeout(() => {
+    showRecommendModal.value = false
+    router.push(`/projects/${projectId}/assign`)
+  }, 1500)
+}
 
 // 초기 로딩
 onMounted(async () => {
-  const res = await fetchProjectDetail(projectId);
+  const token = localStorage.getItem('accessToken')
 
-  projectStatus.value = res.data?.status;
+  if (token) {
+    const payload: any = jwtDecode(token)
+    myRole.value = payload.role
+  }
 
-  await fetchMembers();
-});
+  const res = await fetchProjectDetail(projectId)
+  projectStatus.value = res.data?.status
+
+  await fetchMembers()
+})
 </script>
 
 <style scoped>
@@ -346,8 +472,73 @@ onMounted(async () => {
   color: #fff;
 }
 
-.badge.red { background: #ff4d4f; }
-.badge.green { background: #52c41a; }
-.badge.dark-red { background: #cf1322; }
-.badge.bright-green { background: #23cc66; }
+.badge.green {
+  background: #eaf7dd;
+  color: #52c41a;
+}
+.badge.red   {
+  background: #ffe9ea;
+  color: #ff4d4f;
+}
+.badge.blue  {
+  background: #e8efff;
+  color: #0041ce;
+}
+
+/* 공통 버튼 그룹 (간격 담당) */
+.button-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 공통 버튼 베이스 */
+.btn {
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+
+  background: transparent;
+  border: none;
+  outline: none;
+  box-shadow: none;
+
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.btn-green {
+  background: #eaf7dd;
+  color: #52c41a;
+}
+
+.btn-red {
+  background: #ffe9ea;
+  color: #ff4d4f;
+}
+
+.btn-blue {
+  background: #e8efff;
+  color: #0041ce;
+}
+
+.btn-green:hover {
+  background: #dff3c7;
+}
+
+.btn-red:hover {
+  background: #ffd6d8;
+}
+
+.btn-blue:hover {
+  background: #d7e3ff;
+}
+
+/* 접근성용 포커스 */
+.btn:focus-visible {
+  outline: 2px solid rgba(0, 188, 212, 0.4);
+  outline-offset: 2px;
+}
+
 </style>
