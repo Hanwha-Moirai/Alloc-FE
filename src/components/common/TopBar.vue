@@ -12,7 +12,6 @@
         <NotificationDropdown
             v-if="isNotiOpen"
             @close="closeNoti"
-            @update-count="updateBadgeCount"
         />
       </div>
 
@@ -35,53 +34,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { fetchUnreadCount, getNotificationSubscribeUrl } from '@/api/notification'
 import ProfilePopover from '@/components/common/ProfilePopover.vue'
 import NotificationDropdown from '@/pages/notification/NotificationDropdown.vue'
+import { useAuthStore } from '@/stores/auth'
+import { useNotificationStore } from '@/stores/notification'
 
 const router = useRouter()
+const authStore = useAuthStore()
+const notificationStore = useNotificationStore()
 const isProfileOpen = ref(false)
 const isNotiOpen = ref(false)
-const unreadCount = ref(0)
+const unreadCount = computed(() => notificationStore.unreadCount)
 
 /* 예시 사용자 ID (로그인 정보에서 가져와야 함) */
 const myUserId = 1
-
-// 알림 개수 업데이트 함수
-const updateBadgeCount = (newCount: number) => {
-  unreadCount.value = newCount
-}
-
-// 초기 미읽음 개수 로드
-const loadUnreadCount = async () => {
-  try {
-    const res = await fetchUnreadCount()
-    unreadCount.value = res.data.data // 백엔드 ApiResponse 구조
-  } catch (e) {
-    console.error("미읽음 카운트 로드 실패:", e)
-  }
-}
-
-// 실시간 SSE 연결
-const connectSSE = () => {
-  const url = getNotificationSubscribeUrl()
-  const eventSource = new EventSource(url, { withCredentials: true })
-
-  eventSource.addEventListener('UNREAD_COUNT', (event) => {
-    unreadCount.value = parseInt(event.data)
-  })
-
-  eventSource.onerror = () => {
-    eventSource.close()
-  }
-}
-
-onMounted(() => {
-  loadUnreadCount()
-  connectSSE()
-})
 
 // 토글 로직들
 const toggleProfile = () => {
@@ -114,7 +82,8 @@ const goMyProfile = () => {
 
 const handleLogout = () => {
   closeProfile()
-  localStorage.removeItem('accessToken')
+  authStore.clearAuth()
+  notificationStore.disconnectSse()
   localStorage.removeItem('refreshToken')
   router.push('/login')
 }

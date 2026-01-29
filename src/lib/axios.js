@@ -1,14 +1,19 @@
-import axios from 'axios';
+import axios from 'axios'
+import { useAuthStore } from '@/stores/auth'
+import { pinia } from '@/stores/pinia'
+
+const authStore = useAuthStore(pinia)
+authStore.initFromStorage()
 
 const instance = axios.create({
-    baseURL: 'http://localhost:8080',
+    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
     withCredentials: true,
 });
 
 // 요청 인터셉터
 instance.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('accessToken');
+        const token = authStore.accessToken;
 
         if (token) {
             config.headers = config.headers || {};
@@ -29,7 +34,7 @@ instance.interceptors.response.use(
             console.warn('인증이 만료되었습니다. 로그인 페이지로 이동합니다.');
 
             // 유효하지 않은 토큰 제거
-            localStorage.removeItem('accessToken');
+            authStore.clearAuth();
 
             // 로그인 페이지로 강제 리다이렉트
             window.location.href = '/login';

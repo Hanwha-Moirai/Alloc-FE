@@ -3,7 +3,11 @@ import { createRouter, createWebHistory } from 'vue-router'
 // 레이아웃
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import AdminLayout from "@/layouts/AdminLayout.vue";
-import {jwtDecode} from "jwt-decode";
+import { useAuthStore } from '@/stores/auth'
+import { pinia } from '@/stores/pinia'
+
+const authStore = useAuthStore(pinia)
+authStore.initFromStorage()
 
 const router = createRouter({
     history: createWebHistory(),
@@ -28,24 +32,19 @@ const router = createRouter({
                     redirect: () => {
                         console.log('[ / redirect ]')
 
-                        const token = localStorage.getItem('accessToken')
+                        const token = authStore.accessToken
                         if (!token) {
                             console.log('→ no token')
                             return '/login'
                         }
 
-                        try {
-                            const payload = jwtDecode(token)
-                            console.log('payload:', payload)
-
-                            const role = payload.role
-                            console.log('role:', role)
-
-                            return role === 'PM' ? '/home/pm' : '/home/user'
-                        } catch (e) {
-                            console.error('jwt decode failed', e)
+                        const role = authStore.role
+                        if (!role) {
+                            authStore.clearAuth()
                             return '/login'
                         }
+
+                        return role === 'PM' ? '/home/pm' : '/home/user'
                     }
                 },
                 {
@@ -177,8 +176,10 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-    // 로컬 스토리지에서 액세스 토큰 확인
-    const token = localStorage.getItem('accessToken');
+    authStore.initFromStorage()
+
+    // 스토어에서 액세스 토큰 확인
+    const token = authStore.accessToken;
 
     // 인증이 필요 없는 경로 설정
     const publicPages = ['/login', '/password-reset'];

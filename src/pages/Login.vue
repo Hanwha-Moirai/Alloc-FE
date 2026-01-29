@@ -48,9 +48,10 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from '@/lib/axios'
-import { jwtDecode } from 'jwt-decode'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const username = ref('')
 const password = ref('')
@@ -65,10 +66,8 @@ const login = async () => {
     const responseData = res.data.data
     const accessToken = responseData.accessToken
 
-    localStorage.setItem('accessToken', accessToken)
-
-    const payload: any = jwtDecode(accessToken)
-    const role = payload.role
+    authStore.setAccessToken(accessToken)
+    const role = authStore.role
 
     if (role === 'ADMIN') {
       router.push('/admin/users')
