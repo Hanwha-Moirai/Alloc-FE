@@ -2,22 +2,36 @@
   <div class="recommend-result-page">
     <div class="page-header">
       <h1 class="page-title">프로젝트 적합한 인재 추천</h1>
-      <p class="page-subtitle">추천 지표를 설정하고 적용 버튼을 눌러 인재를 조회하세요.</p>
+      <p class="page-subtitle">
+        추천 지표를 설정하고 적용 버튼을 눌러 인재를 조회하세요.
+      </p>
     </div>
 
+    <!-- 요약 영역 -->
     <div class="summary-grid filter-grid">
       <div class="summary-card">
         <div class="card-label">예상 비용</div>
         <div class="card-content">
-          <span class="value">11.8M</span>
-          <span class="badge green">적정</span>
+          <span class="value">{{ formattedEstimatedCost }}</span>
+          <span
+              class="badge"
+              :class="estimatedCost > 0 ? 'green' : 'gray'"
+          >
+            {{ estimatedCost > 0 ? '적정' : '미선택' }}
+          </span>
         </div>
       </div>
 
       <div class="summary-card filter-card">
         <div class="card-label">기술 적합도 (%)</div>
         <div class="slider-container">
-          <input type="range" v-model="filters.techMatch" min="1" max="100" class="custom-slider" />
+          <input
+              type="range"
+              v-model="filters.techMatch"
+              min="1"
+              max="100"
+              class="custom-slider"
+          />
           <div class="slider-value-box">{{ filters.techMatch }}%</div>
         </div>
       </div>
@@ -25,7 +39,13 @@
       <div class="summary-card filter-card">
         <div class="card-label">경험 적합도 (%)</div>
         <div class="slider-container">
-          <input type="range" v-model="filters.expMatch" min="1" max="100" class="custom-slider" />
+          <input
+              type="range"
+              v-model="filters.expMatch"
+              min="1"
+              max="100"
+              class="custom-slider"
+          />
           <div class="slider-value-box">{{ filters.expMatch }}%</div>
         </div>
       </div>
@@ -33,12 +53,19 @@
       <div class="summary-card filter-card">
         <div class="card-label">투입 가능성 (%)</div>
         <div class="slider-container">
-          <input type="range" v-model="filters.availability" min="1" max="100" class="custom-slider" />
+          <input
+              type="range"
+              v-model="filters.availability"
+              min="1"
+              max="100"
+              class="custom-slider"
+          />
           <div class="slider-value-box">{{ filters.availability }}%</div>
         </div>
       </div>
     </div>
 
+    <!-- 리스트 -->
     <div class="list-container">
       <div class="list-action-header">
         <button class="btn-apply" @click="fetchAssignCandidates">
@@ -50,26 +77,30 @@
         <table class="talent-table">
           <thead>
           <tr>
-            <th class="col-check"><input type="checkbox" /></th>
+            <th class="col-check"></th>
             <th>이름</th>
             <th>직군</th>
             <th>주력 기술</th>
             <th>단가</th>
             <th>현재 상태</th>
-            <th class="col-score">기술 적합도</th>
-            <th class="col-score">경험 적합도</th>
-            <th class="col-score">투입 가능성</th>
+            <th class="col-score">기술</th>
+            <th class="col-score">경험</th>
+            <th class="col-score">투입</th>
             <th>선택</th>
           </tr>
           </thead>
-          <tbody v-if="!isLoading">
-            <tr v-if="assignments.length === 0">
-              <td colspan="10" style="text-align:center; padding:40px;">
-                배치 가능한 후보가 없습니다.
-              </td>
-            </tr>
-            <template v-for="job in assignments" :key="job.jobId">
 
+          <tbody v-if="!isLoading">
+          <tr v-if="filteredAssignments.length === 0">
+            <td colspan="10" style="text-align:center; padding:40px;">
+              배치 가능한 후보가 없습니다.
+            </td>
+          </tr>
+
+          <template
+              v-for="job in filteredAssignments"
+              :key="job.jobId"
+          >
             <!-- 직군 헤더 -->
             <tr class="job-header">
               <td colspan="10">
@@ -78,14 +109,16 @@
               </td>
             </tr>
 
-            <!-- 직군별 후보 -->
+            <!-- 후보 -->
             <tr
                 v-for="candidate in job.candidates"
                 :key="candidate.userId"
-                :class="{ selected: candidate.isSelected }"
             >
               <td class="col-check">
-                <input type="checkbox" v-model="candidate.isSelected" />
+                <input
+                    type="checkbox"
+                    v-model="candidate.isSelected"
+                />
               </td>
 
               <td class="name-cell">
@@ -98,18 +131,22 @@
               <td>{{ job.jobName }}</td>
 
               <td>
-                <span class="tech-tag">{{ candidate.mainSkill }}</span>
+                  <span class="tech-tag">
+                    {{ candidate.mainSkill || '-' }}
+                  </span>
               </td>
 
-              <td>{{ candidate.monthlyWage.toLocaleString() }}</td>
+              <td>
+                {{ candidate.monthlyWage?.toLocaleString() || '-' }}
+              </td>
 
               <td>
                 <span class="status-dot wait">● 대기중</span>
               </td>
 
-              <td class="score-text highlight">{{ candidate.skillScore }}%</td>
-              <td class="score-text highlight">{{ candidate.experienceScore }}%</td>
-              <td class="score-text highlight">{{ candidate.availabilityScore }}%</td>
+              <td class="score-text">{{ candidate.skillScore }}%</td>
+              <td class="score-text">{{ candidate.experienceScore }}%</td>
+              <td class="score-text">{{ candidate.availabilityScore }}%</td>
 
               <td>
                 <button
@@ -119,6 +156,7 @@
                 >
                   + 선택
                 </button>
+
                 <button
                     v-else
                     class="btn-action remove"
@@ -128,24 +166,32 @@
                 </button>
               </td>
             </tr>
-
           </template>
           </tbody>
         </table>
-        <div v-if="isLoading" class="loading-state">데이터를 불러오는 중입니다...</div>
+
+        <div v-if="isLoading" class="loading-state">
+          데이터 불러오는 중입니다...
+        </div>
       </div>
     </div>
 
     <div class="footer-actions">
-      <button class="btn-submit" @click="handleRegister">등록하기</button>
+      <button class="btn-submit" @click="handleRegister">
+        등록하기
+      </button>
     </div>
 
-    <RegisterSuccessModal v-if="showRegisterModal" @close="showRegisterModal = false" @confirm="goToProjectList" />
+    <RegisterSuccessModal
+        v-if="showRegisterModal"
+        @close="showRegisterModal = false"
+        @confirm="goToProjectList"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import RegisterSuccessModal from '@/components/common/RegisterSuccessModal.vue';
 import {
@@ -161,11 +207,43 @@ const showRegisterModal = ref(false);
 const isLoading = ref(false);
 const assignments = ref<any[]>([]);
 
-// (UI 유지용 – 실제 필터링 로직은 아직 없음)
 const filters = ref({
-  techMatch: 80,
-  expMatch: 70,
-  availability: 50
+  techMatch: 0,
+  expMatch: 0,
+  availability: 0
+});
+
+// 필터 적용된 결과
+const filteredAssignments = computed(() => {
+  return assignments.value
+      .map(job => {
+        const filteredCandidates = job.candidates.filter(c =>
+            c.skillScore >= filters.value.techMatch &&
+            c.experienceScore >= filters.value.expMatch &&
+            c.availabilityScore >= filters.value.availability
+        );
+
+        return {
+          jobId: job.jobId,
+          jobName: job.jobName,
+          requiredCount: job.requiredCount,
+          candidates: filteredCandidates   // ⭐ 원본 candidate 참조 유지
+        };
+      })
+      .filter(job => job.candidates.length > 0);
+});
+
+// 예상 비용 계산
+const estimatedCost = computed(() => {
+  return assignments.value
+      .flatMap(job => job.candidates ?? [])
+      .filter(c => c.isSelected)
+      .reduce((sum, c) => sum + (c.monthlyWage ?? 0), 0);
+});
+
+const formattedEstimatedCost = computed(() => {
+  if (estimatedCost.value === 0) return '0';
+  return (estimatedCost.value / 1_000_000).toFixed(1) + 'M';
 });
 
 // 후보 조회
@@ -174,12 +252,8 @@ const fetchAssignCandidates = async () => {
   try {
     const res = await fetchProjectAssignCandidates(projectId);
 
-    const flatCandidates = res.data.candidates;
-    const jobSummaries = res.data.jobSummaries;
-    console.log('API RAW:', res.data);
-    console.log('candidates:', res.data.candidates);
-    console.log('jobSummaries:', res.data.jobSummaries);
-
+    const flatCandidates = res.data.candidates ?? [];
+    const jobSummaries = res.data.jobSummaries ?? [];
 
     assignments.value = jobSummaries.map((job: any) => ({
       jobId: job.jobId,
@@ -205,7 +279,6 @@ onMounted(fetchAssignCandidates);
 // 등록 처리
 const handleRegister = async () => {
   try {
-    // 1️⃣ requiredCount 검증
     for (const job of assignments.value) {
       const selected = job.candidates.filter((c: any) => c.isSelected);
       if (selected.length !== job.requiredCount) {
@@ -214,7 +287,6 @@ const handleRegister = async () => {
       }
     }
 
-    // 2️⃣ 백엔드 DTO에 맞춘 payload
     const payload = {
       projectId,
       assignments: assignments.value.map(job => ({
