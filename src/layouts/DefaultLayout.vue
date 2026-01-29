@@ -14,8 +14,25 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, onUnmounted } from 'vue'
 import TopBar from '@/components/common/TopBar.vue'
 import Sidebar from '@/components/common/Sidebar.vue'
+import { useAuthStore } from '@/stores/auth'
+import { useNotificationStore } from '@/stores/notification'
+
+const authStore = useAuthStore()
+const notificationStore = useNotificationStore()
+
+onMounted(() => {
+  if (authStore.isAuthenticated) {
+    notificationStore.loadUnreadCount()
+    notificationStore.connectSse()
+  }
+})
+
+onUnmounted(() => {
+  notificationStore.disconnectSse()
+})
 </script>
 
 <style scoped>

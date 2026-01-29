@@ -18,24 +18,15 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { jwtDecode } from 'jwt-decode'
+import { useAuthStore } from '@/stores/auth'
 
-type JwtPayload = {
-  role?: 'PM' | 'USER'
-}
+const authStore = useAuthStore()
 
 /* 현재 사용자 role 판별 */
 const getHomePath = () => {
-  const token = localStorage.getItem('accessToken')
-  if (!token) return '/home'
-
-  try {
-    const payload = jwtDecode<JwtPayload>(token)
-    return payload.role === 'PM' ? '/home/pm' : '/home/user'
-  } catch (e) {
-    console.error('JWT decode 실패', e)
-    return '/home/user'
-  }
+  const role = authStore.role
+  if (!role) return '/home'
+  return role === 'PM' ? '/home/pm' : '/home/user'
 }
 
 /* 메뉴 정의 */
