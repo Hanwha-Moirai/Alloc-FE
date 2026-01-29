@@ -185,7 +185,7 @@
     <RegisterSuccessModal
         v-if="showRegisterModal"
         @close="showRegisterModal = false"
-        @confirm="goToProjectList"
+        @confirm="goToProjectMembers"
     />
   </div>
 </template>

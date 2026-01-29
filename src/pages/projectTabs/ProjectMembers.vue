@@ -4,7 +4,7 @@
       <div class="card">
         <span class="card-label">프로젝트 인원</span>
         <div class="card-value">
-          총 <span class="highlight">{{ projectStatus === 'DRAFT' ? 0 : 5 }} 명</span> 선정
+          총 <span class="highlight">{{ memberList.length }} 명</span> 선정
         </div>
       </div>
       <div class="card">
@@ -26,7 +26,7 @@
         <h3 class="section-title">인원 리스트</h3>
         <div class="action-buttons">
           <button
-              v-if="projectStatus === 'DRAFT'"
+              v-if="memberList.length === 1"
               class="btn-gradient"
               @click="handleRecommend"
           >
@@ -52,42 +52,34 @@
             <th>최종 결정</th>
           </tr>
           </thead>
-          <tbody>
-          <template v-if="projectStatus !== 'DRAFT'">
-            <tr v-for="(member, index) in memberList" :key="index">
-              <td class="name-cell">
-                <img src="/user.png" alt="user icon" class="user-icon" />
-                {{ member.name }}
-              </td>
-              <td>{{ member.role }}</td>
-              <td><span class="skill-tag">{{ member.skill }}</span></td>
-              <td>{{ member.fit }}%</td>
-              <td>{{ member.price.toLocaleString() }}</td>
-              <td><span class="status-dot ongoing"></span> 투입중</td>
-              <td>
-                <span class="status-dot" :class="member.requestStatusClass"></span>
-                {{ member.requestStatus }}
-              </td>
-              <td>
-                <div class="decision-group">
-                  <span v-for="tag in member.decisions" :key="tag.label" class="badge" :class="tag.class">
-                    {{ tag.label }}
-                  </span>
-                </div>
-              </td>
-              <td>
-                <div class="decision-group">
-                  <span v-for="tag in member.finalDecisions" :key="tag.label" class="badge" :class="tag.class">
-                    {{ tag.label }}
-                  </span>
-                </div>
-              </td>
-            </tr>
-          </template>
 
-          <tr v-else>
+          <!-- DRAFT가 아닐 때 -->
+          <tbody v-if="projectStatus !== 'DRAFT'">
+          <tr v-for="member in memberList" :key="member.userId">
+            <td class="name-cell">
+              <img src="/user.png" class="user-icon" />
+              {{ member.name }}
+            </td>
+            <td>{{ member.role }}</td>
+            <td>
+              <span class="skill-tag">{{ member.skill || '-' }}</span>
+            </td>
+            <td>{{ member.fit }}%</td>
+            <td>{{ member.price?.toLocaleString?.() || '-' }}</td>
+            <td>{{ member.workStatus === 'AVAILABLE' ? '대기중' : '투입중' }}</td>
+            <td>
+              <span class="badge bright-green">투입</span>
+            </td>
+            <td>-</td>
+            <td>-</td>
+          </tr>
+          </tbody>
+
+          <!-- DRAFT일 때 -->
+          <tbody v-else>
+          <tr>
             <td colspan="9" class="empty-row">
-              {{ projectStatus === 'DRAFT' ? '인재 추천을 통해 프로젝트 멤버를 구성해보세요.' : '등록된 인원이 없습니다.' }}
+              인재 추천을 통해 프로젝트 멤버를 구성해보세요.
             </td>
           </tr>
           </tbody>
@@ -104,7 +96,7 @@ import { ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import RecommendModal from '@/components/common/RecommendModal.vue';
 import { fetchProjectDetail } from '@/api/project';
-import { fetchProjectMembers } from '@/api/projectAssign';
+import { fetchAssignmentManagementPage } from '@/api/projectAssign';
 
 const router = useRouter();
 const route = useRoute();
@@ -158,29 +150,24 @@ const mapFinalDecision = (finalStatus?: string) => {
 
 // 프로젝트 인원 조회
 const fetchMembers = async () => {
-  try {
-    const res = await fetchProjectMembers(projectId);
+  const res = await fetchAssignmentManagementPage(projectId);
 
-    const list =
-        Array.isArray(res.data) ? res.data :
-            Array.isArray(res.data.data) ? res.data.data :
-                Array.isArray(res.data.members) ? res.data.members : [];
+  console.log('📡 members raw response', res.data);
 
-    memberList.value = list.map((m: any) => ({
-      name: m.userName,
-      role: m.role,
-      skill: m.mainSkill,
-      fit: m.fitRate,
-      price: m.monthlyCost,
-      requestStatus: m.requestStatus,
-      requestStatusClass: mapStatus(m.requestStatus),
-      decisions: mapDecision(m.requestStatus),
-      finalDecisions: mapFinalDecision(m.finalStatus)
-    }));
-  } catch (e) {
-    console.error('프로젝트 인원 조회 실패', e);
-  }
+  const list = res.data.members;
+
+  memberList.value = res.data.members.map((m: any) => ({
+    userId: m.userId,
+    name: m.userName,
+    role: m.jobName,
+    skill: m.mainSkill,
+    fit: m.skillScore,
+    price: m.monthlyWage,
+    workStatus: m.workStatus,
+    selected: m.selected
+  }));
 };
+
 
 // 인재 추천 처리
 const handleRecommend = () => {
@@ -190,17 +177,11 @@ const handleRecommend = () => {
 
 // 초기 로딩
 onMounted(async () => {
-  try {
-    const res = await fetchProjectDetail(projectId);
-    projectStatus.value = res.data?.status;
+  const res = await fetchProjectDetail(projectId);
 
-    if (projectStatus.value !== 'DRAFT') {
-      await fetchMembers();
-    }
-  } catch (e) {
-    console.error('데이터 로드 실패', e);
-    projectStatus.value = 'ERROR';
-  }
+  projectStatus.value = res.data?.status;
+
+  await fetchMembers();
 });
 </script>
 
