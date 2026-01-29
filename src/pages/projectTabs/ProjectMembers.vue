@@ -207,20 +207,6 @@ const projectStatus = ref('');
 const showRecommendModal = ref(false);
 const memberList = ref<any[]>([]);
 
-// 상태 매핑
-const mapStatus = (status: string) => {
-  switch (status) {
-    case '요청':
-      return 'request';
-    case '면담 요청':
-      return 'interview';
-    case '수락':
-      return 'accept';
-    default:
-      return '';
-  }
-};
-
 const waitingCount = computed(() =>
     memberList.value.filter(m => m.requestStatus === 'REQUESTED').length
 )
