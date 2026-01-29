@@ -51,7 +51,6 @@
     <div class="section-card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
         <h3 class="section-title" style="margin: 0;">완수 태스크</h3>
-        <button class="btn-outline" @click="addTask('completed')" style="padding: 4px 10px; font-size: 11px;">+ 태스크 추가</button>
       </div>
       <table class="task-table">
         <thead>
@@ -81,7 +80,6 @@
     <div class="section-card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
         <h3 class="section-title" style="margin: 0;">미완수 태스크</h3>
-        <button class="btn-outline" @click="addTask('incomplete')" style="padding: 4px 10px; font-size: 11px;">+ 태스크 추가</button>
       </div>
       <table class="task-table">
         <thead>
@@ -96,7 +94,13 @@
         </thead>
         <tbody>
         <tr v-for="(item, index) in form.incompleteTasks" :key="index">
-          <td class="text-left"><input v-model="item.name" class="edit-input-table" /></td>
+          <td>
+            <input
+                :value="item.delay"
+                class="edit-input-table"
+                readonly
+            />
+          </td>
           <td><input v-model="item.manager" class="edit-input-table" /></td>
           <td><input v-model="item.type" class="edit-input-table" /></td>
           <td><input v-model="item.delay" class="edit-input-table" /></td>
@@ -122,7 +126,6 @@ import { ref, reactive, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { fetchProjectDetail } from '@/api/project';
 import { createWeeklyReport, updateWeeklyReport } from '@/api/weeklyReport';
-import { getGanttTasks } from '@/api/gantt';
 
 
 const route = useRoute();
@@ -139,6 +142,7 @@ const projectInfo = reactive({
 
 // 생성 폼 데이터
 const form = reactive({
+  reportId: null,
   weekLabel: '',
   weekStartDate: '',
   weekEndDate: '',
@@ -148,23 +152,6 @@ const form = reactive({
   summaryText: '',
   changeOfPlan: ''
 });
-
-// 지연 경과 계산
-const calcDelayDays = (endDate: string) => {
-  if (!endDate) return '0일';
-
-  const today = new Date();
-  const end = new Date(endDate);
-
-  today.setHours(0,0,0,0);
-  end.setHours(0,0,0,0);
-
-  const diff = Math.floor(
-      (today.getTime() - end.getTime()) / (1000 * 60 * 60 * 24)
-  );
-
-  return diff > 0 ? `${diff}일` : '0일';
-};
 
 // 프로젝트 데이터 불러오기
 const getProjectInfo = async () => {
@@ -193,51 +180,32 @@ const getProjectInfo = async () => {
   }
 };
 
-const getProjectTasks = async () => {
-  const res = await getGanttTasks(Number(projectId));
-  const tasks = res.data.data || res.data || [];
+onMounted(async () => {
+  await getProjectInfo();
 
-  form.completedTasks = [];
-  form.incompleteTasks = [];
+  const createRes = await createWeeklyReport(projectId);
+  const data = createRes.data.data;
 
-  tasks.forEach(task => {
-    const isDone =
-        task.taskStatus === 'DONE' ||
-        task.taskStatus === 'COMPLETED' ||
-        task.isCompleted === true;
+  form.taskCompletionRate = data.taskCompletionRate ?? 0;
+  form.reportId = data.reportId;
 
-    if (isDone) {
-      form.completedTasks.push({
-        taskId: task.taskId,
-        name: task.taskName,
-        manager: task.userName,
-        type: task.taskCategory,
-        note: task.taskDescription || ''
-      });
-    } else {
-      form.incompleteTasks.push({
-        taskId: task.taskId,
-        name: task.taskName,
-        manager: task.userName,
-        type: task.taskCategory,
-        delay: calcDelayDays(task.endDate),
-        reason: ''
-      });
-    }
-  });
+  form.completedTasks = data.completedTasks.map(t => ({
+    taskId: t.taskId,
+    name: t.taskName,
+    manager: t.assigneeName,
+    type: t.taskCategory,
+    note: t.note || ''
+  }));
 
-  // 진행률 자동 계산
-  const total = tasks.length;
-  const done = form.completedTasks.length;
-  form.taskCompletionRate =
-      total === 0 ? 0 : Math.round((done / total) * 100);
-};
-
-onMounted(() => {
-  getProjectInfo();
-  getProjectTasks();
+  form.incompleteTasks = data.incompleteTasks.map(t => ({
+    taskId: t.taskId,
+    name: t.taskName,
+    manager: t.assigneeName,
+    type: t.taskCategory,
+    delay: `${t.delayedDates}일`,
+    reason: t.delayReason || ''
+  }));
 });
-
 
 // 행 추가/삭제
 const addTask = (type: 'completed' | 'incomplete') => {
@@ -269,33 +237,21 @@ const removeTask = (type: 'completed' | 'incomplete', index: number) => {
 // 등록 핸들러
 const handleCreate = async () => {
   try {
-    // 주간보고 생성 (DRAFT)
-    const createRes = await createWeeklyReport(projectId, {
-      projectId: Number(projectId),
-      taskCompletionRate: Number(form.taskCompletionRate)
-    });
-
-    const reportId = createRes.data.data.reportId;
-
-    // 태스크 포함해서 바로 업데이트
     const updatePayload = {
-      reportId,
-      reportStatus: 'REVIEWED', // 또는 'DRAFT'
-      summaryText: form.summaryText || '',
+      reportId: form.reportId,
+      reportStatus: 'REVIEWED',
+      changeOfPlan: form.changeOfPlan || '',
       taskCompletionRate: Number(form.taskCompletionRate),
 
       completedTasks: form.completedTasks
           .filter(t => t.taskId)
-          .map(t => ({
-            taskId: t.taskId,
-            note: t.note || ''
-          })),
+          .map(t => ({ taskId: t.taskId })),
 
       incompleteTasks: form.incompleteTasks
           .filter(t => t.taskId)
           .map(t => ({
             taskId: t.taskId,
-            delayReason: t.reason || null
+            delayReason: t.reason || ''
           })),
 
       nextWeekTasks: []
@@ -305,10 +261,9 @@ const handleCreate = async () => {
 
     alert('성공적으로 등록되었습니다.');
     router.push(`/projects/${projectId}/docs`);
-
   } catch (error) {
-    console.error('등록 실패:', error.response?.data);
-    alert('등록 실패: ' + (error.response?.data?.message || '서버 오류'));
+    console.error(error);
+    alert('등록 실패');
   }
 };
 </script>

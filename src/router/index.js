@@ -117,14 +117,14 @@ const router = createRouter({
                             component: () => import('@/pages/projectTabs/ProjectMembers.vue'),
                         },
                         {
-                            path: 'risk',
-                            component: () => import('@/pages/projectTabs/ProjectRisk.vue')
+                            path: 'assign',
+                            name: 'ProjectAssign',
+                            component: () => import('@/pages/ProjectAssign.vue'),
+                            props: true
                         },
                         {
-                            path: 'recommend',
-                            name: 'ProjectRecommend',
-                            component: () => import('@/pages/RecommendResultView.vue'),
-                            props: true
+                            path: 'risk',
+                            component: () => import('@/pages/projectTabs/ProjectRisk.vue')
                         },
                     ],
                 },
