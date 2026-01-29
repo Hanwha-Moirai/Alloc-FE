@@ -104,72 +104,104 @@ import { ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import RecommendModal from '@/components/common/RecommendModal.vue';
 import { fetchProjectDetail } from '@/api/project';
+import { fetchProjectMembers } from '@/api/projectAssign';
 
 const router = useRouter();
 const route = useRoute();
-const projectId = route.params.projectId;
+const projectId = route.params.projectId as string;
 
-// 상태 관리 (테스트를 위해 DRAFT로 초기화)
+// 상태 관리
 const projectStatus = ref('');
 const showRecommendModal = ref(false);
+const memberList = ref<any[]>([]);
 
+// 상태 매핑
+const mapStatus = (status: string) => {
+  switch (status) {
+    case '요청':
+      return 'request';
+    case '면담 요청':
+      return 'interview';
+    case '수락':
+      return 'accept';
+    default:
+      return '';
+  }
+};
+
+const mapDecision = (status: string) => {
+  if (status === '요청') {
+    return [
+      { label: '면담 요청', class: 'red' },
+      { label: '수락', class: 'green' }
+    ];
+  }
+  if (status === '면담 요청') {
+    return [{ label: '면담 요청', class: 'red' }];
+  }
+  if (status === '수락') {
+    return [{ label: '수락', class: 'green' }];
+  }
+  return [];
+};
+
+const mapFinalDecision = (finalStatus?: string) => {
+  if (!finalStatus) return [];
+  if (finalStatus === '투입') {
+    return [{ label: '투입', class: 'bright-green' }];
+  }
+  if (finalStatus === '제외') {
+    return [{ label: '제외', class: 'dark-red' }];
+  }
+  return [];
+};
+
+// 프로젝트 인원 조회
+const fetchMembers = async () => {
+  try {
+    const res = await fetchProjectMembers(projectId);
+
+    const list =
+        Array.isArray(res.data) ? res.data :
+            Array.isArray(res.data.data) ? res.data.data :
+                Array.isArray(res.data.members) ? res.data.members : [];
+
+    memberList.value = list.map((m: any) => ({
+      name: m.userName,
+      role: m.role,
+      skill: m.mainSkill,
+      fit: m.fitRate,
+      price: m.monthlyCost,
+      requestStatus: m.requestStatus,
+      requestStatusClass: mapStatus(m.requestStatus),
+      decisions: mapDecision(m.requestStatus),
+      finalDecisions: mapFinalDecision(m.finalStatus)
+    }));
+  } catch (e) {
+    console.error('프로젝트 인원 조회 실패', e);
+  }
+};
+
+// 인재 추천 처리
+const handleRecommend = () => {
+  // 인력 배치 시작 화면으로 이동
+  router.push(`/projects/${projectId}/assign`);
+};
+
+// 초기 로딩
 onMounted(async () => {
   try {
     const res = await fetchProjectDetail(projectId);
+    projectStatus.value = res.data?.status;
 
-    const statusFromServer = res.data?.status;
-
-    projectStatus.value = statusFromServer;
+    if (projectStatus.value !== 'DRAFT') {
+      await fetchMembers();
+    }
   } catch (e) {
-    console.error("데이터 로드 실패", e);
+    console.error('데이터 로드 실패', e);
     projectStatus.value = 'ERROR';
   }
 });
-
-const handleRecommend = () => {
-  showRecommendModal.value = true;
-  setTimeout(() => {
-    showRecommendModal.value = false;
-    router.push(`/projects/${projectId}/recommend`);
-  }, 3000);
-};
-
-// DRAFT가 아닐 때 보여줄 임시 데이터
-const memberList = ref([
-  {
-    name: '홍길동',
-    role: '백엔드 엔지니어',
-    skill: 'Spring Boot',
-    fit: 87,
-    price: 5000000,
-    requestStatus: '요청',
-    requestStatusClass: 'request',
-    decisions: [{ label: '면담 요청', class: 'red' }, { label: '수락', class: 'green' }],
-    finalDecisions: []
-  },
-  {
-    name: '홍길동',
-    role: '백엔드 엔지니어',
-    skill: 'Spring Boot',
-    fit: 87,
-    price: 5000000,
-    requestStatus: '면담 요청',
-    requestStatusClass: 'interview',
-    decisions: [{ label: '면담 요청', class: 'red' }],
-    finalDecisions: [{ label: '제외', class: 'dark-red' }, { label: '투입', class: 'bright-green' }]
-  },
-  {
-    name: '홍길동',
-    role: '백엔드 엔지니어',
-    skill: 'Spring Boot',
-    fit: 87,
-    price: 5000000,
-    requestStatus: '수락',
-    requestStatusClass: 'accept',
-    decisions: [{ label: '수락', class: 'green' }],
-    finalDecisions: []
-  }
-]);
 </script>
 
 <style scoped>

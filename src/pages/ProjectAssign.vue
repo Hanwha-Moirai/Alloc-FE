@@ -41,7 +41,7 @@
 
     <div class="list-container">
       <div class="list-action-header">
-        <button class="btn-apply" @click="fetchRecommendedTalents">
+        <button class="btn-apply" @click="fetchAssignCandidates">
           <span class="search-icon">🔍</span> 추천 인재 다시 조회하기
         </button>
       </div>
@@ -63,32 +63,73 @@
           </tr>
           </thead>
           <tbody v-if="!isLoading">
-          <tr v-for="(item, idx) in talentList" :key="idx" :class="{ selected: item.isSelected }">
-            <td class="col-check"><input type="checkbox" v-model="item.isSelected" /></td>
-            <td class="name-cell">
-              <div class="avatar"><img src="/user.png" class="avatar-img" /></div>
-              {{ item.name }}
-            </td>
-            <td>{{ item.role }}</td>
-            <td><span class="tech-tag">{{ item.mainTech }}</span></td>
-            <td>{{ item.cost.toLocaleString() }}</td>
-            <td>
-                <span class="status-dot" :class="item.status === '투입중' ? 'on' : 'wait'">
-                  ● {{ item.status }}
-                </span>
-            </td>
-            <td class="score-text highlight">{{ item.techScore }}%</td>
-            <td class="score-text highlight">{{ item.expScore }}%</td>
-            <td class="score-text highlight">{{ item.availScore }}%</td>
-            <td>
-              <button v-if="!item.isSelected" class="btn-action select" @click="item.isSelected = true">
-                + 선택
-              </button>
-              <button v-else class="btn-action remove" @click="item.isSelected = false">
-                ✕ 제거
-              </button>
-            </td>
-          </tr>
+            <tr v-if="assignments.length === 0">
+              <td colspan="10" style="text-align:center; padding:40px;">
+                배치 가능한 후보가 없습니다.
+              </td>
+            </tr>
+            <template v-for="job in assignments" :key="job.jobId">
+
+            <!-- 직군 헤더 -->
+            <tr class="job-header">
+              <td colspan="10">
+                <strong>{{ job.jobName }}</strong>
+                ({{ job.requiredCount }}명 선택)
+              </td>
+            </tr>
+
+            <!-- 직군별 후보 -->
+            <tr
+                v-for="candidate in job.candidates"
+                :key="candidate.userId"
+                :class="{ selected: candidate.isSelected }"
+            >
+              <td class="col-check">
+                <input type="checkbox" v-model="candidate.isSelected" />
+              </td>
+
+              <td class="name-cell">
+                <div class="avatar">
+                  <img src="/user.png" class="avatar-img" />
+                </div>
+                {{ candidate.userName }}
+              </td>
+
+              <td>{{ job.jobName }}</td>
+
+              <td>
+                <span class="tech-tag">{{ candidate.mainSkill }}</span>
+              </td>
+
+              <td>{{ candidate.monthlyWage.toLocaleString() }}</td>
+
+              <td>
+                <span class="status-dot wait">● 대기중</span>
+              </td>
+
+              <td class="score-text highlight">{{ candidate.skillScore }}%</td>
+              <td class="score-text highlight">{{ candidate.experienceScore }}%</td>
+              <td class="score-text highlight">{{ candidate.availabilityScore }}%</td>
+
+              <td>
+                <button
+                    v-if="!candidate.isSelected"
+                    class="btn-action select"
+                    @click="candidate.isSelected = true"
+                >
+                  + 선택
+                </button>
+                <button
+                    v-else
+                    class="btn-action remove"
+                    @click="candidate.isSelected = false"
+                >
+                  ✕ 제거
+                </button>
+              </td>
+            </tr>
+
+          </template>
           </tbody>
         </table>
         <div v-if="isLoading" class="loading-state">데이터를 불러오는 중입니다...</div>
@@ -105,42 +146,98 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import RegisterSuccessModal from '@/components/common/RegisterSuccessModal.vue';
+import {
+  fetchProjectAssignCandidates,
+  submitAssignment
+} from '@/api/projectAssign';
 
 const router = useRouter();
+const route = useRoute();
+const projectId = route.params.projectId as string;
+
 const showRegisterModal = ref(false);
 const isLoading = ref(false);
+const assignments = ref<any[]>([]);
 
+// (UI 유지용 – 실제 필터링 로직은 아직 없음)
 const filters = ref({
   techMatch: 80,
   expMatch: 70,
   availability: 50
 });
 
-const talentList = ref([]);
-
-const fetchRecommendedTalents = async () => {
+// 후보 조회
+const fetchAssignCandidates = async () => {
   isLoading.value = true;
-  // 임시 API 지연 재현
-  setTimeout(() => {
-    talentList.value = [
-      { name: '홍길동', role: '백엔드 엔지니어', mainTech: 'Spring Boot', cost: 5000000, status: '대기중', techScore: 95, expScore: 88, availScore: 100, isSelected: false },
-      { name: '김철수', role: '프론트엔드 엔지니어', mainTech: 'Vue.js', cost: 4500000, status: '투입중', techScore: 82, expScore: 75, availScore: 40, isSelected: true },
-      { name: '이영희', role: 'UI/UX 디자이너', mainTech: 'Figma', cost: 4800000, status: '대기중', techScore: 90, expScore: 92, availScore: 95, isSelected: false }
-    ];
+  try {
+    const res = await fetchProjectAssignCandidates(projectId);
+
+    const flatCandidates = res.data.candidates;
+    const jobSummaries = res.data.jobSummaries;
+    console.log('API RAW:', res.data);
+    console.log('candidates:', res.data.candidates);
+    console.log('jobSummaries:', res.data.jobSummaries);
+
+
+    assignments.value = jobSummaries.map((job: any) => ({
+      jobId: job.jobId,
+      jobName: job.jobName,
+      requiredCount: job.requiredCount,
+      candidates: flatCandidates
+          .filter((c: any) => c.jobName === job.jobName)
+          .map((c: any) => ({
+            ...c,
+            isSelected: false
+          }))
+    }));
+
+  } catch (e) {
+    console.error('배치 후보 조회 실패', e);
+  } finally {
     isLoading.value = false;
-  }, 300);
+  }
 };
 
-onMounted(() => {
-  fetchRecommendedTalents();
-});
+onMounted(fetchAssignCandidates);
 
-const handleRegister = () => showRegisterModal.value = true;
-const goToProjectList = () => {
+// 등록 처리
+const handleRegister = async () => {
+  try {
+    // 1️⃣ requiredCount 검증
+    for (const job of assignments.value) {
+      const selected = job.candidates.filter((c: any) => c.isSelected);
+      if (selected.length !== job.requiredCount) {
+        alert(`${job.jobName}은 ${job.requiredCount}명을 선택해야 합니다.`);
+        return;
+      }
+    }
+
+    // 2️⃣ 백엔드 DTO에 맞춘 payload
+    const payload = {
+      projectId,
+      assignments: assignments.value.map(job => ({
+        jobId: job.jobId,
+        candidates: job.candidates
+            .filter((c: any) => c.isSelected)
+            .map((c: any) => ({
+              userId: c.userId,
+              fitnessScore: c.fitnessScore
+            }))
+      }))
+    };
+
+    await submitAssignment(projectId, payload);
+    showRegisterModal.value = true;
+  } catch (e) {
+    console.error('인력 배치 확정 실패', e);
+  }
+};
+
+const goToProjectMembers = () => {
   showRegisterModal.value = false;
-  router.push('/projects');
+  router.push(`/projects/${projectId}/members`);
 };
 </script>
 
@@ -149,6 +246,11 @@ const goToProjectList = () => {
 .page-header { margin-bottom: 24px; }
 .page-title { font-size: 24px; font-weight: 700; margin: 0; }
 .page-subtitle { color: #64748b; font-size: 14px; }
+.job-header td {
+  background: #f8fafc;
+  font-weight: 700;
+  color: #334155;
+}
 
 /* 요약 카드 */
 .summary-grid {
