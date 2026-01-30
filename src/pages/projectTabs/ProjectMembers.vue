@@ -140,19 +140,25 @@
 
             <!-- 최종 결정 -->
             <td>
+              <!-- 1) 이미 결정된 경우: 버튼 절대 안 보임 -->
+              <span v-if="member.finalDecision === 'ASSIGNED'" class="badge green">투입</span>
+              <span v-else-if="member.finalDecision === 'EXCLUDED'" class="badge red">제외</span>
+
+              <!-- 2) 결정 가능 상태: 버튼 -->
               <template
-                  v-if="myRole === 'PM' &&
-                  member.requestStatus === 'INTERVIEW_REQUESTED'"
+                  v-else-if="myRole === 'PM' && member.requestStatus === 'INTERVIEW_REQUESTED'"
               >
                 <div class="button-group">
                   <button
                       class="btn btn-green"
+                      :disabled="finalDecisionLoadingId === member.assignmentId"
                       @click="onFinalDecision(member, 'ASSIGNED')"
                   >
                     투입
                   </button>
                   <button
                       class="btn btn-red"
+                      :disabled="finalDecisionLoadingId === member.assignmentId"
                       @click="onFinalDecision(member, 'EXCLUDED')"
                   >
                     제외
@@ -160,9 +166,7 @@
                 </div>
               </template>
 
-              <template v-else>
-                -
-              </template>
+              <template v-else>-</template>
             </td>
           </tr>
           </tbody>
@@ -228,6 +232,8 @@ const interviewCount = computed(() =>
     memberList.value.filter(m => m.requestStatus === 'INTERVIEW_REQUESTED').length
 )
 
+const finalDecisionLoadingId = ref<number | null>(null)
+
 const onRequestInterview = async (member: any) => {
   await respondAssignment(
       projectId,
@@ -247,14 +253,22 @@ const onAcceptAssignment = async (member: any) => {
 }
 
 const onFinalDecision = async (member: any, decision: 'ASSIGNED' | 'EXCLUDED') => {
-  await decideFinalAssignment(
-      projectId,
-      member.assignmentId,
-      decision
-  )
-  await fetchMembers()
-}
+  member.finalDecision = decision
 
+  finalDecisionLoadingId.value = member.assignmentId
+
+  try {
+    await decideFinalAssignment(projectId, member.assignmentId, decision)
+
+    await fetchMembers()
+  } catch (e) {
+    // 실패하면 원복
+    member.finalDecision = null
+    console.error(e)
+  } finally {
+    finalDecisionLoadingId.value = null
+  }
+}
 
 // 프로젝트 인원 조회
 const fetchMembers = async () => {
@@ -275,10 +289,10 @@ const fetchMembers = async () => {
           : 'AVAILABLE',
       selected: m.selected,
       requestStatus: m.assignmentStatus ?? m.requestStatus,
+      finalDecision: m.finalDecision ?? null,
     };
   });
 };
-
 
 // 인재 추천 처리
 const handleRecommend = () => {
