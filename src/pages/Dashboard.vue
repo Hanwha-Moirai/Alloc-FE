@@ -9,7 +9,8 @@
         <div class="icon purple">📊</div>
         <div class="label">내 프로젝트</div>
         <div class="value">
-          진행중 <span class="green">3</span> · 전체 5
+          진행중 <span class="green">{{ summary.active }}</span> ·
+          전체 {{ summary.active + summary.closed }}
         </div>
       </div>
 
@@ -17,14 +18,15 @@
         <div class="icon orange">📋</div>
         <div class="label">내 태스크</div>
         <div class="value">
-          진행중 <span class="green">7</span> · 지연 <span class="red">1</span>
+          진행중 <span class="green">{{ taskSummary.inProgress }}</span> ·
+          지연 <span class="red">{{ taskSummary.delayed }}</span>
         </div>
       </div>
 
       <div class="summary-card">
         <div class="icon blue">⏰</div>
         <div class="label">이번주 일정</div>
-        <div class="value">4건</div>
+        <div class="value">{{ weeklyEventCount }}건</div>
       </div>
 
       <div class="summary-card">
@@ -38,7 +40,12 @@
     <div class="main-grid">
       <!-- 내 프로젝트 -->
       <section class="card">
-        <h3 class="card-title">내 프로젝트 목록</h3>
+        <div class="card-header-row">
+          <h3 class="card-title">내 프로젝트 목록</h3>
+          <button class="more-btn" @click="goToProjectList">
+            프로젝트 더보기 →
+          </button>
+        </div>
 
         <table class="project-table">
           <thead>
@@ -86,11 +93,9 @@
         <h3 class="card-title">내 태스크</h3>
 
         <ul class="task-list">
-          <li v-for="task in tasks" :key="task.title">
-            <span>{{ task.title }}</span>
-            <span class="badge" :class="task.status">
-              {{ task.status }}
-            </span>
+          <li v-for="task in delayedTasks" :key="task.taskId">
+            <span>{{ task.taskName }}</span>
+            <span class="badge to-do">지연</span>
           </li>
         </ul>
       </section>
@@ -99,9 +104,21 @@
       <section class="card">
         <h3 class="card-title">다가오는 일정</h3>
 
-        <div class="schedule-item">
-          <div class="schedule-title">주간회의 보고</div>
-          <div class="schedule-date">2026.01.08 09:30</div>
+        <div v-if="upcomingEvents.length === 0" class="schedule-item">
+          <div class="schedule-item empty">
+            다가오는 일정이 없습니다.
+          </div>
+        </div>
+
+        <div
+            v-for="e in upcomingEvents"
+            :key="e.eventId"
+            class="schedule-item"
+        >
+          <div class="schedule-title">{{ e.title }}</div>
+          <div class="schedule-date">
+            {{ dayjs(e.startDateTime).format('YYYY.MM.DD HH:mm') }}
+          </div>
         </div>
       </section>
     </div>
@@ -109,73 +126,161 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { Chart, DoughnutController, ArcElement, Tooltip, Legend } from 'chart.js'
+import dayjs from 'dayjs'
+import { fetchProjectList } from '@/api/project'
+import { getMyWeeklyEventCount, getUpcomingProjectEvents } from '@/api/calendar'
+import { getGanttTasks } from '@/api/gantt'
+import {useRouter} from "vue-router";
 
-// Chart.js 필수 구성 요소 등록
 Chart.register(DoughnutController, ArcElement, Tooltip, Legend)
 
-/* ================= 더미 데이터 ================= */
+/* ================= 상태 ================= */
 
-const projects = [
-  {
-    name: '클라우드 인프라 전환 프로젝트',
-    period: '2026.01.02 - 2026.01.31',
-    progress: 95,
-    status: 'ACTIVE',
-  },
-  {
-    name: '신규 서비스 런칭 준비',
-    period: '2026.01.02 - 2026.01.31',
-    progress: 100,
-    status: 'CLOSED',
-  },
-  {
-    name: '모바일 앱 리뉴얼',
-    period: '2026.01.02 - 2026.01.31',
-    progress: 10,
-    status: 'HOLD',
-  },
-]
+const summary = ref({
+  active: 0,
+  delayed: 0,
+  closed: 0
+})
 
-const tasks = [
-  { title: 'API 게이트웨이 인증 로직 구현', status: 'in-progress' },
-  { title: '트래픽 이상 감지 룰 수정', status: 'done' },
-  { title: 'Spring Boot 모니터링 로그 정리', status: 'done' },
-  { title: '알림 서버 재시작 스케줄 적용', status: 'to-do' },
-]
+const taskSummary = ref({
+  inProgress: 0,
+  delayed: 0
+})
+
+const tasks = ref<any[]>([])
+const projectList = ref<any[]>([])
+const upcomingEvents = ref<any[]>([])
+const delayedTasks = ref<any[]>([])
+const weeklyEventCount = ref(0)
+const router = useRouter()
+const goToProjectList = () => {
+  router.push('/projects') // 프로젝트 목록 라우트
+}
+
+/* ================= computed ================= */
+
+const projects = computed(() =>
+    projectList.value.slice(0, 5).map(p => ({
+      id: p.projectId,
+      name: p.projectName,
+      period: `${p.startDate} ~ ${p.endDate}`,
+      progress: p.progressRate,
+      status: p.status
+    }))
+)
+
+/* ================= API ================= */
+const calculateSummaryFromProjects = (list) => {
+  const active = list.filter(p => p.status === 'ACTIVE').length
+  const closed = list.filter(p => p.status === 'CLOSED').length
+  const delayed = list.filter(p =>
+      p.status === 'DELAYED' || p.status === 'HOLD'
+  ).length
+
+  summary.value = { active, delayed, closed }
+}
+
+const fetchDashboardData = async () => {
+  const res = await fetchProjectList()
+  const list = res.data.data ?? res.data ?? []
+
+  projectList.value = list
+
+  calculateSummaryFromProjects(list)
+}
+
+const fetchWeeklyEventCount = async () => {
+  const res = await getMyWeeklyEventCount()
+  weeklyEventCount.value = res.data.data?.count ?? 0
+}
+
+const fetchUpcomingEvents = async () => {
+  if (!projectList.value.length) return
+
+  const projectId = projectList.value[0].projectId
+  const res = await getUpcomingProjectEvents(projectId, 3)
+
+  upcomingEvents.value = res.data.data?.items ?? []
+}
+
+const fetchMyTasks = async () => {
+  if (!projectList.value.length) return
+
+  const projectId = projectList.value[0].projectId
+
+  const res = await getGanttTasks(projectId)
+  const list = res.data.data ?? res.data ?? []
+
+  tasks.value = list
+
+  // 요약 계산
+  const inProgress = list.filter(
+      t => t.status === 'IN_PROGRESS'
+  ).length
+
+  const delayed = list.filter(
+      t => t.status === 'DELAYED'
+  ).length
+
+  taskSummary.value = {
+    inProgress,
+    delayed
+  }
+
+  // 지연 태스크만 따로
+  delayedTasks.value = list.filter(
+      t => t.status === 'DELAYED'
+  )
+}
+
+/* ================= Chart ================= */
 
 const donutChartRef = ref<HTMLCanvasElement | null>(null)
-let donutChart: InstanceType<typeof Chart> | null = null
+let donutChart: Chart | null = null
 
-onMounted(() => {
+const chartData = computed(() => [
+  summary.value.active,
+  summary.value.delayed,
+  summary.value.closed
+])
+console.log('summary', summary.value)
+console.log('chartData', chartData.value)
+
+
+onMounted(async () => {
+  await fetchDashboardData()
+  await fetchUpcomingEvents()
+  await fetchMyTasks()
+  await fetchWeeklyEventCount()
+
   if (!donutChartRef.value) return
 
   donutChart = new Chart(donutChartRef.value, {
     type: 'doughnut',
     data: {
-      labels: ['DRAFT', 'ACTIVE', 'CLOSED'],
+      labels: ['ACTIVE', 'DELAYED', 'CLOSED'],
       datasets: [{
-        data: [20, 45, 35], // 이미지 비율 기준 예시 데이터
-        backgroundColor: [
-          '#0085FF', // DRAFT (파랑)
-          '#2ECC71', // ACTIVE (초록)
-          '#FFC107'  // CLOSED (노랑)
-        ],
+        data: chartData.value,
+        backgroundColor: ['#0085FF', '#2ECC71', '#FFC107'],
         borderWidth: 2,
-        borderColor: '#ffffff',
-        hoverOffset: 4
+        borderColor: '#fff'
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      cutout: '70%', // 도넛 두께 조절
-      plugins: {
-        legend: { display: false } // 커스텀 범례를 사용하므로 기본 범례는 숨김
-      }
+      cutout: '70%',
+      plugins: { legend: { display: false } }
     }
   })
+})
+
+watch(chartData, (val) => {
+  if (!donutChart) return
+  donutChart.data.datasets[0].data = val
+  donutChart.update()
 })
 </script>
 
@@ -251,6 +356,27 @@ onMounted(() => {
   font-size: 16px;
   font-weight: 700;
   margin: 0 0 12px 0;
+}
+
+.card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.more-btn {
+  font-size: 12px;
+  color: #6fd3e8;
+  background: #ffffff;
+  border: 1px solid #6fd3e8;
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.more-btn:hover {
+  background: #eaf8fc;
 }
 
 /* 테이블 */
@@ -382,5 +508,14 @@ canvas {
   font-size: 12px;
   color: #777;
   margin-top: 4px;
+}
+
+/* 일정 없음 상태 */
+.schedule-item.empty {
+  font-size: 12px;
+  color: #9ca3af;
+  text-align: center;
+  padding: 16px 0;
+  border-top: none;
 }
 </style>
