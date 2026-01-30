@@ -9,9 +9,9 @@
         <div class="icon purple">📊</div>
         <div class="label">프로젝트 진행상황</div>
         <div class="value">
-          진행중 <span class="green">3</span> ·
-          지연 <span class="red">1</span> ·
-          종료 5
+          진행중 <span class="green">{{ summary.active }}</span> ·
+          지연 <span class="red">{{ summary.delayed }}</span> ·
+          종료 {{ summary.closed }}
         </div>
       </div>
 
@@ -41,8 +41,12 @@
     <div class="main-grid">
       <!-- 내 프로젝트 목록 -->
       <section class="card">
-        <h3 class="card-title">내 프로젝트 목록</h3>
-
+        <div class="card-header-row">
+          <h3 class="card-title">내 프로젝트 목록</h3>
+          <button class="more-btn" @click="goToProjectList">
+            프로젝트 더보기 →
+          </button>
+        </div>
         <table class="project-table">
           <thead>
           <tr>
@@ -53,14 +57,14 @@
           </tr>
           </thead>
           <tbody>
-          <tr v-for="p in projects" :key="p.name">
+          <tr v-for="p in projects" :key="p.id">
             <td>{{ p.name }}</td>
             <td>{{ p.period }}</td>
             <td>{{ p.progress }}%</td>
             <td>
-                <span class="status" :class="p.status.toLowerCase()">
-                  {{ p.status }}
-                </span>
+              <span class="status" :class="p.status.toLowerCase()">
+                {{ p.status }}
+              </span>
             </td>
           </tr>
           </tbody>
@@ -126,96 +130,103 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { Chart, DoughnutController, ArcElement, Tooltip, Legend } from 'chart.js'
+import { fetchHomeSummary, fetchHomeProjectList } from '@/api/home'
 
-// Chart.js 필수 구성 요소 등록
+const router = useRouter()
+const goToProjectList = () => {
+  router.push('/projects') // 프로젝트 목록 라우트
+}
+
 Chart.register(DoughnutController, ArcElement, Tooltip, Legend)
 
-/* ================= 더미 데이터 ================= */
+// ================= 상태 =================
+const summary = ref({
+  active: 0,
+  delayed: 0,
+  closed: 0
+})
 
-const projects = [
-  {
-    name: '클라우드 인프라 전환 프로젝트',
-    period: '2026.01.02 - 2026.01.31',
-    progress: 95,
-    status: 'ACTIVE',
-  },
-  {
-    name: '신규 서비스 런칭 준비',
-    period: '2026.01.02 - 2026.01.31',
-    progress: 100,
-    status: 'CLOSED',
-  },
-  {
-    name: '모바일 앱 리뉴얼',
-    period: '2026.01.02 - 2026.01.31',
-    progress: 10,
-    status: 'HOLD',
-  },
-  {
-    name: '내부 운영 시스템 고도화',
-    period: '2026.01.02 - 2026.01.31',
-    progress: 0,
-    status: 'DRAFT',
-  },
-]
+const projectList = ref<any[]>([])
 
-const delayedTasks = [
-  {
-    name: '클라우드 인프라 전환 프로젝트',
-    projectname: '클라우드 인프라 전환 프로젝트',
-    owner: '홍길동',
-    delay: '1일 지연',
-    delayClass: 'd1',
-  },
-  {
-    name: '신규 서비스 런칭 준비',
-    projectname: '신규 서비스 런칭 준비',
-    owner: '홍길동',
-    delay: '2일 지연',
-    delayClass: 'd2',
-  },
-  {
-    name: '모바일 앱 리뉴얼',
-    projectname: '모바일 앱 리뉴얼',
-    owner: '홍길동',
-    delay: '3일 지연',
-    delayClass: 'd3',
-  },
-]
+// ================= computed =================
+const projects = computed(() =>
+    projectList.value
+        .slice(0, 5) // 5개만 보이게
+        .map(p => ({
+          id: p.projectId,
+          name: p.projectName,
+          period: `${p.startDate} ~ ${p.endDate}`,
+          progress: p.progressRate,
+          status: p.status
+        }))
+)
 
+const chartData = computed(() => [
+  summary.value.active,
+  summary.value.delayed,
+  summary.value.closed
+])
+
+// ================= API =================
+const fetchDashboardData = async () => {
+  try {
+    const [summaryRes, listRes] = await Promise.all([
+      fetchHomeSummary(),
+      fetchHomeProjectList()
+    ])
+
+    const s = summaryRes.data.data ?? summaryRes.data
+
+    summary.value = {
+      active: s.activeCount ?? 0,
+      delayed: s.delayedCount ?? 0,
+      closed: s.closedCount ?? 0
+    }
+
+    projectList.value = listRes.data.data ?? listRes.data ?? []
+  } catch (e) {
+    console.error('홈 대시보드 로드 실패', e)
+  }
+}
+
+// ================= Chart =================
 const donutChartRef = ref<HTMLCanvasElement | null>(null)
-let donutChart: InstanceType<typeof Chart> | null = null
+let donutChart: Chart | null = null
 
-onMounted(() => {
+onMounted(async () => {
+  await fetchDashboardData()
+
   if (!donutChartRef.value) return
 
   donutChart = new Chart(donutChartRef.value, {
     type: 'doughnut',
     data: {
-      labels: ['DRAFT', 'ACTIVE', 'CLOSED'],
+      labels: ['ACTIVE', 'DELAYED', 'CLOSED'],
       datasets: [{
-        data: [20, 45, 35], // 이미지 비율 기준 예시 데이터
-        backgroundColor: [
-          '#0085FF', // DRAFT (파랑)
-          '#2ECC71', // ACTIVE (초록)
-          '#FFC107'  // CLOSED (노랑)
-        ],
+        data: chartData.value,
+        backgroundColor: ['#0085FF', '#2ECC71', '#FFC107'],
         borderWidth: 2,
-        borderColor: '#ffffff',
-        hoverOffset: 4
+        borderColor: '#ffffff'
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      cutout: '70%', // 도넛 두께 조절
-      plugins: {
-        legend: { display: false } // 커스텀 범례를 사용하므로 기본 범례는 숨김
-      }
+      cutout: '70%',
+      plugins: { legend: { display: false } }
     }
   })
+})
+
+// summary 변경 시 차트 갱신
+watch(chartData, (newVal) => {
+  if (donutChart) {
+    donutChart.data.datasets[0].data = newVal
+    donutChart.update()
+  }
 })
 </script>
 
@@ -290,6 +301,25 @@ onMounted(() => {
   font-size: 16px;
   font-weight: 700;
   margin: 0 0 12px 0;
+}
+
+.card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.more-btn {
+  font-size: 12px;
+  color: #0085FF;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.more-btn:hover {
+  text-decoration: underline;
 }
 
 /* 테이블 */
