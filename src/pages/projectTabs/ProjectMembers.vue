@@ -193,7 +193,7 @@ import { useRouter, useRoute } from 'vue-router';
 import RecommendModal from '@/components/common/RecommendModal.vue';
 import { fetchProjectDetail } from '@/api/project';
 import {
-  fetchAssignmentManagementPage,
+  fetchProjectMembers,
   respondAssignment,
   decideFinalAssignment
 } from '@/api/projectAssign';
@@ -258,7 +258,7 @@ const onFinalDecision = async (member: any, decision: 'ASSIGNED' | 'EXCLUDED') =
 
 // 프로젝트 인원 조회
 const fetchMembers = async () => {
-  const res = await fetchAssignmentManagementPage(projectId);
+  const res = await fetchProjectMembers(projectId);
 
   memberList.value = res.data.members.map((m: any) => {
 

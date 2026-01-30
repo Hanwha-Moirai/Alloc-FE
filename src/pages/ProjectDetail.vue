@@ -152,7 +152,16 @@ const fetchMilestones = async () => {
 const fetchProjectMembers = async () => {
   try {
     const res = await getAssignedMembers(projectId);
-    memberList.value = res.data || [];
+    const data = res.data.data ?? res.data;
+
+    memberList.value = (data.members ?? []).map((m: any) => ({
+      assignmentId: m.assignmentId,
+      userId: m.userId,
+      employeeName: m.userName,
+      jobName: m.jobName,
+      mainSkill: m.mainSkill,
+    }));
+
     console.log("멤버 로드 성공:", memberList.value);
   } catch (e) {
     console.error("멤버 로드 실패:", e);
