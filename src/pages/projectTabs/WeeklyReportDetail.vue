@@ -104,7 +104,7 @@
               <span v-else>{{ item.type }}</span>
             </td>
             <td>
-              <input v-if="isEditing" v-model="item.delay" class="edit-input-table" @click.stop />
+              <input v-if="isEditing" v-model="item.delay" class="edit-input-table" readonly @click.stop />
               <span v-else>{{ item.delay }}</span>
             </td>
             <td>
@@ -151,6 +151,7 @@ import {ref, reactive, computed, onMounted} from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from '@/lib/axios';
 import { fetchProjectDetail } from '@/api/project';
+import { updateWeeklyReport } from '@/api/weeklyReport';
 
 const route = useRoute();
 const router = useRouter();
@@ -218,6 +219,7 @@ const fetchDetail = async () => {
 
     // 완료 태스크
     completedTasks.value = (data.completedTasks ?? []).map(t => ({
+      taskId: t.taskId,
       name: t.taskName,
       manager: t.assigneeName,
       type: t.taskCategory,
@@ -225,6 +227,7 @@ const fetchDetail = async () => {
     }));
 
     uncompletedTasks.value = (data.incompleteTasks ?? []).map(t => ({
+      taskId: t.taskId,
       name: t.taskName,
       manager: t.assigneeName,
       type: t.taskCategory,
@@ -254,20 +257,30 @@ const handleSave = async () => {
   try {
     const payload = {
       reportId: Number(reportId),
-      progressRate: form.progress,
-      completedTasks: completedTasks.value,
-      uncompletedTasks: uncompletedTasks.value,
-      nextWeekTasks: nextWeekTasks.value
+      reportStatus: 'REVIEWED',
+      changeOfPlan: '',
+
+      completedTasks: completedTasks.value.map(t => ({
+        taskId: t.taskId
+      })),
+
+      incompleteTasks: uncompletedTasks.value.map(t => ({
+        taskId: t.taskId,
+        delayReason: t.reason || ''
+      })),
+
+      nextWeekTasks: []
     };
 
-    await axios.patch(`/api/projects/${projectId}/docs/report/save`, payload);
+    await updateWeeklyReport(projectId, payload);
 
     alert('성공적으로 저장되었습니다.');
     isEditing.value = false;
-    fetchDetail();
+    await fetchDetail();
+
   } catch (error) {
-    console.error("저장 실패:", error);
-    alert("저장 권한이 없거나 실패했습니다. (PM만 가능)");
+    console.error('저장 실패:', error);
+    alert('저장 실패 (콘솔 확인)');
   }
 };
 
