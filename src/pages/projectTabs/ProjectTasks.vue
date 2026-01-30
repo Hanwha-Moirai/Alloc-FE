@@ -111,7 +111,7 @@ import { useRoute } from 'vue-router'
 import dayjs from 'dayjs'
 import TaskDetailModal from '@/components/common/TaskDetailModal.vue'
 import { getGanttTasks, getGanttMilestones, updateTask, deleteTask, completeTask } from '@/api/gantt'
-import { jwtDecode } from 'jwt-decode'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const projectId = Number(route.params.projectId)
@@ -164,18 +164,11 @@ const categoryClass: Record<string, string> = {
   DISTRIBUTION: 'dist'
 }
 
+const authStore = useAuthStore()
+
 // role 계산
 const getUserRole = (): string => {
-  const token = localStorage.getItem('accessToken')
-  if (!token) return 'USER'
-
-  try {
-    const payload: any = jwtDecode(token)
-    return payload.role || 'USER'
-  } catch (e) {
-    console.error('토큰 디코딩 실패', e)
-    return 'USER'
-  }
+  return authStore.role || 'USER'
 }
 
 // 데이터 로드

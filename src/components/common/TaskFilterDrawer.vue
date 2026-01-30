@@ -27,7 +27,7 @@
                 type="checkbox"
                 :id="`user-${user.id}`"
                 v-model="filters.assignees"
-                :value="user.name"
+                :value="user.id"
             />
             <label :for="`user-${user.id}`">{{ user.name }}</label>
           </div>
@@ -64,7 +64,7 @@ const periods = ['지연됨', 'D-7', 'D-14', 'D-21']
 
 const filters = reactive({
   categories: [] as string[],
-  assignees: [] as string[],
+  assignees: [] as number[],
   periods: [] as string[]
 })
 

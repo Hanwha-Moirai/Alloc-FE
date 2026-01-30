@@ -15,13 +15,8 @@ export const submitAssignment = (projectId, payload) => {
 
 /* 프로젝트 인력 조회 */
 
-// 최종 확정 인원 조회
-export const fetchAssignedMembers = (projectId) => {
-    return axios.get(`/api/projects/${projectId}/assignments/assigned`);
-};
-
-// 인력 배치 관리 화면
-export const fetchAssignmentManagementPage = (projectId) => {
+// 프로젝트 인원 조회
+export const fetchProjectMembers = (projectId) => {
     return axios.get(`/api/projects/${projectId}/members`);
 };
 

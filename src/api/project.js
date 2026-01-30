@@ -22,7 +22,7 @@ export const createProject = (data) => {
 
 //참여된 프로젝트 인원 조회
 export const getAssignedMembers = (projectId) => {
-    return axios.get(`/api/projects/${projectId}/assignments/assigned`)
+    return axios.get(`/api/projects/${projectId}/members`)
 }
 
 // 프로젝트별 달성률(진행률) 조회

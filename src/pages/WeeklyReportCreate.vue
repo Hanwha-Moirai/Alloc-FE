@@ -39,7 +39,7 @@
       </div>
       <div class="chart-container">
         <div class="edit-progress-box" style="margin-right: 20px;">
-          <input type="number" v-model="form.taskCompletionRate" class="percent-input" min="0" max="100" />
+          <input type="number" v-model="form.taskCompletionRate" class="percent-input" readonly />
           <span style="font-size: 18px; font-weight: 800;">%</span>
         </div>
         <div class="progress-circle" :style="`--p:${form.taskCompletionRate}; --c:#23cc66;`">
@@ -241,7 +241,6 @@ const handleCreate = async () => {
       reportId: form.reportId,
       reportStatus: 'REVIEWED',
       changeOfPlan: form.changeOfPlan || '',
-      taskCompletionRate: Number(form.taskCompletionRate),
 
       completedTasks: form.completedTasks
           .filter(t => t.taskId)

@@ -48,28 +48,27 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from '@/lib/axios'
-import { jwtDecode } from 'jwt-decode'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const username = ref('')
 const password = ref('')
 
 const login = async () => {
   try {
-    const res = await axios.post('/api/auth/login', {
+    // 1. 로그인 → 서버가 쿠키에 토큰 세팅
+    await axios.post('/api/auth/login', {
       loginId: username.value,
       password: password.value
     })
 
-    const responseData = res.data.data
-    const accessToken = responseData.accessToken
+    // 2. 내 정보 조회
+    await authStore.fetchMe()
 
-    localStorage.setItem('accessToken', accessToken)
-
-    const payload: any = jwtDecode(accessToken)
-    const role = payload.role
-
+    // 3. 역할 기반 이동
+    const role = authStore.role
     if (role === 'ADMIN') {
       router.push('/admin/users')
     } else if (role === 'PM') {

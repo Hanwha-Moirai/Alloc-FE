@@ -26,7 +26,7 @@
       >
         <div class="noti-icon">⚠️</div>
         <div class="noti-content">
-          <p class="noti-text">{{ noti.message }}</p>
+          <p class="noti-text">{{ noti.content }}</p>
           <span class="noti-date">{{ noti.createdAt }}</span>
         </div>
 
@@ -51,78 +51,48 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
-import {
-  fetchNotifications,
-  fetchUnreadCount,
-  markNotificationAsRead,
-  markAllNotificationsAsRead,
-  deleteNotification,
-  deleteAllReadNotifications,
-  getNotificationSubscribeUrl
-} from '@/api/notification';
+import { ref, onMounted, computed } from 'vue'
+import { useNotificationStore } from '@/stores/notification'
 
-const notifications = ref([]);
-const unreadCount = ref(0);
-const activeTab = ref('unread');
+const notificationStore = useNotificationStore()
+const activeTab = ref('unread')
+
+const notifications = computed(() => notificationStore.notifications)
 
 const loadData = async () => {
-  try {
-    const [listRes, countRes] = await Promise.all([
-      fetchNotifications({ page: 0, size: 20 }),
-      fetchUnreadCount()
-    ]);
-
-    notifications.value = listRes.data.data.content || [];
-    unreadCount.value = countRes.data.data || 0;
-  } catch (error) {
-    console.error("알림 데이터 로딩 실패:", error);
-  }
-};
+  await Promise.all([
+    notificationStore.loadNotifications({ page: 0, size: 20 }),
+    notificationStore.loadUnreadCount(),
+  ])
+}
 
 const handleSingleAction = async (noti) => {
-  try {
-    if (activeTab.value === 'unread') {
-      await markNotificationAsRead(noti.id);
-      noti.isRead = true;
-      unreadCount.value = Math.max(0, unreadCount.value - 1);
-    } else {
-      await deleteNotification(noti.id);
-      notifications.value = notifications.value.filter(n => n.id !== noti.id);
-    }
-  } catch (error) {
-    console.error("알림 처리 실패:", error);
+  if (activeTab.value === 'unread') {
+    await notificationStore.markAsRead(noti.id)
+  } else {
+    await notificationStore.removeNotification(noti.id)
   }
-};
+}
 
 // 전체 읽음 처리
 const markAllAsRead = async () => {
-  try {
-    await markAllNotificationsAsRead();
-    notifications.value.forEach(n => n.isRead = true);
-    unreadCount.value = 0;
-  } catch (error) {
-    console.error("전체 읽음 처리 실패:", error);
-  }
-};
+  await notificationStore.markAllAsRead()
+}
 
 // 읽은 알림 전체 삭제
 const deleteAllRead = async () => {
-  try {
-    await deleteAllReadNotifications();
-    notifications.value = notifications.value.filter(n => !n.isRead);
-  } catch (error) {
-    console.error("전체 삭제 실패:", error);
-  }
-};
+  await notificationStore.removeAllRead()
+}
 
-const unreadNotifications = computed(() => notifications.value.filter(n => !n.isRead));
-const readNotifications = computed(() => notifications.value.filter(n => n.isRead));
-const displayedNotifications = computed(() => activeTab.value === 'unread' ? unreadNotifications.value : readNotifications.value);
+const unreadNotifications = computed(() => notifications.value.filter((n) => !n.isRead))
+const readNotifications = computed(() => notifications.value.filter((n) => n.isRead))
+const displayedNotifications = computed(() =>
+  activeTab.value === 'unread' ? unreadNotifications.value : readNotifications.value
+)
 
 onMounted(() => {
-  loadData();
-});
+  loadData()
+})
 </script>
 
 <style scoped>
