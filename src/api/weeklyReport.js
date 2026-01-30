@@ -67,3 +67,13 @@ export const searchMyWeeklyReports = (params) => {
         }
     });
 };
+
+// 미작성 주간보고 조회
+export const getMissingWeeklyReports = (projectId, params) => {
+    return axios.get(`/api/projects/${projectId}/docs/report/missing`, {
+        params: {
+            startDate: params.startDate,
+            endDate: params.endDate
+        }
+    })
+}

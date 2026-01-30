@@ -31,8 +31,8 @@
         <div class="icon yellow">📝</div>
         <div class="label">주간 보고서 작성 여부</div>
         <div class="value">
-          작성 <span class="green">0</span> ·
-          미작성 <span class="red">1</span>
+          작성 <span class="green">{{ weeklyReportStatus.written }}</span> ·
+          미작성 <span class="red">{{ weeklyReportStatus.missing }}</span>
         </div>
       </div>
     </div>
@@ -148,6 +148,7 @@ import { Chart, DoughnutController, ArcElement, Tooltip, Legend } from 'chart.js
 import { fetchHomeSummary, fetchHomeProjectList } from '@/api/home'
 import { getUpcomingProjectEvents } from '@/api/calendar'
 import { fetchDelayedTasks } from '@/api/gantt'
+import { getMissingWeeklyReports } from '@/api/weeklyReport'
 import dayjs from "dayjs";
 
 const router = useRouter()
@@ -162,6 +163,11 @@ const summary = ref({
   active: 0,
   delayed: 0,
   closed: 0
+})
+
+const weeklyReportStatus = ref({
+  written: 0,
+  missing: 0
 })
 
 const projectList = ref<any[]>([])
@@ -209,6 +215,27 @@ const fetchDashboardData = async () => {
   }
 }
 
+const fetchWeeklyReportStatus = async () => {
+  if (projectList.value.length === 0) return
+
+  const project = projectList.value[0]
+
+  const res = await getMissingWeeklyReports(project.projectId, {
+    startDate: project.startDate,
+    endDate: project.endDate
+  })
+
+  const missing = res.data.data ?? []
+
+  const totalWeeks =
+      dayjs(project.endDate).diff(dayjs(project.startDate), 'week') + 1
+
+  weeklyReportStatus.value = {
+    missing: missing.length,
+    written: Math.max(totalWeeks - missing.length, 0)
+  }
+}
+
 const fetchUpcomingEvents = async () => {
   if (projectList.value.length === 0) return
 
@@ -217,11 +244,8 @@ const fetchUpcomingEvents = async () => {
   try {
     const res = await getUpcomingProjectEvents(projectId, 3)
 
-    console.log('📅 upcoming response:', res.data)
-
     upcomingEvents.value = res.data.data?.items ?? []
 
-    console.log('📅 upcomingEvents:', upcomingEvents.value)
   } catch (e) {
     console.error('다가오는 일정 조회 실패', e)
     upcomingEvents.value = []
@@ -261,6 +285,7 @@ onMounted(async () => {
   await fetchDashboardData()
   await fetchUpcomingEvents()
   await fetchDelayedTaskList()
+  await fetchWeeklyReportStatus()
 
   if (!donutChartRef.value) return
 
