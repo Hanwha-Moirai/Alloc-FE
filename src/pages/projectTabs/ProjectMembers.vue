@@ -110,9 +110,12 @@
 
             <!-- 의사 결정 -->
             <td>
-              <!-- USER만 버튼 가능 -->
               <template
-                  v-if="myRole === 'USER' && member.requestStatus === 'REQUESTED'"
+                  v-if="
+                         myRole === 'USER' &&
+                         member.requestStatus === 'REQUESTED' &&
+                         member.userId === myUserId
+                        "
               >
                 <div class="button-group">
                   <button
@@ -130,7 +133,6 @@
                 </div>
               </template>
 
-              <!-- PM이거나 처리된 상태 -->
               <template v-else>
                 -
               </template>
@@ -195,12 +197,19 @@ import {
   respondAssignment,
   decideFinalAssignment
 } from '@/api/projectAssign';
-import { jwtDecode } from 'jwt-decode'
+import { useAuthStore } from '@/stores/auth'
 
-const myRole = ref<'PM' | 'USER' | ''>('')
+const authStore = useAuthStore()
+
+const myRole = computed(() => authStore.role)
+const myUserId = computed(() => authStore.userId)
+
 const router = useRouter();
 const route = useRoute();
 const projectId = route.params.projectId as string;
+console.log('myRole:', myRole.value)
+console.log('myUserId:', myUserId.value)
+
 
 // 상태 관리
 const projectStatus = ref('');
@@ -283,13 +292,6 @@ const handleRecommend = () => {
 
 // 초기 로딩
 onMounted(async () => {
-  const token = localStorage.getItem('accessToken')
-
-  if (token) {
-    const payload: any = jwtDecode(token)
-    myRole.value = payload.role
-  }
-
   const res = await fetchProjectDetail(projectId)
   projectStatus.value = res.data?.status
 
