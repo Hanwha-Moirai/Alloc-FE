@@ -24,7 +24,7 @@
       <div class="summary-card">
         <div class="icon blue">⏰</div>
         <div class="label">이번주 일정</div>
-        <div class="value">4건</div>
+        <div class="value">{{ weeklyEventCount }}건</div>
       </div>
 
       <div class="summary-card">
@@ -146,7 +146,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Chart, DoughnutController, ArcElement, Tooltip, Legend } from 'chart.js'
 import { fetchHomeSummary, fetchHomeProjectList } from '@/api/home'
-import { getUpcomingProjectEvents } from '@/api/calendar'
+import { getUpcomingProjectEvents, getMyWeeklyEventCount } from '@/api/calendar'
 import { fetchDelayedTasks } from '@/api/gantt'
 import { getMissingWeeklyReports } from '@/api/weeklyReport'
 import dayjs from "dayjs";
@@ -173,6 +173,7 @@ const weeklyReportStatus = ref({
 const projectList = ref<any[]>([])
 const upcomingEvents = ref<any[]>([])
 const delayedTasks = ref<any[]>([])
+const weeklyEventCount = ref(0)
 
 // ================= computed =================
 const projects = computed(() =>
@@ -236,6 +237,11 @@ const fetchWeeklyReportStatus = async () => {
   }
 }
 
+const fetchWeeklyEventCount = async () => {
+  const res = await getMyWeeklyEventCount()
+  weeklyEventCount.value = res.data.data?.count ?? 0
+}
+
 const fetchUpcomingEvents = async () => {
   if (projectList.value.length === 0) return
 
@@ -286,6 +292,7 @@ onMounted(async () => {
   await fetchUpcomingEvents()
   await fetchDelayedTaskList()
   await fetchWeeklyReportStatus()
+  await fetchWeeklyEventCount()
 
   if (!donutChartRef.value) return
 
@@ -399,15 +406,17 @@ watch(chartData, (newVal) => {
 
 .more-btn {
   font-size: 12px;
-  color: #0085FF;
-  background: none;
-  border: none;
+  color: #6fd3e8;
+  background: #ffffff;
+  border: 1px solid #6fd3e8;
+  border-radius: 6px;
+  padding: 4px 10px;
   cursor: pointer;
-  padding: 0;
+  transition: all 0.15s ease;
 }
 
 .more-btn:hover {
-  text-decoration: underline;
+  background: #eaf8fc;
 }
 
 /* 테이블 */

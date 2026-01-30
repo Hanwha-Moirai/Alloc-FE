@@ -49,3 +49,8 @@ export const getUpcomingProjectEvents = (projectId, limit = 3) => {
         params: { limit }
     })
 }
+
+// 이번주 일정 카운트
+export const getMyWeeklyEventCount = () => {
+    return axios.get('/api/calendar/weekly-count')
+}
