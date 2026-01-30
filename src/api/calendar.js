@@ -42,3 +42,10 @@ export const createVacationEvent = async (projectId, data) => {
     );
     return response.data;
 };
+
+// 다가오는 일정 조회 (프로젝트 기준)
+export const getUpcomingProjectEvents = (projectId, limit = 3) => {
+    return axios.get(`/api/projects/${projectId}/calendar/upcoming`, {
+        params: { limit }
+    })
+}

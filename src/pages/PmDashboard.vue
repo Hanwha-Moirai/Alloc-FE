@@ -120,9 +120,21 @@
       <section class="card">
         <h3 class="card-title">다가오는 일정</h3>
 
-        <div class="schedule-item">
-          <div class="schedule-title">주간회의 보고</div>
-          <div class="schedule-date">2026.01.08 09:30</div>
+        <div v-if="upcomingEvents.length === 0" class="schedule-item">
+          <div class="schedule-item empty">
+            다가오는 일정이 없습니다.
+          </div>
+        </div>
+
+        <div
+            v-for="e in upcomingEvents"
+            :key="e.eventId"
+            class="schedule-item"
+        >
+          <div class="schedule-title">{{ e.title }}</div>
+          <div class="schedule-date">
+            {{ dayjs(e.startDateTime).format('YYYY.MM.DD HH:mm') }}
+          </div>
         </div>
       </section>
     </div>
@@ -134,6 +146,8 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Chart, DoughnutController, ArcElement, Tooltip, Legend } from 'chart.js'
 import { fetchHomeSummary, fetchHomeProjectList } from '@/api/home'
+import { getUpcomingProjectEvents } from '@/api/calendar'
+import dayjs from "dayjs";
 
 const router = useRouter()
 const goToProjectList = () => {
@@ -150,6 +164,8 @@ const summary = ref({
 })
 
 const projectList = ref<any[]>([])
+const upcomingEvents = ref<any[]>([])
+const delayedTasks = ref<any[]>([])
 
 // ================= computed =================
 const projects = computed(() =>
@@ -192,12 +208,32 @@ const fetchDashboardData = async () => {
   }
 }
 
+const fetchUpcomingEvents = async () => {
+  if (projectList.value.length === 0) return
+
+  const projectId = projectList.value[0].projectId
+
+  try {
+    const res = await getUpcomingProjectEvents(projectId, 3)
+
+    console.log('📅 upcoming response:', res.data)
+
+    upcomingEvents.value = res.data.data?.items ?? []
+
+    console.log('📅 upcomingEvents:', upcomingEvents.value)
+  } catch (e) {
+    console.error('다가오는 일정 조회 실패', e)
+    upcomingEvents.value = []
+  }
+}
+
 // ================= Chart =================
 const donutChartRef = ref<HTMLCanvasElement | null>(null)
 let donutChart: Chart | null = null
 
 onMounted(async () => {
   await fetchDashboardData()
+  await fetchUpcomingEvents()
 
   if (!donutChartRef.value) return
 
@@ -437,5 +473,14 @@ canvas {
   font-size: 12px;
   color: #777;
   margin-top: 4px;
+}
+
+/* 일정 없음 상태 */
+.schedule-item.empty {
+  font-size: 12px;
+  color: #9ca3af;
+  text-align: center;
+  padding: 16px 0;
+  border-top: none;
 }
 </style>
