@@ -1,51 +1,30 @@
 import { defineStore } from 'pinia'
-import { jwtDecode } from 'jwt-decode'
-
-const STORAGE_KEY = 'accessToken'
-
-const parseRole = (token) => {
-  try {
-    const payload = jwtDecode(token)
-    return payload?.role || null
-  } catch (error) {
-    console.error('JWT decode 실패', error)
-    return null
-  }
-}
+import axios from '@/lib/axios'
 
 export const useAuthStore = defineStore('auth', {
-  state: () => ({
-    accessToken: null,
-    role: null,
-    initialized: false,
-  }),
-  getters: {
-    isAuthenticated: (state) => Boolean(state.accessToken),
-  },
-  actions: {
-    initFromStorage() {
-      if (this.initialized) return
+    state: () => ({
+        user: null, // UserMeResponse 그대로
+    }),
 
-      const token = localStorage.getItem(STORAGE_KEY)
-      if (token) {
-        this.accessToken = token
-        this.role = parseRole(token)
-      } else {
-        this.accessToken = null
-        this.role = null
-      }
+    getters: {
+        userId: (state) => state.user?.userId,
+        role: (state) => state.user?.role,
+        isAuthenticated: (state) => !!state.user,
+    },
 
-      this.initialized = true
+    actions: {
+        async fetchMe() {
+            const res = await axios.get('/api/user/me')
+            this.user = res.data.data
+        },
+
+        async logout() {
+            await axios.post('/api/auth/logout')
+            this.user = null
+        },
+
+        clearAuth() {
+            this.user = null
+        },
     },
-    setAccessToken(token) {
-      this.accessToken = token
-      this.role = parseRole(token)
-      localStorage.setItem(STORAGE_KEY, token)
-    },
-    clearAuth() {
-      this.accessToken = null
-      this.role = null
-      localStorage.removeItem(STORAGE_KEY)
-    },
-  },
 })

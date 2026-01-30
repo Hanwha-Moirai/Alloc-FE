@@ -58,17 +58,17 @@ const password = ref('')
 
 const login = async () => {
   try {
-    const res = await axios.post('/api/auth/login', {
+    // 1. 로그인 → 서버가 쿠키에 토큰 세팅
+    await axios.post('/api/auth/login', {
       loginId: username.value,
       password: password.value
     })
 
-    const responseData = res.data.data
-    const accessToken = responseData.accessToken
+    // 2. 내 정보 조회
+    await authStore.fetchMe()
 
-    authStore.setAccessToken(accessToken)
+    // 3. 역할 기반 이동
     const role = authStore.role
-
     if (role === 'ADMIN') {
       router.push('/admin/users')
     } else if (role === 'PM') {

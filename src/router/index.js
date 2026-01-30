@@ -6,9 +6,6 @@ import AdminLayout from "@/layouts/AdminLayout.vue";
 import { useAuthStore } from '@/stores/auth'
 import { pinia } from '@/stores/pinia'
 
-const authStore = useAuthStore(pinia)
-authStore.initFromStorage()
-
 const router = createRouter({
     history: createWebHistory(),
     routes: [
@@ -28,23 +25,21 @@ const router = createRouter({
             component: DefaultLayout,
             children: [
                 {
-                    path: '/',
-                    redirect: () => {
-                        console.log('[ / redirect ]')
+                    path: '/home',
+                    redirect: async () => {
+                        const authStore = useAuthStore(pinia)
 
-                        const token = authStore.accessToken
-                        if (!token) {
-                            console.log('→ no token')
-                            return '/login'
+                        if (!authStore.user) {
+                            try {
+                                await authStore.fetchMe()
+                            } catch {
+                                return '/login'
+                            }
                         }
 
-                        const role = authStore.role
-                        if (!role) {
-                            authStore.clearAuth()
-                            return '/login'
-                        }
-
-                        return role === 'PM' ? '/home/pm' : '/home/user'
+                        return authStore.role === 'PM'
+                            ? '/home/pm'
+                            : '/home/user'
                     }
                 },
                 {
@@ -175,35 +170,28 @@ const router = createRouter({
     ],
 })
 
-router.beforeEach((to, from, next) => {
-    authStore.initFromStorage()
+router.beforeEach(async (to) => {
+    const authStore = useAuthStore(pinia)
+    const publicPages = ['/login', '/password-reset']
+    const isPublicPage = publicPages.includes(to.path)
 
-    // 스토어에서 액세스 토큰 확인
-    const token = authStore.accessToken;
-
-    // 인증이 필요 없는 경로 설정
-    const publicPages = ['/login', '/password-reset'];
-    const authRequired = !publicPages.includes(to.path);
-
-    // 인증이 필요한 페이지에 접근하는데 토큰이 없는 경우
-    if (authRequired && !token) {
-        console.warn('인증되지 않은 사용자입니다. 로그인 페이지로 이동합니다.');
-
-        // 만약 일반 서비스 영역('/')으로 가려 했다면 /login으로,
-        // 어드민 영역('/admin')으로 가려 했다면 /admin/login으로 보낼 수 있음
-        if (to.path.startsWith('/admin')) {
-            return next('/admin/login');
+    // 로그인 필요한 페이지
+    if (!authStore.user && !isPublicPage) {
+        try {
+            await authStore.fetchMe()
+        } catch {
+            return '/login'
         }
-        return next('/login');
     }
 
-    // 이미 로그인이 되어 있는데 로그인 페이지에 접근하는 경우 (홈으로 리다이렉트)
-    if (token && (to.path === '/login' || to.path === '/admin/login')) {
-        return next('/');
+    // 로그인 상태로 로그인 페이지 접근
+    if (authStore.user && to.path === '/login') {
+        return authStore.role === 'PM'
+            ? '/home/pm'
+            : '/home/user'
     }
 
-    // 그 외에는 정상적으로 이동 허용
-    next();
-});
+    return true
+})
 
 export default router

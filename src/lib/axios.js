@@ -3,44 +3,32 @@ import { useAuthStore } from '@/stores/auth'
 import { pinia } from '@/stores/pinia'
 
 const authStore = useAuthStore(pinia)
-authStore.initFromStorage()
 
 const instance = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
     withCredentials: true,
-});
+})
 
 // 요청 인터셉터
-instance.interceptors.request.use(
-    (config) => {
-        const token = authStore.accessToken;
-
-        if (token) {
-            config.headers = config.headers || {};
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-
-        return config;
-    },
-    (error) => Promise.reject(error)
-);
-
-// 응답 인터셉터
-instance.interceptors.response.use(
-    (response) => response,
-    (error) => {
-        // 서버에서 401 Unauthorized 에러를 보낸 경우
-        if (error.response?.status === 401) {
-            console.warn('인증이 만료되었습니다. 로그인 페이지로 이동합니다.');
-
-            // 유효하지 않은 토큰 제거
-            authStore.clearAuth();
-
-            // 로그인 페이지로 강제 리다이렉트
-            window.location.href = '/login';
-        }
-        return Promise.reject(error);
+instance.interceptors.request.use((config) => {
+    const csrfToken = authStore.csrfToken
+    if (csrfToken) {
+        config.headers['X-CSRF-Token'] = csrfToken
     }
-);
+    return config
+})
 
-export default instance;
+// 응답 인터셉터 수정
+instance.interceptors.response.use(
+    (res) => res,
+    async (error) => {
+        // 현재 페이지가 로그인 페이지가 아닐 때만 자동 리다이렉트 수행
+        if (error.response?.status === 401 && !window.location.pathname.includes('/login')) {
+            authStore.clearAuth()
+            window.location.href = '/login'
+        }
+        return Promise.reject(error)
+    }
+)
+
+export default instance
