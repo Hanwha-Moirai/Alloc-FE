@@ -147,6 +147,7 @@ import { useRouter } from 'vue-router'
 import { Chart, DoughnutController, ArcElement, Tooltip, Legend } from 'chart.js'
 import { fetchHomeSummary, fetchHomeProjectList } from '@/api/home'
 import { getUpcomingProjectEvents } from '@/api/calendar'
+import { fetchDelayedTasks } from '@/api/gantt'
 import dayjs from "dayjs";
 
 const router = useRouter()
@@ -227,6 +228,31 @@ const fetchUpcomingEvents = async () => {
   }
 }
 
+const fetchDelayedTaskList = async () => {
+  if (projectList.value.length === 0) return
+
+  const project = projectList.value[0]
+
+  const res = await fetchDelayedTasks({
+    projectId: project.projectId,
+    from: project.startDate,
+    to: project.endDate
+  })
+
+  const list = res.data.data ?? []
+
+  delayedTasks.value = list.map(t => ({
+    name: t.taskName,
+    projectname: t.projectName,
+    owner: t.assigneeName,
+    delay: `${t.delayedDays}일 지연`,
+    delayClass:
+        t.delayedDays >= 3 ? 'd3'
+            : t.delayedDays === 2 ? 'd2'
+                : 'd1'
+  }))
+}
+
 // ================= Chart =================
 const donutChartRef = ref<HTMLCanvasElement | null>(null)
 let donutChart: Chart | null = null
@@ -234,6 +260,7 @@ let donutChart: Chart | null = null
 onMounted(async () => {
   await fetchDashboardData()
   await fetchUpcomingEvents()
+  await fetchDelayedTaskList()
 
   if (!donutChartRef.value) return
 

@@ -28,6 +28,17 @@ export const completeTask = (projectId, taskId, data) => {
     return axios.patch(`/api/projects/${projectId}/tasks/${taskId}/complete`, data);
 };
 
+// 지연 태스크 목록 조회
+export const fetchDelayedTasks = (params) => {
+    return axios.get('/api/tasks/delayed', {
+        params: {
+            projectId: params.projectId,
+            from: params.from || null,
+            to: params.to || null
+        }
+    })
+}
+
 
 // ---------------------------- 마일스톤 --------------------------------------
 
