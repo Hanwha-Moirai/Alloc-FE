@@ -28,8 +28,10 @@
 
       <div v-if="isSearched" class="result-area">
         <div class="result-header">
-          <div class="ai-summary">총 2명이 검색되었습니다.</div>
-          <div class="ai-filter-tags">백엔드 개발자, Spring 숙련, 현재 프로젝트 1개 이하</div>
+          <div class="ai-summary">
+            총 {{ people.length }}명이 검색되었습니다.
+          </div>
+
         </div>
 
         <div class="result-table-wrapper">
@@ -44,12 +46,36 @@
             </tr>
             </thead>
             <tbody>
-            <tr>
-              <td><input type="checkbox" checked /></td>
-              <td class="user-info">👤 홍길동</td>
-              <td>백엔드 엔지니어</td>
-              <td><span class="tech-badge">Spring Boot</span></td>
-              <td><span class="status-dot">●</span> 대기중</td>
+            <tr v-for="person in people" :key="person.personId">
+              <td><input type="checkbox" /></td>
+
+              <td class="user-info">
+                👤 {{ person.name }}
+              </td>
+
+              <td>{{ person.jobRole }}</td>
+
+              <td>
+      <span
+          v-for="tech in person.techNames"
+          :key="tech"
+          class="tech-badge"
+          style="margin-right:4px"
+      >
+        {{ tech }}
+      </span>
+              </td>
+
+              <td>
+                <span class="status-dot">●</span>
+                대기중
+              </td>
+            </tr>
+
+            <tr v-if="!loading && people.length === 0">
+              <td colspan="5" style="text-align:center; padding:40px; color:#94a3b8">
+                검색 결과가 없습니다.
+              </td>
             </tr>
             </tbody>
           </table>
@@ -61,15 +87,36 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { searchPeopleByNL } from '@/api/peopleSearch'
 
 const searchQuery = ref('')
-const isSearched = ref(false) // 검색 여부를 판단하는 상태값
-const suggestTags = ['직무', '기술', '숙련도', '투입 중 프로젝트 수', '부서', '재직 유형']
+const isSearched = ref(false)
+const people = ref<any[]>([])
+const loading = ref(false)
 
-const handleSearch = () => {
+const suggestTags = [
+  '직무', '기술', '숙련도', '투입 중 프로젝트 수', '부서', '재직 유형'
+]
+
+const handleSearch = async () => {
   if (!searchQuery.value.trim()) return
-  // 검색 버튼을 누르거나 엔터를 치면 true로 변경되어 레이아웃이 전환됨
+
+  loading.value = true
   isSearched.value = true
+
+  try {
+    const res = await searchPeopleByNL({
+      conversationId: 'people-search',
+      nl: searchQuery.value
+    })
+
+    people.value = res.people ?? []
+  } catch (e) {
+    console.error(e)
+    people.value = []
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
