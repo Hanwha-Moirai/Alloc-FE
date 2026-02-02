@@ -84,6 +84,15 @@
         @create="handleCreateDoc"
     />
 
+    <!-- 리스크 분석 로딩 모달 -->
+    <LoadingModal
+        v-if="showRiskModal"
+        title="리스크 분석 중"
+        message="프로젝트 일정 및 이슈를 기반으로 리스크를 분석 중입니다."
+        icon-src="/loading.gif"
+        :closable="false"
+    />
+
   </div>
 </template>
 
@@ -95,6 +104,7 @@ import TaskAddModal from '@/components/common/TaskAddModal.vue'
 import TaskFilterDrawer from '@/components/common/TaskFilterDrawer.vue'
 import MilestoneAddModal from '@/components/common/MilestoneAddModal.vue'
 import DocCreateModal from '@/components/common/DocCreateModal.vue'
+import LoadingModal from '@/components/common/LoadingModal.vue'
 
 import { createMilestone, createTask, getGanttMilestones } from '@/api/gantt'
 import { getAssignedMembers, fetchProjectList } from '@/api/project';
@@ -112,6 +122,7 @@ const isEditing = ref(false)
 const isFilterOpen = ref(false)
 const milestoneList = ref<any[]>([])
 const myProjectList = ref<{ id: number; name: string }[]>([])
+const showRiskModal = ref(false)
 
 // URL에 'recommend'가 포함되어 있으면 true를 반환하여 template의 UI를 숨김
 const isRecommendPage = computed(() => {
@@ -266,11 +277,24 @@ const handleCreateDoc = (data: any) => {
   console.log('생성 데이터:', data)
 }
 
-const handleCreateRisk = () => {
-  // 지금은 화면만 → 나중에 API 연결
-  console.log("리스크 분석 생성 클릭");
-  alert("리스크 분석 생성 (추후 API 연동)");
-};
+const handleCreateRisk = async () => {
+  showRiskModal.value = true
+
+  try {
+    // TODO: 리스크 분석 API 연결
+    // await createRiskAnalysis(projectId)
+
+    // UX 확인용 임시 딜레이
+    await new Promise(resolve => setTimeout(resolve, 1500))
+
+    // 분석 완료 후 리스크 탭으로 이동
+    router.push(`/projects/${projectId}/risk`)
+  } catch (e) {
+    console.error('리스크 분석 실패', e)
+  } finally {
+    showRiskModal.value = false
+  }
+}
 
 // --- Navigation ---
 const goTab = (tab: string) => {
