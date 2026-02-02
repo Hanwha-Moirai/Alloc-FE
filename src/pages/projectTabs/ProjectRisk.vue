@@ -3,7 +3,7 @@
 
     <div class="top-summary">
       <div class="summary-info">
-        <h3>프로젝트 리스크 현황</h3>
+        <h3 class="analysis-title">프로젝트 리스크 현황</h3>
         <p>현재 분석된 리스크는 총 <strong>{{ reports.length }}건</strong>입니다.</p>
       </div>
       <div class="status-chips">
@@ -94,7 +94,25 @@ const getStatusColor = (score: number) => {
 </script>
 
 <style scoped>
-.risk-v2-container { padding: 0 20px; display: flex; flex-direction: column; gap: 24px; }
+.risk-v2-container { display: flex; flex-direction: column; gap: 24px; }
+.analysis-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  position: relative;
+  padding-left: 10px;
+}
+
+.analysis-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  width: 3px;
+  height: 18px;
+  background: #4ab8d8;
+  border-radius: 2px;
+}
 
 /* 상단 요약 스타일 */
 .top-summary { display: flex; justify-content: space-between; align-items: flex-end; }

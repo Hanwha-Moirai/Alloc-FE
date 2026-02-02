@@ -187,7 +187,7 @@
         v-if="showRecommendModal"
         title="인재 추천 중"
         message="프로젝트에 적합한 인재를 분석하고 있습니다."
-        icon-src="/recommend.gif"
+        icon-src="/loading.gif"
         :closable="false"
     />
 
