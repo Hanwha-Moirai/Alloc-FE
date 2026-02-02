@@ -39,15 +39,17 @@
             <thead>
             <tr>
               <th width="40"><input type="checkbox" /></th>
-              <th>이름 <span style="font-size: 10px">↓</span></th>
+              <th>이름</th>
               <th>직군</th>
               <th>주력 기술</th>
-              <th>현재 투입 상태</th>
+              <th>직급</th>
             </tr>
             </thead>
             <tbody>
             <tr v-for="person in people" :key="person.personId">
-              <td><input type="checkbox" /></td>
+              <td @click.stop>
+                <input type="checkbox" />
+              </td>
 
               <td class="user-info">
                 👤 {{ person.name }}
@@ -56,19 +58,17 @@
               <td>{{ person.jobRole }}</td>
 
               <td>
-      <span
-          v-for="tech in person.techNames"
-          :key="tech"
-          class="tech-badge"
-          style="margin-right:4px"
-      >
-        {{ tech }}
-      </span>
+                <span
+                    v-for="tech in person.techNames"
+                    :key="tech"
+                    class="tech-badge"
+                    style="margin-right:4px"
+                >
+                  {{ tech }}
+                </span>
               </td>
-
               <td>
-                <span class="status-dot">●</span>
-                대기중
+                {{ person.jobTitle }}
               </td>
             </tr>
 
