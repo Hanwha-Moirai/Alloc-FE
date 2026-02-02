@@ -81,7 +81,7 @@
           <div class="progress-container">
             <div class="canvas-half">
               <canvas ref="progressChart"></canvas>
-              <div class="percent">67%</div>
+              <div class="percent">{{ progressRate }}%</div>
             </div>
           </div>
         </div>
@@ -168,6 +168,7 @@ const props = defineProps({
 })
 
 const { isEditing } = toRefs(props)
+const progressRate = ref(0)
 
 const form = reactive({
   projectName: '',
@@ -193,7 +194,7 @@ onMounted(() => {
       type: 'doughnut',
       data: {
         datasets: [{
-          data: [67, 33],
+          data: [progressRate.value, 100 - progressRate.value],
           backgroundColor: ['#22c55e', '#e5e7eb'],
           borderWidth: 0,
         }],
@@ -252,6 +253,7 @@ const loadProjectDetail = async () => {
     form.client = data.partners
     form.description = data.description
     form.budget = data.predictedCost ?? 0
+    progressRate.value = data.progressRate ?? 0
 
   } catch (e) {
     console.error('프로젝트 상세 조회 실패', e)
