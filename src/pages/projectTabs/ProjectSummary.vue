@@ -81,7 +81,7 @@
           <div class="progress-container">
             <div class="canvas-half">
               <canvas ref="progressChart"></canvas>
-              <div class="percent">67%</div>
+              <div class="percent">{{ progressRate }}%</div>
             </div>
           </div>
         </div>
@@ -136,10 +136,24 @@
       <div class="schedule-box">
         <h4>다음 일정 요약</h4>
         <ul>
-          <li>마일스톤: 로그 수집 완료 (D-5)</li>
-          <li>이벤트: 운영 배포 (06.25)</li>
-          <li>회의: 장애 대응 리뷰 (06.20)</li>
-          <li>이벤트: 운영 배포 (06.25)</li>
+          <li v-if="isUpcomingLoading">
+            일정 불러오는 중...
+          </li>
+
+          <li v-else-if="upcomingEvents.length === 0">
+            예정된 일정이 없습니다.
+          </li>
+
+          <li
+              v-else
+              v-for="event in upcomingEvents"
+              :key="event.eventId"
+          >
+            {{ event.label }} · {{ event.title }}
+            <span class="date">
+              ({{ formatDDay(event.dDay) }})
+            </span>
+          </li>
         </ul>
       </div>
     </div>
@@ -148,26 +162,42 @@
 </template>
 
 <script setup lang="ts">
+/* =======================
+ * imports & setup
+ * ======================= */
 import { onMounted, ref, reactive, watch, toRefs } from 'vue'
 import { useRoute } from 'vue-router'
 import { Chart, ArcElement, Tooltip, DoughnutController } from 'chart.js'
+
 import { fetchProjectDetail, updateProject } from '@/api/project'
+import { getUpcomingProjectEvents } from '@/api/calendar'
 
 Chart.register(ArcElement, Tooltip, DoughnutController)
 
 const route = useRoute()
 const projectId = Number(route.params.projectId)
 
-const progressChart = ref<HTMLCanvasElement | null>(null)
-const riskChart = ref<HTMLCanvasElement | null>(null)
+/* =======================
+ * props
+ * ======================= */
 const props = defineProps({
   isEditing: {
     type: Boolean,
     default: false
   }
 })
-
 const { isEditing } = toRefs(props)
+
+/* =======================
+ * refs & state
+ * ======================= */
+const progressChart = ref<HTMLCanvasElement | null>(null)
+const riskChart = ref<HTMLCanvasElement | null>(null)
+
+const progressRate = ref(0)
+
+const upcomingEvents = ref<any[]>([])
+const isUpcomingLoading = ref(false)
 
 const form = reactive({
   projectName: '',
@@ -180,68 +210,84 @@ const form = reactive({
   budget: 0
 })
 
-// 예산 숫자를 한글 읽기로 변환 (예: 1억 8천만 원)
-const convertToKoreanWon = (num: number) => {
-  if (!num) return '0원';
-  const won = num / 100000000;
-  return won >= 1 ? `${won.toLocaleString(undefined, { maximumFractionDigits: 1 })}억 원` : `${(num / 10000).toLocaleString()}만 원`;
+/* =======================
+ * utils
+ * ======================= */
+const formatDDay = (dDay: number) => {
+  if (dDay === 0) return 'D-Day'
+  if (dDay > 0) return `D+${dDay}`
+  return `D${dDay}`
 }
 
-onMounted(() => {
-  if (progressChart.value) {
-    new Chart(progressChart.value, {
-      type: 'doughnut',
-      data: {
-        datasets: [{
-          data: [67, 33],
-          backgroundColor: ['#22c55e', '#e5e7eb'],
-          borderWidth: 0,
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        rotation: -90,
-        circumference: 180,
-        cutout: '80%',
-        plugins: { tooltip: { enabled: false } },
-      },
-    })
-  }
+const convertToKoreanWon = (num: number) => {
+  if (!num) return '0원'
+  const won = num / 100000000
+  return won >= 1
+      ? `${won.toLocaleString(undefined, { maximumFractionDigits: 1 })}억 원`
+      : `${(num / 10000).toLocaleString()}만 원`
+}
 
-  if (riskChart.value) {
-    new Chart(riskChart.value, {
-      type: 'doughnut',
-      data: {
-        datasets: [{
-          data: [2, 3, 2],
-          backgroundColor: ['#ef4444', '#3b82f6', '#facc15'],
-          borderWidth: 0,
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '70%',
-        plugins: { tooltip: {
-            enabled: true,
-            displayColors: false,
-            callbacks: {
-              label: function(context) {
-                return context.raw + '개';
-              }
-            }
-          },
+/* =======================
+ * chart init
+ * ======================= */
+const initProgressChart = () => {
+  if (!progressChart.value) return
+
+  new Chart(progressChart.value, {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [progressRate.value, 100 - progressRate.value],
+        backgroundColor: ['#22c55e', '#e5e7eb'],
+        borderWidth: 0,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      rotation: -90,
+      circumference: 180,
+      cutout: '80%',
+      plugins: { tooltip: { enabled: false } },
+    },
+  })
+}
+
+const initRiskChart = () => {
+  if (!riskChart.value) return
+
+  new Chart(riskChart.value, {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [2, 3, 2],
+        backgroundColor: ['#ef4444', '#3b82f6', '#facc15'],
+        borderWidth: 0,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '70%',
+      plugins: {
+        tooltip: {
+          enabled: true,
+          displayColors: false,
+          callbacks: {
+            label: (context) => `${context.raw}개`
+          }
         },
       },
-    })
-  }
-})
+    },
+  })
+}
 
+/* =======================
+ * api calls
+ * ======================= */
 const loadProjectDetail = async () => {
   try {
     const res = await fetchProjectDetail(projectId)
-
     const data = res.data
 
     form.projectName = data.projectName
@@ -252,41 +298,61 @@ const loadProjectDetail = async () => {
     form.client = data.partners
     form.description = data.description
     form.budget = data.predictedCost ?? 0
-
+    progressRate.value = data.progressRate ?? 0
   } catch (e) {
     console.error('프로젝트 상세 조회 실패', e)
   }
 }
 
-watch(
-    isEditing,
-    async (now, prev) => {
-      if (prev === true && now === false) {
-        try {
-          const payload = {
-            projectId: projectId,
-            projectName: form.projectName,
-            projectStatus: form.status,
-            projectType: form.type,
-            startDate: form.startDate,
-            endDate: form.endDate,
-            partners: form.client,
-            description: form.description,
-            predictedCost: form.budget
-          }
+const loadUpcomingProjectEvents = async () => {
+  isUpcomingLoading.value = true
+  try {
+    const res = await getUpcomingProjectEvents(projectId, 3)
+    upcomingEvents.value = res.data.data?.items ?? []
+  } catch (e) {
+    console.error('다가오는 일정 조회 실패', e)
+    upcomingEvents.value = []
+  } finally {
+    isUpcomingLoading.value = false
+  }
+}
 
-          await updateProject(projectId, payload)
-          alert('프로젝트가 수정되었습니다.')
-        } catch (e) {
-          console.error('프로젝트 수정 실패', e)
-          alert('프로젝트 수정에 실패했습니다.')
-        }
+/* =======================
+ * watchers
+ * ======================= */
+watch(isEditing, async (now, prev) => {
+  if (prev === true && now === false) {
+    try {
+      const payload = {
+        projectId,
+        projectName: form.projectName,
+        projectStatus: form.status,
+        projectType: form.type,
+        startDate: form.startDate,
+        endDate: form.endDate,
+        partners: form.client,
+        description: form.description,
+        predictedCost: form.budget
       }
-    }
-)
 
+      await updateProject(projectId, payload)
+      alert('프로젝트가 수정되었습니다.')
+    } catch (e) {
+      console.error('프로젝트 수정 실패', e)
+      alert('프로젝트 수정에 실패했습니다.')
+    }
+  }
+})
+
+/* =======================
+ * lifecycle
+ * ======================= */
 onMounted(() => {
+  initProgressChart()
+  initRiskChart()
+
   loadProjectDetail()
+  loadUpcomingProjectEvents()
 })
 </script>
 

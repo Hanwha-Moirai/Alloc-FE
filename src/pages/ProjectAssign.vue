@@ -1,7 +1,7 @@
 <template>
   <div class="recommend-result-page">
     <div class="page-header">
-      <h1 class="page-title">프로젝트 적합한 인재 추천</h1>
+      <h1 class="page-title recommend-title">프로젝트 적합한 인재 추천</h1>
       <p class="page-subtitle">
         추천 지표를 설정하고 적용 버튼을 눌러 인재를 조회하세요.
       </p>
@@ -317,6 +317,24 @@ const goToProjectMembers = () => {
 /* 헤더 */
 .page-header { margin-bottom: 24px; }
 .page-title { font-size: 24px; font-weight: 700; margin: 0; }
+.recommend-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  position: relative;
+  padding-left: 10px;
+}
+
+.recommend-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  width: 3px;
+  height: 18px;
+  background: #4ab8d8;
+  border-radius: 2px;
+}
 .page-subtitle { color: #64748b; font-size: 14px; }
 .job-header td {
   background: #f8fafc;

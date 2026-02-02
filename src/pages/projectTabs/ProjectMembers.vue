@@ -183,9 +183,12 @@
     </div>
 
     <!-- 인재 추천 로딩 모달 -->
-    <RecommendModal
+    <LoadingModal
         v-if="showRecommendModal"
-        @close="showRecommendModal = false"
+        title="인재 추천 중"
+        message="프로젝트에 적합한 인재를 분석하고 있습니다."
+        icon-src="/loading.gif"
+        :closable="false"
     />
 
   </div>
@@ -194,7 +197,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import RecommendModal from '@/components/common/RecommendModal.vue';
+import LoadingModal from '@/components/common/LoadingModal.vue';
 import { fetchProjectDetail } from '@/api/project';
 import {
   fetchProjectMembers,

@@ -1,18 +1,48 @@
 <template>
-  <div class="modal-overlay" @click.self="$emit('close')">
+  <div class="modal-overlay" @click.self="closable && emitClose()">
     <div class="modal-content">
-      <button class="close-x" @click="$emit('close')">×</button>
+      <button
+          v-if="closable"
+          class="close-x"
+          @click="emitClose"
+      >
+        ×
+      </button>
 
       <div class="loading-icon">
-        <img src="/recommend.gif" alt="추천 중..." class="gif-img" />
+        <img :src="iconSrc" :alt="title" class="gif-img" />
       </div>
 
-      <h2 class="modal-title">인재 추천중</h2>
-      <p class="modal-message">프로젝트에 적합한 인재를 추천중입니다.</p>
-
+      <h2 class="modal-title">{{ title }}</h2>
+      <p class="modal-message">{{ message }}</p>
     </div>
   </div>
 </template>
+
+<script setup>
+defineProps({
+  title: {
+    type: String,
+    required: true
+  },
+  message: {
+    type: String,
+    required: true
+  },
+  iconSrc: {
+    type: String,
+    default: '/loading.gif'
+  },
+  closable: {
+    type: Boolean,
+    default: false
+  }
+})
+
+const emit = defineEmits(['close'])
+const emitClose = () => emit('close')
+</script>
+
 
 <style scoped>
 .modal-overlay {
