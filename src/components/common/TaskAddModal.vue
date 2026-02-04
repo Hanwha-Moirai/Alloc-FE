@@ -142,7 +142,6 @@ const handleSubmit = () => {
   }
 
   emit('add', { ...newTask })
-  close()
 }
 </script>
 
