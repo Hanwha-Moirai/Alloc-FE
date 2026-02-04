@@ -84,15 +84,6 @@
         @create="handleCreateDoc"
     />
 
-    <!-- 리스크 분석 로딩 모달 -->
-    <LoadingModal
-        v-if="showRiskModal"
-        title="리스크 분석 중"
-        message="프로젝트 일정 및 이슈를 기반으로 리스크를 분석 중입니다."
-        icon-src="/loading.gif"
-        :closable="false"
-    />
-
   </div>
 </template>
 
@@ -104,10 +95,10 @@ import TaskAddModal from '@/components/common/TaskAddModal.vue'
 import TaskFilterDrawer from '@/components/common/TaskFilterDrawer.vue'
 import MilestoneAddModal from '@/components/common/MilestoneAddModal.vue'
 import DocCreateModal from '@/components/common/DocCreateModal.vue'
-import LoadingModal from '@/components/common/LoadingModal.vue'
 
 import { createMilestone, createTask, getGanttMilestones } from '@/api/gantt'
 import { getAssignedMembers, fetchProjectList } from '@/api/project';
+import { createRiskReport } from '@/api/risk';
 
 const route = useRoute()
 const router = useRouter()
@@ -122,7 +113,6 @@ const isEditing = ref(false)
 const isFilterOpen = ref(false)
 const milestoneList = ref<any[]>([])
 const myProjectList = ref<{ id: number; name: string }[]>([])
-const showRiskModal = ref(false)
 
 // URL에 'recommend'가 포함되어 있으면 true를 반환하여 template의 UI를 숨김
 const isRecommendPage = computed(() => {
@@ -278,24 +268,43 @@ const handleCreateDoc = (data: any) => {
   console.log('생성 데이터:', data)
 }
 
+const formatDate = (value: Date) => {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getCurrentWeekRange = () => {
+  const now = new Date();
+  const day = now.getDay(); // 0 = Sun, 1 = Mon
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + diffToMonday);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  return {
+    weekStart: formatDate(monday),
+    weekEnd: formatDate(sunday),
+  };
+};
+
 const handleCreateRisk = async () => {
-  showRiskModal.value = true
-
-  try {
-    // TODO: 리스크 분석 API 연결
-    // await createRiskAnalysis(projectId)
-
-    // UX 확인용 임시 딜레이
-    await new Promise(resolve => setTimeout(resolve, 1500))
-
-    // 분석 완료 후 리스크 탭으로 이동
-    router.push(`/projects/${projectId}/risk`)
-  } catch (e) {
-    console.error('리스크 분석 실패', e)
-  } finally {
-    showRiskModal.value = false
+  if (!projectId) {
+    alert('프로젝트 ID가 없습니다.');
+    return;
   }
-}
+  try {
+    const { weekStart, weekEnd } = getCurrentWeekRange();
+    const payload = { week_start: weekStart, week_end: weekEnd };
+    await createRiskReport(projectId, payload);
+    alert('리스크 분석이 생성되었습니다.');
+    refreshKey.value++;
+  } catch (error: any) {
+    console.error('리스크 분석 생성 실패:', error);
+    alert(error.response?.data?.message || '리스크 분석 생성에 실패했습니다.');
+  }
+};
 
 // --- Navigation ---
 const goTab = (tab: string) => {

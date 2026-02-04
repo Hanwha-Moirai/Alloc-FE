@@ -35,5 +35,5 @@ export const deleteAllReadNotifications = () => {
  * SSE는 axios를 통하지 않고 EventSource 객체를 사용해야 하므로 URL만 정의
  */
 export const getNotificationSubscribeUrl = () => {
-    return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'}/api/notifications/stream`
+    return '/api/notifications/stream'
 }
