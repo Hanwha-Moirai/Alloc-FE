@@ -169,7 +169,7 @@ import { onMounted, ref, reactive, watch, toRefs } from 'vue'
 import { useRoute } from 'vue-router'
 import { Chart, ArcElement, Tooltip, DoughnutController } from 'chart.js'
 
-import { fetchProjectDetail, updateProject } from '@/api/project'
+import { fetchProjectDetail, fetchProjectAchievementRate, updateProject } from '@/api/project'
 import { getUpcomingProjectEvents } from '@/api/calendar'
 
 Chart.register(ArcElement, Tooltip, DoughnutController)
@@ -192,6 +192,7 @@ const { isEditing } = toRefs(props)
  * refs & state
  * ======================= */
 const progressChart = ref<HTMLCanvasElement | null>(null)
+let progressChartInstance: Chart | null = null
 const riskChart = ref<HTMLCanvasElement | null>(null)
 
 const progressRate = ref(0)
@@ -233,7 +234,7 @@ const convertToKoreanWon = (num: number) => {
 const initProgressChart = () => {
   if (!progressChart.value) return
 
-  new Chart(progressChart.value, {
+  progressChartInstance = new Chart(progressChart.value, {
     type: 'doughnut',
     data: {
       datasets: [{
@@ -251,6 +252,14 @@ const initProgressChart = () => {
       plugins: { tooltip: { enabled: false } },
     },
   })
+}
+
+const updateProgressChart = () => {
+  if (!progressChartInstance) return
+  const dataset = progressChartInstance.data.datasets?.[0]
+  if (!dataset) return
+  dataset.data = [progressRate.value, 100 - progressRate.value]
+  progressChartInstance.update()
 }
 
 const initRiskChart = () => {
@@ -298,9 +307,21 @@ const loadProjectDetail = async () => {
     form.client = data.partners
     form.description = data.description
     form.budget = data.predictedCost ?? 0
-    progressRate.value = data.progressRate ?? 0
   } catch (e) {
     console.error('프로젝트 상세 조회 실패', e)
+  }
+}
+
+const loadProjectProgressRate = async () => {
+  try {
+    const rateRes = await fetchProjectAchievementRate(projectId)
+    const rawRate = rateRes.data?.data
+    progressRate.value = Number.isFinite(rawRate) ? Math.round(rawRate) : 0
+    updateProgressChart()
+  } catch (e) {
+    console.error('프로젝트 진행률 조회 실패', e)
+    progressRate.value = 0
+    updateProgressChart()
   }
 }
 
@@ -352,6 +373,7 @@ onMounted(() => {
   initRiskChart()
 
   loadProjectDetail()
+  loadProjectProgressRate()
   loadUpcomingProjectEvents()
 })
 </script>

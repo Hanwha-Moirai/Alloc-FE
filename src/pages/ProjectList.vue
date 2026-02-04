@@ -130,7 +130,7 @@ const loadProjects = async () => {
 
             return {
               ...project,
-              progressRate: Number.isFinite(rawRate) ? rawRate : 0
+              progressRate: Number.isFinite(rawRate) ? Math.round(rawRate) : 0
             }
           } catch (err) {
             return { ...project, progressRate: 0 }
