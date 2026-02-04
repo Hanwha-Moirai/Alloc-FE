@@ -30,7 +30,7 @@
               <th>이름</th>
               <th>직군</th>
               <th>주력 기술</th>
-              <th class="text-right">적합도</th>
+              <th>적합도</th>
             </tr>
             </thead>
             <tbody>
@@ -134,7 +134,7 @@ const handleSave = async () => {
   try {
     const payload = {
       projectId: props.projectId,
-      userIds: selectedIds.value // API 요구 형식에 맞춰 수정 필요
+      userIds: selectedIds.value
     }
     await submitAssignment(props.projectId, payload)
     alert('인원이 성공적으로 추가되었습니다.')
@@ -194,7 +194,7 @@ onMounted(loadCandidates)
   border-bottom: 1px solid #f1f5f9;
 }
 
-.candidate-table td { padding: 16px 12px; vertical-align: middle; text-align: center; transition: all 0.2s; }
+.candidate-table td { padding: 10px; vertical-align: middle; text-align: center; transition: all 0.2s; font-size: 13px; }
 .candidate-table tr { cursor: pointer; }
 .candidate-table tr:hover td { background: #f8fafc; }
 .candidate-table tr.is-selected td { background: #f0f7ff; }
@@ -206,12 +206,16 @@ onMounted(loadCandidates)
   display: flex; align-items: center; justify-content: center;
   font-size: 0.75rem; font-weight: 700; color: #475569;
 }
-.user-name { font-weight: 600; color: #334155; }
+.user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
 
 /* 배지 및 태그 */
 .badge-job {
-  background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 6px;
-  font-size: 0.75rem; font-weight: 500;
+  background: #f1f5f9; color: #475569; padding: 3px 8px; border-radius: 6px;
+  font-size: 13px; font-weight: 500;
 }
 .score-tag {
   font-weight: 700; font-size: 0.875rem;
