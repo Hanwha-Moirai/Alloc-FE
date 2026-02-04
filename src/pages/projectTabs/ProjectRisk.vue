@@ -35,7 +35,7 @@
             </div>
           </div>
           <p class="rationale-preview">{{ report.rationale }}</p>
-          <button class="view-detail-btn" @click="selectedReport = report; isModalOpen = true">
+          <button class="view-detail-btn" @click="openDetail(report)">
             상세 분석 결과 보기
           </button>
         </div>
@@ -51,8 +51,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from "vue";
+import { computed, ref, onMounted, watch } from "vue";
+import { useRoute } from "vue-router";
 import RiskDetailModal from "@/components/common/RiskDetailModal.vue";
+import { fetchRiskReportDetail, fetchRiskReports } from "@/api/risk";
+
+const props = defineProps({
+  refreshTrigger: {
+    type: Number,
+    default: 0,
+  },
+});
+
+const route = useRoute();
+const projectId = Number(route.params.projectId);
 
 const reports = ref<any[]>([]);
 const isLoading = ref(true);
@@ -74,17 +86,51 @@ const categorizedReports = computed(() => {
   };
 });
 
-onMounted(() => {
-  setTimeout(() => {
-    reports.value = [
-      { report_id: 104, likelihood: 4, impact: 3, summary: "외부 벤더 응답 지연으로 인한 통합 테스트 일정 지연", rationale: "핵심 API 지연 보고됨", generated_at: "2026-01-26T17:53:58" },
-      { report_id: 103, likelihood: 5, impact: 4, summary: "테스트 서버 인프라 다운 이슈", rationale: "Qdrant 연결 상태 불안정", generated_at: "2026-01-26T17:50:00" },
-      { report_id: 102, likelihood: 3, impact: 2, summary: "API 스펙 변경으로 인한 프론트엔드 재작업", rationale: "스키마 변경 로그 확인", generated_at: "2026-01-25T14:30:00" },
-      { report_id: 101, likelihood: 2, impact: 2, summary: "리소스 부족: 핵심 개발자 병가", rationale: "회의록 인용", generated_at: "2026-01-24T09:00:00" },
-    ];
+const loadReports = async () => {
+  isLoading.value = true;
+  if (!projectId) {
+    console.error("Missing projectId in route params");
+    reports.value = [];
     isLoading.value = false;
-  }, 500);
+    return;
+  }
+  try {
+    const { data } = await fetchRiskReports(projectId);
+    const items = Array.isArray(data?.items) ? data.items : [];
+    reports.value = items.map((item: any) => ({
+      ...item,
+      rationale: item.rationale ?? "",
+    }));
+  } catch (err) {
+    console.error("Failed to load risk reports", err);
+    reports.value = [];
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const openDetail = async (report: any) => {
+  try {
+    const { data } = await fetchRiskReportDetail(projectId, report.report_id);
+    selectedReport.value = data;
+  } catch (err) {
+    console.error("Failed to load risk report detail", err);
+    selectedReport.value = report;
+  } finally {
+    isModalOpen.value = true;
+  }
+};
+
+onMounted(() => {
+  loadReports();
 });
+
+watch(
+  () => props.refreshTrigger,
+  () => {
+    loadReports();
+  }
+);
 
 const getStatusColor = (score: number) => {
   if (score >= 12) return 'critical';

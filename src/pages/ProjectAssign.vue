@@ -28,7 +28,7 @@
           <input
               type="range"
               v-model="filters.techMatch"
-              min="1"
+              min="0"
               max="100"
               class="custom-slider"
           />
@@ -42,7 +42,7 @@
           <input
               type="range"
               v-model="filters.expMatch"
-              min="1"
+              min="0"
               max="100"
               class="custom-slider"
           />
@@ -56,7 +56,7 @@
           <input
               type="range"
               v-model="filters.availability"
-              min="1"
+              min="0"
               max="100"
               class="custom-slider"
           />

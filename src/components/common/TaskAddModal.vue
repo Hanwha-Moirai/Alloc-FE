@@ -8,6 +8,20 @@
 
       <div class="content">
         <div class="input-section">
+          <label>마일스톤</label>
+          <select v-model="newTask.milestoneId" class="full-input select-input">
+            <option value="" disabled>마일스톤 선택</option>
+            <option
+                v-for="ms in milestoneList"
+                :key="ms.milestoneId"
+                :value="ms.milestoneId"
+            >
+              {{ ms.milestoneName }}
+            </option>
+          </select>
+        </div>
+
+        <div class="input-section">
           <label>태스크 제목</label>
           <input
               type="text"
@@ -57,20 +71,6 @@
         </div>
 
         <div class="input-section">
-          <label>마일스톤</label>
-          <select v-model="newTask.milestoneId" class="full-input select-input">
-            <option value="" disabled>마일스톤 선택</option>
-            <option
-                v-for="ms in milestoneList"
-                :key="ms.milestoneId"
-                :value="ms.milestoneId"
-            >
-              {{ ms.milestoneName }}
-            </option>
-          </select>
-        </div>
-
-        <div class="input-section">
           <label>설명</label>
           <textarea
               v-model="newTask.description"
@@ -89,7 +89,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, watch } from 'vue'
 
 const props = defineProps<{
   milestoneList: any[],
@@ -110,6 +110,29 @@ const newTask = reactive({
   status: 'TO_DO'
 })
 
+const toDateInputValue = (value: unknown) => {
+  if (!value) return ''
+  if (typeof value !== 'string') return ''
+  if (value.includes('T')) return value.split('T')[0]
+  if (value.includes('.')) return value.replace(/\./g, '-')
+  return value
+}
+
+watch(
+    () => [newTask.milestoneId, props.milestoneList],
+    ([milestoneId]) => {
+      if (!milestoneId) return
+      const selected = props.milestoneList?.find(
+          (ms: any) => String(ms.milestoneId) === String(milestoneId)
+      )
+      if (!selected) return
+      const start = toDateInputValue(selected.startDate)
+      const end = toDateInputValue(selected.endDate)
+      if (start) newTask.startDate = start
+      if (end) newTask.endDate = end
+    }
+)
+
 const close = () => emit('close')
 
 const handleSubmit = () => {
@@ -119,7 +142,6 @@ const handleSubmit = () => {
   }
 
   emit('add', { ...newTask })
-  close()
 }
 </script>
 

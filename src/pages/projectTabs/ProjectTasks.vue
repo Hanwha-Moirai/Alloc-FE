@@ -238,6 +238,7 @@ watch(
     () => [props.refreshTrigger, props.taskFilters],
     () => {
       fetchTasks()
+      fetchMilestones()
     },
     { deep: true }
 );
