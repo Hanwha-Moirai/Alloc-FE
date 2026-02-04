@@ -258,6 +258,7 @@ const handleAddMilestone = async (newMilestone: any) => {
       alert('마일스톤이 등록되었습니다.')
       showMilestoneAddModal.value = false
 
+      await fetchMilestones()
       refreshKey.value++
     } else {
       alert(response.data?.message || '등록에 실패했습니다.')
