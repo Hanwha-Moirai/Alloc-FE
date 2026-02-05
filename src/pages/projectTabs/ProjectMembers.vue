@@ -39,7 +39,6 @@
             ✨ 인재 추천받기
           </button>
           <button v-if="myRole === 'PM'" class="btn-outline" @click="onAddMember">인원 추가</button>
-          <button v-if="myRole === 'PM'" class="btn-primary">저장</button>
         </div>
       </div>
 
@@ -314,15 +313,9 @@ const handleRecommend = () => {
 }
 
 // 인원 추가 모달
-const onAddMember = async () => {
-  try {
-    await addAdditionalCandidates(projectId); // 백엔드 호출
-    showAddMemberModal.value = true;          // 성공 시 모달 오픈
-  } catch (error) {
-    console.error("후보 생성 실패:", error);
-    alert("새로운 후보를 생성하는 데 실패했습니다.");
-  }
-}
+const onAddMember = () => {
+  showAddMemberModal.value = true;
+};
 
 // 목록 새로고침 핸들러
 const handleAddMemberSuccess = async () => {

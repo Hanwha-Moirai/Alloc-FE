@@ -133,16 +133,31 @@ const handleSave = async () => {
   submitting.value = true
   try {
     const payload = {
-      projectId: props.projectId,
       userIds: selectedIds.value
     }
     await submitAssignment(props.projectId, payload)
     alert('인원이 성공적으로 추가되었습니다.')
     emit('success')
     emit('close')
-  } catch (error) {
-    console.error('저장 실패:', error)
-    alert('저장에 실패했습니다.')
+  } catch (error: any) {
+    console.error('저장 실패 상세:', error)
+
+    // 1. 서버가 보낸 구체적인 에러 메시지 찾기
+    const serverMessage = error.response?.data?.message
+        || error.response?.data
+        || '알 수 없는 서버 오류가 발생했습니다.';
+
+    // 2. 메시지에 따라 사용자 친화적으로 변환 (선택 사항)
+    let alertMsg = '';
+    if (serverMessage.includes('Must select exactly')) {
+      alertMsg = `⚠️ 인원 수 부족\n\n${serverMessage}\n\n해당 직군의 인원을 요구사항에 맞게 선택해야 합니다.`;
+    } else if (serverMessage.includes('No candidates selected')) {
+      alertMsg = `⚠️ 직군 선택 누락\n\n${serverMessage}\n\n필수 직군에 최소 한 명 이상의 후보자를 지정하세요.`;
+    } else {
+      alertMsg = `저장 실패: ${serverMessage}`;
+    }
+
+    alert(alertMsg);
   } finally {
     submitting.value = false
   }
