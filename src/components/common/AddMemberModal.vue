@@ -44,7 +44,7 @@
               </td>
               <td>
                 <div class="user-info">
-                  <div class="user-avatar">{{ m.userName.charAt(0) }}</div>
+                  <img src="/user.png" class="user-icon" />
                   <span class="user-name">{{ m.userName }}</span>
                 </div>
               </td>
@@ -201,10 +201,13 @@ onMounted(loadCandidates)
 
 /* 사용자 아바타 커스텀 */
 .user-info { display: flex; align-items: center; gap: 12px; }
-.user-avatar {
-  width: 32px; height: 32px; background: #e2e8f0; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.75rem; font-weight: 700; color: #475569;
+.user-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 10px;
+  vertical-align: middle;
 }
 .user-name {
   font-size: 13px;
@@ -230,7 +233,7 @@ onMounted(loadCandidates)
   display: inline-flex; align-items: center; justify-content: center;
   transition: all 0.2s;
 }
-.custom-checkbox.checked { background: #3b82f6; border-color: #3b82f6; }
+.custom-checkbox.checked { background: #00bcd4; border-color: #00bcd4; }
 .check-mark {
   color: white; font-size: 12px; transform: scaleX(-1) rotate(-35deg);
   margin-bottom: 2px; font-weight: bold;
@@ -263,7 +266,7 @@ onMounted(loadCandidates)
 .btn-secondary {
   background: white; color: #475569; border: 1px solid #e2e8f0;
   padding: 10px 24px; border-radius: 4px; font-weight: 600; font-size: 0.875rem;
-  transition: all 0.2s;
+  transition: all 0.2s; cursor: pointer;
 }
 .btn-secondary:hover { background: #f1f5f9; }
 
