@@ -99,12 +99,17 @@ export const useNotificationStore = defineStore('notification', {
       if (eventSource) return
 
       const authStore = useAuthStore()
-      if (!authStore.isAuthenticated) return
+      if (!authStore.isAuthenticated) {
+        console.log('[SSE] connectSse skipped: not authenticated')
+        return
+      }
 
       const url = getNotificationSubscribeUrl()
+      console.log('[SSE] connecting to', url)
       eventSource = new EventSource(url, { withCredentials: true })
 
       eventSource.onopen = () => {
+        console.log('[SSE] connected')
         this.connected = true
         this.error = null
       }
@@ -130,6 +135,7 @@ export const useNotificationStore = defineStore('notification', {
       eventSource.addEventListener('PING', () => {})
 
       eventSource.onerror = () => {
+        console.log('[SSE] error/disconnected')
         this.connected = false
         this.error = new Error('SSE disconnected')
         if (eventSource) {

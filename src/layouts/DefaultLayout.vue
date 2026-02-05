@@ -14,7 +14,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, watch } from 'vue'
 import TopBar from '@/components/common/TopBar.vue'
 import Sidebar from '@/components/common/Sidebar.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -24,11 +24,25 @@ const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
 
 onMounted(() => {
+  console.log('[SSE] DefaultLayout mounted, isAuthenticated=', authStore.isAuthenticated)
   if (authStore.isAuthenticated) {
     notificationStore.loadUnreadCount()
     notificationStore.connectSse()
   }
 })
+
+watch(
+  () => authStore.isAuthenticated,
+  (isAuthed) => {
+    console.log('[SSE] authStore.isAuthenticated changed:', isAuthed)
+    if (isAuthed) {
+      notificationStore.loadUnreadCount()
+      notificationStore.connectSse()
+    } else {
+      notificationStore.disconnectSse()
+    }
+  }
+)
 
 onUnmounted(() => {
   notificationStore.disconnectSse()
