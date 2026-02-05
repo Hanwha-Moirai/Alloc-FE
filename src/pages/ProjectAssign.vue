@@ -280,27 +280,26 @@ onMounted(fetchAssignCandidates);
 const handleRegister = async () => {
   try {
     for (const job of assignments.value) {
-      const selected = job.candidates.filter((c: any) => c.isSelected);
+      const selected = job.candidates.filter(c => c.isSelected);
       if (selected.length !== job.requiredCount) {
         alert(`${job.jobName}은 ${job.requiredCount}명을 선택해야 합니다.`);
         return;
       }
     }
+    const selectedUserIds = assignments.value
+        .flatMap(job => job.candidates)
+        .filter(c => c.isSelected)
+        .map(c => c.userId);
 
-    const payload = {
-      projectId,
-      assignments: assignments.value.map(job => ({
-        jobId: job.jobId,
-        candidates: job.candidates
-            .filter((c: any) => c.isSelected)
-            .map((c: any) => ({
-              userId: c.userId,
-              fitnessScore: c.fitnessScore
-            }))
-      }))
-    };
+    if (selectedUserIds.length === 0) {
+      alert('선택된 인원이 없습니다.');
+      return;
+    }
 
-    await submitAssignment(projectId, payload);
+    await submitAssignment(projectId, {
+      userIds: selectedUserIds
+    });
+
     showRegisterModal.value = true;
   } catch (e) {
     console.error('인력 배치 확정 실패', e);

@@ -38,8 +38,7 @@
           >
             ✨ 인재 추천받기
           </button>
-          <button v-if="myRole === 'PM'" class="btn-outline">인원 추가</button>
-          <button v-if="myRole === 'PM'" class="btn-primary">저장</button>
+          <button v-if="myRole === 'PM'" class="btn-outline" @click="onAddMember">인원 추가</button>
         </div>
       </div>
 
@@ -191,6 +190,12 @@
         :closable="false"
     />
 
+    <AddMemberModal
+        v-if="showAddMemberModal"
+        :project-id="projectId"
+        @close="showAddMemberModal = false"
+        @success="handleAddMemberSuccess"
+    />
   </div>
 </template>
 
@@ -198,11 +203,13 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import LoadingModal from '@/components/common/LoadingModal.vue';
+import AddMemberModal from '@/components/common/AddMemberModal.vue'
 import { fetchProjectDetail } from '@/api/project';
 import {
   fetchProjectMembers,
   respondAssignment,
-  decideFinalAssignment
+  decideFinalAssignment,
+  addAdditionalCandidates
 } from '@/api/projectAssign';
 import { useAuthStore } from '@/stores/auth'
 
@@ -214,14 +221,12 @@ const myUserId = computed(() => authStore.userId)
 const router = useRouter();
 const route = useRoute();
 const projectId = route.params.projectId as string;
-console.log('myRole:', myRole.value)
-console.log('myUserId:', myUserId.value)
-
 
 // 상태 관리
 const projectStatus = ref('');
 const showRecommendModal = ref(false);
 const memberList = ref<any[]>([]);
+const showAddMemberModal = ref(false)
 
 const waitingCount = computed(() =>
     memberList.value.filter(m => m.requestStatus === 'REQUESTED').length
@@ -305,6 +310,17 @@ const handleRecommend = () => {
     showRecommendModal.value = false
     router.push(`/projects/${projectId}/assign`)
   }, 1500)
+}
+
+// 인원 추가 모달
+const onAddMember = () => {
+  showAddMemberModal.value = true;
+};
+
+// 목록 새로고침 핸들러
+const handleAddMemberSuccess = async () => {
+  await fetchMembers();            // 데이터 다시 불러오기
+  showAddMemberModal.value = false; // 모달 닫기
 }
 
 // 초기 로딩
