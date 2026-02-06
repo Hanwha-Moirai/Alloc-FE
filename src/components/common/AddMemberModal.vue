@@ -34,12 +34,17 @@
             </tr>
             </thead>
             <tbody>
-            <tr v-for="m in candidates" :key="m.userId"
-                :class="{ 'is-selected': selectedIds.includes(m.userId) }"
-                @click="toggleSelection(m.userId)">
+            <tr v-for="m in candidates"
+                :key="m.userId"
+                :class="{ 'is-selected': isSelected(m) }"
+                @click="toggleSelection(m)">
+
               <td class="text-center">
-                <div class="custom-checkbox" :class="{ 'checked': selectedIds.includes(m.userId) }">
-                  <div v-if="selectedIds.includes(m.userId)" class="check-mark">L</div>
+                <div class="custom-checkbox"
+                     :class="{ checked: isSelected(m) }">
+
+                  <div v-if="isSelected(m)" class="check-mark">L</div>
+
                 </div>
               </td>
               <td>
@@ -63,13 +68,13 @@
 
       <div class="modal-footer">
         <div class="selection-count">
-          선택됨 <strong>{{ selectedIds.length }}</strong>명
+          선택됨 <strong>{{ totalSelectedCount()}}</strong>명
         </div>
         <div class="footer-btns">
           <button class="btn-secondary" @click="$emit('close')">취소</button>
           <button
               class="btn-primary"
-              :disabled="selectedIds.length === 0 || submitting"
+              :disabled="totalSelectedCount() === 0 || submitting"
               @click="handleSave"
           >
             <span v-if="submitting" class="mini-loader"></span>
@@ -80,10 +85,13 @@
     </div>
   </div>
 </template>
-
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { fetchProjectAssignCandidates, submitAssignment } from '@/api/projectAssign'
+import {
+  fetchProjectAssignCandidates,
+  submitAssignment,
+  addAdditionalCandidates
+} from '@/api/projectAssign'
 
 const props = defineProps<{
   projectId: string | number
@@ -91,80 +99,133 @@ const props = defineProps<{
 
 const emit = defineEmits(['close', 'success'])
 
-const candidates = ref<any[]>([])
-const selectedIds = ref<number[]>([])
+const candidates = ref([])
+const selectedByJob = ref({})
 const loading = ref(false)
 const submitting = ref(false)
 
-// 데이터 불러오기
+const isAdditionalMode = ref(false)   // ⭐ 추가선발 모드
+
+// ==========================
+// 후보 조회
+// ==========================
 const loadCandidates = async () => {
+  loading.value = true
   try {
-    const res = await fetchProjectAssignCandidates(props.projectId);
+    const res = await fetchProjectAssignCandidates(props.projectId)
 
-    if (res.data && res.data.candidates) {
-      candidates.value = res.data.candidates;
-    } else {
-      candidates.value = Array.isArray(res.data) ? res.data : [];
-    }
-  } catch (error) {
-    console.error("후보 조회 실패:", error);
+    console.log("FULL RESPONSE", res)
+    console.log("DATA", res.data)
+
+    candidates.value = res.data?.candidates
+        ? [...res.data.candidates]
+        : []
+
+    // ⭐ 추가선발 모드 받기 (백엔드에서 내려줘야함)
+    isAdditionalMode.value = res.data?.additionalMode === true
+
+    console.log("ADDITIONAL MODE", isAdditionalMode.value)
+    console.log("FINAL CANDIDATES", candidates.value)
+
+  } catch (e) {
+    console.error(e)
+    candidates.value = []
+  } finally {
+    loading.value = false
   }
 }
 
-// 체크박스 토글
-const toggleSelection = (id: number) => {
-  const index = selectedIds.value.indexOf(id)
-  if (index > -1) {
-    selectedIds.value.splice(index, 1)
-  } else {
-    selectedIds.value.push(id)
-  }
+// ==========================
+// 선택 여부
+// ==========================
+const isSelected = (candidate) => {
+  const list = selectedByJob.value[candidate.jobId] || []
+  return list.includes(candidate.userId)
 }
-
-// 스코어별 색상 클래스 계산
 const getScoreClass = (score: number) => {
   if (score >= 80) return 'high';
   if (score >= 50) return 'mid';
   return 'low';
 }
+// ==========================
+// 선택 토글
+// ==========================
+const toggleSelection = (candidate) => {
 
-// 저장 실행
+  const jobId = candidate.jobId
+  const userId = candidate.userId
+
+  if (!selectedByJob.value[jobId]) {
+    selectedByJob.value[jobId] = []
+  }
+
+  const list = selectedByJob.value[jobId]
+  const idx = list.indexOf(userId)
+
+  if (idx > -1) list.splice(idx, 1)
+  else list.push(userId)
+}
+
+// ==========================
+// 총 선택 수
+// ==========================
+const totalSelectedCount = () => {
+  return Object.values(selectedByJob.value)
+      .reduce((sum, arr) => sum + arr.length, 0)
+}
+
+// ==========================
+// 저장
+// ==========================
 const handleSave = async () => {
+
   submitting.value = true
+
   try {
+
     const payload = {
-      userIds: selectedIds.value
+      assignments: Object.entries(selectedByJob.value)
+          .filter(([_, userIds]) => userIds && userIds.length > 0)
+          .map(([jobId, userIds]) => ({
+            jobId: Number(jobId),
+            candidates: userIds.map(id => ({ userId: id }))
+          })
+      )
     }
-    await submitAssignment(props.projectId, payload)
-    alert('인원이 성공적으로 추가되었습니다.')
-    emit('success')
-    emit('close')
-  } catch (error: any) {
-    console.error('저장 실패 상세:', error)
 
-    // 1. 서버가 보낸 구체적인 에러 메시지 찾기
-    const serverMessage = error.response?.data?.message
-        || error.response?.data
-        || '알 수 없는 서버 오류가 발생했습니다.';
+    console.log("SAVE PAYLOAD", payload)
 
-    // 2. 메시지에 따라 사용자 친화적으로 변환 (선택 사항)
-    let alertMsg = '';
-    if (serverMessage.includes('Must select exactly')) {
-      alertMsg = `⚠️ 인원 수 부족\n\n${serverMessage}\n\n해당 직군의 인원을 요구사항에 맞게 선택해야 합니다.`;
-    } else if (serverMessage.includes('No candidates selected')) {
-      alertMsg = `⚠️ 직군 선택 누락\n\n${serverMessage}\n\n필수 직군에 최소 한 명 이상의 후보자를 지정하세요.`;
+    if (isAdditionalMode.value) {
+      console.log(">>> ADDITIONAL SAVE")
+      await addAdditionalCandidates(props.projectId, payload)
     } else {
-      alertMsg = `저장 실패: ${serverMessage}`;
+      console.log(">>> INITIAL SAVE")
+      await submitAssignment(props.projectId, payload)
     }
 
-    alert(alertMsg);
+    alert("저장 완료")
+    emit("success")
+    emit("close")
+
+  } catch (e) {
+    console.error("SAVE ERROR", e)
   } finally {
     submitting.value = false
   }
 }
 
-onMounted(loadCandidates)
+onMounted(async () => {
+  try {
+    await addAdditionalCandidates(props.projectId)   // 먼저 생성
+  } catch(e) {
+    console.log("additional already exists or no shortage")
+  }
+
+  await loadCandidates()
+})
+
 </script>
+
 
 <style scoped>
 /* 폰트 및 변수 */
