@@ -214,7 +214,16 @@ const handleSave = async () => {
   }
 }
 
-onMounted(loadCandidates)
+onMounted(async () => {
+  try {
+    await addAdditionalCandidates(props.projectId)   // 먼저 생성
+  } catch(e) {
+    console.log("additional already exists or no shortage")
+  }
+
+  await loadCandidates()
+})
+
 </script>
 
 
