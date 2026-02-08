@@ -41,16 +41,22 @@
         <tr>
           <th width="40"><input type="checkbox" /></th>
           <th>문서명 <span class="sort-icon">↓</span></th>
+          <th>업로드 상태</th>
           <th>업로드 날짜</th>
           <th>요약</th>
         </tr>
         </thead>
         <tbody>
-        <tr v-if="filteredDocs.length === 0"><td colspan="4" style="text-align:center; padding: 40px;">데이터가 없습니다.</td></tr>
+        <tr v-if="filteredDocs.length === 0"><td colspan="5" style="text-align:center; padding: 40px;">데이터가 없습니다.</td></tr>
 
         <tr v-for="doc in pagedDocs" :key="doc.id">
           <td><input type="checkbox" /></td>
           <td class="doc-name">{{ doc.name }}</td>
+          <td>
+            <span class="status-pill" :class="statusClass(doc.status)">
+              {{ statusLabel(doc.status) }}
+            </span>
+          </td>
           <td class="date-text">{{ doc.uploadedAt }}</td>
           <td class="summary-text">{{ doc.summary }}</td>
         </tr>
@@ -115,13 +121,15 @@ const documents = ref([
     id: 1,
     name: 'software_development_process_guide.pdf',
     uploadedAt: '2026-02-07',
-    summary: '프로젝트 관리 및 개발 프로세스 개요 문서.'
+    summary: '프로젝트 관리 및 개발 프로세스 개요 문서.',
+    status: 'SUCCESS'
   },
   {
     id: 2,
     name: 'ISO31000_sample.pdf',
     uploadedAt: '2026-02-08',
-    summary: '리스크 관리 기본 정의 및 프로세스 요약.'
+    summary: '리스크 관리 기본 정의 및 프로세스 요약.',
+    status: 'PROCESSING'
   }
 ]);
 
@@ -170,92 +178,96 @@ const handleUpload = async (event) => {
     loading.value = false;
   }
 };
+
+const statusLabel = (status) => {
+  if (status === 'SUCCESS') return '성공';
+  if (status === 'FAILED') return '실패';
+  return '처리중';
+};
+
+const statusClass = (status) => {
+  if (status === 'SUCCESS') return 'success';
+  if (status === 'FAILED') return 'failed';
+  return 'processing';
+};
 </script>
 
 <style scoped>
 .admin-page-container {
-  padding: 24px 30px;
-  background-color: #f9fafb;
-  min-height: 100vh;
-}
-
-.page-header {
   display: flex;
-  align-items: center;
-  margin-bottom: 20px;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .page-title {
-  font-size: 20px;
-  font-weight: bold;
-  color: #111827;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
 }
 
 .control-panel {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 18px;
-  gap: 10px;
-}
-
-.tab-group {
-  display: flex;
-  gap: 8px;
+  align-items: flex-end;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .tab-item {
-  padding: 8px 16px;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
-  background-color: #fff;
-  font-size: 13px;
-  color: #6b7280;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+  background: none;
+  border: none;
   cursor: pointer;
+  position: relative;
 }
 
 .tab-item.active {
-  background-color: #eef2ff;
-  color: #1d4ed8;
-  border-color: #c7d2fe;
-  font-weight: 600;
+  color: #001D6C;
+}
+
+.tab-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: #001D6C;
 }
 
 .action-group {
   display: flex;
-  align-items: center;
   gap: 12px;
+  margin-bottom: 8px;
 }
 
 .search-bar {
+  position: relative;
   display: flex;
   align-items: center;
-  background-color: #fff;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  gap: 6px;
 }
 
 .search-bar input {
-  border: none;
-  outline: none;
+  padding: 8px 12px 8px 36px;
+  border: 1px solid #e2e8f0;
+  background-color: white;
   font-size: 13px;
-  color: #374151;
   width: 200px;
 }
 
 .add-btn {
-  background-color: #111827;
-  color: #fff;
+  background-color: #4ab8d8;
+  color: white;
   border: none;
-  border-radius: 10px;
-  padding: 8px 14px;
+  padding: 8px 16px;
   font-size: 13px;
+  cursor: pointer;
   display: flex;
   align-items: center;
   gap: 6px;
-  cursor: pointer;
 }
 
 .plus-icon {
@@ -303,6 +315,30 @@ const handleUpload = async (event) => {
 
 .summary-text {
   color: #374151;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-pill.success {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-pill.processing {
+  background: #e3f2fd;
+  color: #1e88e5;
+}
+
+.status-pill.failed {
+  background: #ffebee;
+  color: #d32f2f;
 }
 
 .pagination {
