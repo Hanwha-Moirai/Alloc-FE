@@ -36,6 +36,15 @@
           <button class="add-btn btn-gradient" @click="showDocModal = true">+ 주간보고/회의록 생성</button>
         </div>
 
+        <div v-if="isActive('risk')">
+          <button
+              class="add-btn btn-gradient"
+              @click="handleCreateRisk"
+          >
+            + 리스크 분석 생성
+          </button>
+        </div>
+
       </div>
     </div>
 
@@ -75,6 +84,13 @@
         @create="handleCreateDoc"
     />
 
+    <LoadingModal
+        v-if="showRiskLoading"
+        title="리스크 분석 생성 중"
+        message="리스크 분석을 생성하고 있습니다. 잠시만 기다려 주세요."
+        icon-src="/loading.gif"
+    />
+
   </div>
 </template>
 
@@ -86,9 +102,11 @@ import TaskAddModal from '@/components/common/TaskAddModal.vue'
 import TaskFilterDrawer from '@/components/common/TaskFilterDrawer.vue'
 import MilestoneAddModal from '@/components/common/MilestoneAddModal.vue'
 import DocCreateModal from '@/components/common/DocCreateModal.vue'
+import LoadingModal from '@/components/common/LoadingModal.vue'
 
 import { createMilestone, createTask, getGanttMilestones } from '@/api/gantt'
 import { getAssignedMembers, fetchProjectList } from '@/api/project';
+import { createRiskReport } from '@/api/risk';
 
 const route = useRoute()
 const router = useRouter()
@@ -99,6 +117,7 @@ const memberList = ref([]);
 const showAddModal = ref(false)
 const showMilestoneAddModal = ref(false)
 const showDocModal = ref(false)
+const showRiskLoading = ref(false)
 const isEditing = ref(false)
 const isFilterOpen = ref(false)
 const milestoneList = ref<any[]>([])
@@ -257,6 +276,47 @@ const handleAddMilestone = async (newMilestone: any) => {
 const handleCreateDoc = (data: any) => {
   console.log('생성 데이터:', data)
 }
+
+const formatDate = (value: Date) => {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getCurrentWeekRange = () => {
+  const now = new Date();
+  const day = now.getDay(); // 0 = Sun, 1 = Mon
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + diffToMonday);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  return {
+    weekStart: formatDate(monday),
+    weekEnd: formatDate(sunday),
+  };
+};
+
+const handleCreateRisk = async () => {
+  if (!projectId) {
+    alert('프로젝트 ID가 없습니다.');
+    return;
+  }
+  try {
+    showRiskLoading.value = true;
+    const { weekStart, weekEnd } = getCurrentWeekRange();
+    const payload = { week_start: weekStart, week_end: weekEnd };
+    await createRiskReport(projectId, payload);
+    alert('리스크 분석이 생성되었습니다.');
+    refreshKey.value++;
+  } catch (error: any) {
+    console.error('리스크 분석 생성 실패:', error);
+    alert(error.response?.data?.message || '리스크 분석 생성에 실패했습니다.');
+  } finally {
+    showRiskLoading.value = false;
+  }
+};
 
 
 // --- Navigation ---
