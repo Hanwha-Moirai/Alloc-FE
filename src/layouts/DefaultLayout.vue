@@ -24,28 +24,26 @@ const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
 
 onMounted(() => {
-  console.log('[SSE] DefaultLayout mounted, isAuthenticated=', authStore.isAuthenticated)
   if (authStore.isAuthenticated) {
     notificationStore.loadUnreadCount()
-    notificationStore.connectSse()
+    notificationStore.startPolling()
   }
 })
 
 watch(
   () => authStore.isAuthenticated,
   (isAuthed) => {
-    console.log('[SSE] authStore.isAuthenticated changed:', isAuthed)
     if (isAuthed) {
       notificationStore.loadUnreadCount()
-      notificationStore.connectSse()
+      notificationStore.startPolling()
     } else {
-      notificationStore.disconnectSse()
+      notificationStore.stopPolling()
     }
   }
 )
 
 onUnmounted(() => {
-  notificationStore.disconnectSse()
+  notificationStore.stopPolling()
 })
 </script>
 

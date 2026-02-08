@@ -83,7 +83,7 @@ const goMyProfile = () => {
 const handleLogout = () => {
   closeProfile()
   authStore.clearAuth()
-  notificationStore.disconnectSse()
+  notificationStore.stopPolling()
   localStorage.removeItem('refreshToken')
   router.push('/login')
 }

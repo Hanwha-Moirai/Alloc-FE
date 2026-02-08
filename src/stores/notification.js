@@ -6,12 +6,11 @@ import {
   markAllNotificationsAsRead,
   deleteNotification,
   deleteAllReadNotifications,
-  getNotificationSubscribeUrl,
+  fetchNotificationPoll,
 } from '@/api/notification'
 import { useAuthStore } from '@/stores/auth'
 
-let eventSource = null
-let reconnectTimer = null
+let pollTimer = null
 
 const normalizeNotification = (raw) => {
   if (!raw) return null
@@ -34,26 +33,7 @@ const normalizeNotification = (raw) => {
   }
 }
 
-const parseJson = (payload) => {
-  if (!payload) return null
-  try {
-    return JSON.parse(payload)
-  } catch (error) {
-    return null
-  }
-}
-
-const scheduleReconnect = (store) => {
-  if (reconnectTimer) return
-
-  reconnectTimer = setTimeout(() => {
-    reconnectTimer = null
-    const authStore = useAuthStore()
-    if (authStore.isAuthenticated) {
-      store.connectSse()
-    }
-  }, 3000)
-}
+const DEFAULT_POLL_INTERVAL = 10000
 
 export const useNotificationStore = defineStore('notification', {
   state: () => ({
@@ -62,6 +42,7 @@ export const useNotificationStore = defineStore('notification', {
     loading: false,
     connected: false,
     error: null,
+    latestNotificationId: 0,
   }),
   actions: {
     async loadNotifications(params = { page: 0, size: 20 }) {
@@ -75,6 +56,11 @@ export const useNotificationStore = defineStore('notification', {
         this.notifications = items
           .map(normalizeNotification)
           .filter((item) => item && item.id)
+        if (this.notifications.length > 0) {
+           this.latestNotificationId = Math.max(
+              ...this.notifications.map((item) => item.id || 0)
+           )
+          }
       } catch (error) {
         console.error('알림 목록 로드 실패:', error)
         this.error = error
@@ -95,64 +81,60 @@ export const useNotificationStore = defineStore('notification', {
     async refresh() {
       await Promise.all([this.loadNotifications(), this.loadUnreadCount()])
     },
-    connectSse() {
-      if (eventSource) return
+      async pollNotifications() {
+          const authStore = useAuthStore()
+          if (!authStore.isAuthenticated) return
 
-      const authStore = useAuthStore()
-      if (!authStore.isAuthenticated) {
-        console.log('[SSE] connectSse skipped: not authenticated')
-        return
-      }
+          try {
+              const res = await fetchNotificationPoll({
+                  sinceId: this.latestNotificationId || 0,
+              })
+              const payload = res.data?.data || {}
+              const items = payload.notifications || []
+              const normalizedItems = items
+                  .map(normalizeNotification)
+                  .filter((item) => item && item.id)
 
-      const url = getNotificationSubscribeUrl()
-      console.log('[SSE] connecting to', url)
-      eventSource = new EventSource(url, { withCredentials: true })
+              if (normalizedItems.length > 0) {
+                  const existingIds = new Set(this.notifications.map((n) => n.id))
+                  const newItems = normalizedItems.filter((item) => !existingIds.has(item.id))
+                  if (newItems.length > 0) {
+                      const ordered = [...newItems].sort((a, b) => a.id - b.id)
+                      this.notifications = [...ordered.reverse(), ...this.notifications]
+                  }
+              }
 
-      eventSource.onopen = () => {
-        console.log('[SSE] connected')
-        this.connected = true
-        this.error = null
-      }
+              if (Number.isFinite(payload.unreadCount)) {
+                  this.unreadCount = payload.unreadCount
+              }
 
-      eventSource.addEventListener('UNREAD_COUNT', (event) => {
-        const nextCount = parseInt(event.data, 10)
-        if (Number.isFinite(nextCount)) {
-          this.unreadCount = nextCount
-        }
-      })
+              if (Number.isFinite(payload.latestNotificationId)) {
+                  this.latestNotificationId = Math.max(
+                      this.latestNotificationId || 0,
+                      payload.latestNotificationId
+                  )
+              }
+              this.connected = true
+              this.error = null
+          } catch (error) {
+              console.error('알림 폴링 실패:', error)
+              this.connected = false
+              this.error = error
+          }
+      },
+      startPolling(intervalMs = DEFAULT_POLL_INTERVAL) {
+          const authStore = useAuthStore()
+          if (!authStore.isAuthenticated || pollTimer) return
 
-      eventSource.addEventListener('NOTIFICATION', (event) => {
-        const payload = parseJson(event.data) || {}
-        const normalized = normalizeNotification(payload)
-        if (!normalized || !normalized.id) return
-
-        this.notifications = [normalized, ...this.notifications]
-        if (!normalized.isRead) {
-          this.unreadCount += 1
-        }
-      })
-
-      eventSource.addEventListener('PING', () => {})
-
-      eventSource.onerror = () => {
-        console.log('[SSE] error/disconnected')
-        this.connected = false
-        this.error = new Error('SSE disconnected')
-        if (eventSource) {
-          eventSource.close()
-          eventSource = null
-        }
-        scheduleReconnect(this)
-      }
-    },
-    disconnectSse() {
-      if (eventSource) {
-        eventSource.close()
-        eventSource = null
-      }
-      if (reconnectTimer) {
-        clearTimeout(reconnectTimer)
-        reconnectTimer = null
+          this.pollNotifications()
+          pollTimer = setInterval(() => {
+              this.pollNotifications()
+          }, intervalMs)
+      },
+      stopPolling() {
+          if (pollTimer) {
+              clearInterval(pollTimer)
+              pollTimer = null
       }
       this.connected = false
     },

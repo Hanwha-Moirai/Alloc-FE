@@ -30,10 +30,7 @@ export const deleteAllReadNotifications = () => {
     return axios.delete('/api/notifications/read')
 }
 
-/**
- * 실시간 알림 구독(SSE) URL 반환
- * SSE는 axios를 통하지 않고 EventSource 객체를 사용해야 하므로 URL만 정의
- */
-export const getNotificationSubscribeUrl = () => {
-    return '/api/notifications/stream'
+// 폴링 기반 신규 알림 조회
+export const fetchNotificationPoll = (params = { sinceId: 0, size: 20 }) => {
+    return axios.get('/api/notifications/poll', { params })
 }
