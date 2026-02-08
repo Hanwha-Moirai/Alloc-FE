@@ -165,6 +165,11 @@ const router = createRouter({
                     name: 'AdminRanks',
                     component: () => import('@/pages/admin/RankManagement.vue'),
                 },
+                {
+                    path: 'documents',
+                    name: 'AdminDocuments',
+                    component: () => import('@/pages/admin/DocumentManagement.vue'),
+                },
             ],
         },
     ],

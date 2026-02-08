@@ -27,6 +27,7 @@ const adminMenu = computed(() => [
   { path: '/admin/tech-stack', icon: '/icons/stack.png', label: '기술스택' },
   { path: '/admin/jobs', icon: '/icons/job.png', label: '직무 관리' },
   { path: '/admin/ranks', icon: '/icons/ranks.png', label: '직급 관리' },
+  { path: '/admin/documents', icon: '/icons/report.png', label: '문서 관리' },
   { path: '/admin/audit', icon: '/icons/audit.png', label: '감사/보고' }
 ])
 </script>
