@@ -84,6 +84,13 @@
         @create="handleCreateDoc"
     />
 
+    <LoadingModal
+        v-if="showRiskLoading"
+        title="리스크 분석 생성 중"
+        message="리스크 분석을 생성하고 있습니다. 잠시만 기다려 주세요."
+        icon-src="/loading.gif"
+    />
+
   </div>
 </template>
 
@@ -95,6 +102,7 @@ import TaskAddModal from '@/components/common/TaskAddModal.vue'
 import TaskFilterDrawer from '@/components/common/TaskFilterDrawer.vue'
 import MilestoneAddModal from '@/components/common/MilestoneAddModal.vue'
 import DocCreateModal from '@/components/common/DocCreateModal.vue'
+import LoadingModal from '@/components/common/LoadingModal.vue'
 
 import { createMilestone, createTask, getGanttMilestones } from '@/api/gantt'
 import { getAssignedMembers, fetchProjectList } from '@/api/project';
@@ -109,6 +117,7 @@ const memberList = ref([]);
 const showAddModal = ref(false)
 const showMilestoneAddModal = ref(false)
 const showDocModal = ref(false)
+const showRiskLoading = ref(false)
 const isEditing = ref(false)
 const isFilterOpen = ref(false)
 const milestoneList = ref<any[]>([])
@@ -295,6 +304,7 @@ const handleCreateRisk = async () => {
     return;
   }
   try {
+    showRiskLoading.value = true;
     const { weekStart, weekEnd } = getCurrentWeekRange();
     const payload = { week_start: weekStart, week_end: weekEnd };
     await createRiskReport(projectId, payload);
@@ -303,8 +313,11 @@ const handleCreateRisk = async () => {
   } catch (error: any) {
     console.error('리스크 분석 생성 실패:', error);
     alert(error.response?.data?.message || '리스크 분석 생성에 실패했습니다.');
+  } finally {
+    showRiskLoading.value = false;
   }
 };
+
 
 // --- Navigation ---
 const goTab = (tab: string) => {

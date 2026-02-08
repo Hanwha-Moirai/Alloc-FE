@@ -46,8 +46,7 @@
         </tr>
         </thead>
         <tbody>
-        <tr v-if="loading"><td colspan="4" style="text-align:center; padding: 40px;">업로드 처리 중...</td></tr>
-        <tr v-else-if="filteredDocs.length === 0"><td colspan="4" style="text-align:center; padding: 40px;">데이터가 없습니다.</td></tr>
+        <tr v-if="filteredDocs.length === 0"><td colspan="4" style="text-align:center; padding: 40px;">데이터가 없습니다.</td></tr>
 
         <tr v-for="doc in pagedDocs" :key="doc.id">
           <td><input type="checkbox" /></td>
@@ -91,11 +90,19 @@
       </button>
     </div>
   </div>
+
+  <LoadingModal
+      v-if="loading"
+      title="PDF 업로드 중"
+      message="문서를 처리하고 있습니다. 잠시만 기다려 주세요."
+      icon-src="/loading.gif"
+  />
 </template>
 
 <script setup>
 import { computed, ref } from 'vue';
 import { uploadAdminDocument } from '@/api/document';
+import LoadingModal from '@/components/common/LoadingModal.vue';
 
 const searchText = ref('');
 const loading = ref(false);
