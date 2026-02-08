@@ -36,15 +36,6 @@
           <button class="add-btn btn-gradient" @click="showDocModal = true">+ 주간보고/회의록 생성</button>
         </div>
 
-        <div v-if="isActive('risk')">
-          <button
-              class="add-btn btn-gradient"
-              @click="handleCreateRisk"
-          >
-            + 리스크 분석 생성
-          </button>
-        </div>
-
       </div>
     </div>
 
@@ -98,7 +89,6 @@ import DocCreateModal from '@/components/common/DocCreateModal.vue'
 
 import { createMilestone, createTask, getGanttMilestones } from '@/api/gantt'
 import { getAssignedMembers, fetchProjectList } from '@/api/project';
-import { createRiskReport } from '@/api/risk';
 
 const route = useRoute()
 const router = useRouter()
@@ -268,43 +258,6 @@ const handleCreateDoc = (data: any) => {
   console.log('생성 데이터:', data)
 }
 
-const formatDate = (value: Date) => {
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, '0');
-  const day = String(value.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
-const getCurrentWeekRange = () => {
-  const now = new Date();
-  const day = now.getDay(); // 0 = Sun, 1 = Mon
-  const diffToMonday = day === 0 ? -6 : 1 - day;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + diffToMonday);
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  return {
-    weekStart: formatDate(monday),
-    weekEnd: formatDate(sunday),
-  };
-};
-
-const handleCreateRisk = async () => {
-  if (!projectId) {
-    alert('프로젝트 ID가 없습니다.');
-    return;
-  }
-  try {
-    const { weekStart, weekEnd } = getCurrentWeekRange();
-    const payload = { week_start: weekStart, week_end: weekEnd };
-    await createRiskReport(projectId, payload);
-    alert('리스크 분석이 생성되었습니다.');
-    refreshKey.value++;
-  } catch (error: any) {
-    console.error('리스크 분석 생성 실패:', error);
-    alert(error.response?.data?.message || '리스크 분석 생성에 실패했습니다.');
-  }
-};
 
 // --- Navigation ---
 const goTab = (tab: string) => {

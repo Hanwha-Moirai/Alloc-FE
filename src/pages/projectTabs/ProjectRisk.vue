@@ -6,10 +6,15 @@
         <h3 class="analysis-title">프로젝트 리스크 현황</h3>
         <p>현재 분석된 리스크는 총 <strong>{{ reports.length }}건</strong>입니다.</p>
       </div>
-      <div class="status-chips">
-        <div class="chip critical">심각 {{ categorizedReports.high.length }}</div>
-        <div class="chip warning">주의 {{ categorizedReports.medium.length }}</div>
-        <div class="chip stable">보통 {{ categorizedReports.low.length }}</div>
+      <div class="summary-actions">
+        <button class="add-btn btn-gradient" @click="handleCreateRisk">
+          + 리스크 분석 생성
+        </button>
+        <div class="status-chips">
+          <div class="chip critical">심각 {{ categorizedReports.high.length }}</div>
+          <div class="chip warning">주의 {{ categorizedReports.medium.length }}</div>
+          <div class="chip stable">보통 {{ categorizedReports.low.length }}</div>
+        </div>
       </div>
     </div>
 
@@ -47,6 +52,13 @@
         :report="selectedReport"
         @close="isModalOpen = false"
     />
+
+    <LoadingModal
+        v-if="showRiskLoading"
+        title="리스크 분석 생성 중"
+        message="리스크 분석을 생성하고 있습니다. 잠시만 기다려 주세요."
+        icon-src="/loading.gif"
+    />
   </div>
 </template>
 
@@ -54,7 +66,8 @@
 import { computed, ref, onMounted, watch } from "vue";
 import { useRoute } from "vue-router";
 import RiskDetailModal from "@/components/common/RiskDetailModal.vue";
-import { fetchRiskReportDetail, fetchRiskReports } from "@/api/risk";
+import LoadingModal from "@/components/common/LoadingModal.vue";
+import { createRiskReport, fetchRiskReportDetail, fetchRiskReports } from "@/api/risk";
 
 const props = defineProps({
   refreshTrigger: {
@@ -70,6 +83,7 @@ const reports = ref<any[]>([]);
 const isLoading = ref(true);
 const isModalOpen = ref(false);
 const selectedReport = ref<any>(null);
+const showRiskLoading = ref(false);
 
 // 1. 전체 리포트 중 가장 높은 위험도 점수 계산
 const maxRiskScore = computed(() => {
@@ -137,6 +151,47 @@ const getStatusColor = (score: number) => {
   if (score >= 8) return 'warning';
   return 'stable';
 };
+
+const formatDate = (value: Date) => {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getCurrentWeekRange = () => {
+  const now = new Date();
+  const day = now.getDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + diffToMonday);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  return {
+    weekStart: formatDate(monday),
+    weekEnd: formatDate(sunday),
+  };
+};
+
+const handleCreateRisk = async () => {
+  if (!projectId) {
+    alert('프로젝트 ID가 없습니다.');
+    return;
+  }
+  try {
+    showRiskLoading.value = true;
+    const { weekStart, weekEnd } = getCurrentWeekRange();
+    const payload = { week_start: weekStart, week_end: weekEnd };
+    await createRiskReport(projectId, payload);
+    alert('리스크 분석이 생성되었습니다.');
+    await loadReports();
+  } catch (error: any) {
+    console.error('리스크 분석 생성 실패:', error);
+    alert(error.response?.data?.message || '리스크 분석 생성에 실패했습니다.');
+  } finally {
+    showRiskLoading.value = false;
+  }
+};
 </script>
 
 <style scoped>
@@ -161,9 +216,10 @@ const getStatusColor = (score: number) => {
 }
 
 /* 상단 요약 스타일 */
-.top-summary { display: flex; justify-content: space-between; align-items: flex-end; }
+.top-summary { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
 .top-summary h3 { margin: 0 0 8px 0; font-size: 22px; color: #0f172a; }
 .top-summary p { margin: 0; color: #64748b; font-size: 14px; }
+.summary-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .status-chips { display: flex; gap: 8px; }
 .chip { padding: 6px 12px; border-radius: 100px; font-size: 12px; font-weight: 700; border: 1px solid transparent; }
 .chip.critical { background: #fee2e2; color: #ef4444; border-color: #fca5a5; }
