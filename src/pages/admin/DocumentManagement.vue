@@ -258,6 +258,11 @@ const statusClass = (status) => {
   width: 200px;
 }
 
+.search-bar svg {
+  position: absolute;
+  left: 10px;
+}
+
 .add-btn {
   background-color: #4ab8d8;
   color: white;
@@ -280,41 +285,49 @@ const statusClass = (status) => {
 }
 
 .table-wrapper {
-  background-color: #fff;
-  border-radius: 12px;
-  padding: 12px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  background: white;
+  border: 1px solid #e2e8f0;
 }
 
 .admin-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  text-align: left;
 }
 
 .admin-table th,
 .admin-table td {
-  padding: 12px 8px;
-  border-bottom: 1px solid #e5e7eb;
-  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .admin-table th {
-  color: #6b7280;
+  background-color: #f8fafc;
+  padding: 12px 16px;
+  font-size: 12px;
   font-weight: 600;
+  color: #475569;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.admin-table td {
+  padding: 14px 16px;
+  font-size: 13px;
+  color: #1e293b;
+  border-bottom: 1px solid #f1f5f9;
 }
 
 .doc-name {
   font-weight: 600;
-  color: #111827;
+  color: #1e293b;
 }
 
 .date-text {
-  color: #6b7280;
+  color: #64748b;
+  font-size: 13px;
 }
 
 .summary-text {
-  color: #374151;
+  color: #1e293b;
 }
 
 .status-pill {
@@ -345,38 +358,40 @@ const statusClass = (status) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 20px;
   margin-top: 20px;
   flex-wrap: wrap;
 }
 
 .p-nav {
-  padding: 6px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background-color: #fff;
+  background: none;
+  border: none;
+  color: #2563eb;
   font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
 }
 
 .p-numbers {
   display: flex;
-  gap: 6px;
+  gap: 4px;
+  align-items: center;
 }
 
 .p-num {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  background-color: #fff;
-  font-size: 12px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  color: #64748b;
+  border-radius: 4px;
   cursor: pointer;
 }
 
 .p-num.active {
-  background-color: #111827;
-  color: #fff;
-  border-color: #111827;
+  background-color: #bfdbfe;
+  color: #2563eb;
+  font-weight: 700;
 }
 </style>
