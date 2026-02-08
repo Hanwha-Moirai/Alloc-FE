@@ -23,6 +23,8 @@
           v-for="noti in displayedNotifications"
           :key="noti.id"
           class="notification-item"
+          :class="{ clickable: !!noti.linkUrl }"
+          @click="handleNotificationClick(noti)"
       >
         <div class="noti-icon">⚠️</div>
         <div class="noti-content">
@@ -30,7 +32,7 @@
           <span class="noti-date">{{ noti.createdAt }}</span>
         </div>
 
-        <button class="action-btn" @click="handleSingleAction(noti)">
+        <button class="action-btn" @click.stop="handleSingleAction(noti)">
           <span v-if="activeTab === 'unread'">∨</span> <span v-else>×</span> </button>
       </div>
 
@@ -52,9 +54,11 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useNotificationStore } from '@/stores/notification'
 
 const notificationStore = useNotificationStore()
+const router = useRouter()
 const activeTab = ref('unread')
 
 const notifications = computed(() => notificationStore.notifications)
@@ -71,6 +75,30 @@ const handleSingleAction = async (noti) => {
     await notificationStore.markAsRead(noti.id)
   } else {
     await notificationStore.removeNotification(noti.id)
+  }
+}
+
+const handleNotificationClick = async (noti) => {
+  if (activeTab.value === 'unread') {
+    await notificationStore.markAsRead(noti.id)
+  }
+
+  if (!noti.linkUrl) {
+    return
+  }
+
+  let isExternal = false
+  try {
+    const parsed = new URL(noti.linkUrl, window.location.origin)
+    isExternal = parsed.origin !== window.location.origin
+  } catch (error) {
+    isExternal = false
+  }
+
+  if (isExternal) {
+    window.location.assign(noti.linkUrl)
+  } else {
+    await router.push(noti.linkUrl)
   }
 }
 
@@ -157,6 +185,10 @@ onMounted(() => {
 
 .notification-item:hover {
   background-color: #fafafa;
+}
+
+.notification-item.clickable {
+  cursor: pointer;
 }
 
 .noti-icon {
