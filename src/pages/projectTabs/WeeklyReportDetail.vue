@@ -174,7 +174,8 @@ const form = reactive({
   manager: '',
   week: '',
   reporter: '',
-  progress: 0
+  progress: 0,
+  reportStatus: null
 });
 
 // 태스크 데이터 리스트
@@ -214,6 +215,7 @@ const fetchDetail = async () => {
     form.reporter = data.reporterName ?? '-';
     form.progress = Math.round(data.taskCompletionRate ?? 0);
     form.period = `${data.weekStartDate} ~ ${data.weekEndDate}`;
+    form.reportStatus = data.reportStatus ?? null;
 
     const weeklyTasks = data.weeklyTasks ?? [];
 
@@ -257,7 +259,7 @@ const handleSave = async () => {
   try {
     const payload = {
       reportId: Number(reportId),
-      reportStatus: 'REVIEWED',
+      reportStatus: form.reportStatus ?? null,
       changeOfPlan: '',
 
       completedTasks: completedTasks.value.map(t => ({

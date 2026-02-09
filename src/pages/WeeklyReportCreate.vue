@@ -144,6 +144,7 @@ const projectInfo = reactive({
 const form = reactive({
   reportId: null,
   reporter: '',
+  reportStatus: null,
   weekLabel: '',
   weekStartDate: '',
   weekEndDate: '',
@@ -188,6 +189,7 @@ onMounted(async () => {
   const data = createRes.data.data;
 
   form.reporter = data.reporterName ?? '';
+  form.reportStatus = data.reportStatus ?? null;
   form.taskCompletionRate = data.taskCompletionRate ?? 0;
   form.reportId = data.reportId;
 
@@ -241,7 +243,7 @@ const handleCreate = async () => {
   try {
     const updatePayload = {
       reportId: form.reportId,
-      reportStatus: 'REVIEWED',
+      reportStatus: form.reportStatus ?? null,
       changeOfPlan: form.changeOfPlan || '',
 
       completedTasks: form.completedTasks
