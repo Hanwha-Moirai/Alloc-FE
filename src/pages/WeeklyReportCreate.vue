@@ -27,7 +27,7 @@
       </div>
       <div class="info-card">
         <span class="label">보고자</span>
-        <div class="value">로그인 사용자</div>
+        <div class="value">{{ form.reporter }}</div>
       </div>
     </div>
 
@@ -143,6 +143,7 @@ const projectInfo = reactive({
 // 생성 폼 데이터
 const form = reactive({
   reportId: null,
+  reporter: '',
   weekLabel: '',
   weekStartDate: '',
   weekEndDate: '',
@@ -186,6 +187,7 @@ onMounted(async () => {
   const createRes = await createWeeklyReport(projectId);
   const data = createRes.data.data;
 
+  form.reporter = data.reporterName ?? '';
   form.taskCompletionRate = data.taskCompletionRate ?? 0;
   form.reportId = data.reportId;
 

@@ -64,10 +64,12 @@ import { ref, reactive, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { createMeetingRecord } from '@/api/meetingRecord';
 import { fetchProjectDetail } from '@/api/project';
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute();
 const router = useRouter();
 const projectId = Number(route.params.projectId);
+const authStore = useAuthStore()
 
 // 생성 페이지이므로 isEditing은 필요 없거나 true인 상태와 같습니다.
 const form = reactive({
@@ -76,7 +78,7 @@ const form = reactive({
   client: '',
   manager: '',
   meetingDate: new Date().toISOString().split('T')[0], // 오늘 날짜 기본값
-  reporter: '담당자(본인)', // 필요 시 유저 정보에서 가져옴
+  reporter: '',
   topic: '',
   agendaType: '',
   decision: ''
@@ -100,6 +102,10 @@ const fetchProjectInfo = async () => {
 
 onMounted(async () => {
   await fetchProjectInfo();
+  if (!authStore.user) {
+    await authStore.fetchMe()
+  }
+  form.reporter = authStore.user?.name ?? ''
 });
 
 const handleCreate = async () => {
