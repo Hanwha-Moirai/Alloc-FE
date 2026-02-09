@@ -219,21 +219,31 @@ const fetchDashboardData = async () => {
 const fetchWeeklyReportStatus = async () => {
   if (projectList.value.length === 0) return
 
-  const project = projectList.value[0]
+  let totalMissing = 0
+  let totalWeeks = 0
 
-  const res = await getMissingWeeklyReports(project.projectId, {
-    startDate: project.startDate,
-    endDate: project.endDate
-  })
+  await Promise.all(
+      projectList.value.map(async (project) => {
+        if (!project.startDate || !project.endDate) return
 
-  const missing = res.data.data ?? []
+        const res = await getMissingWeeklyReports(project.projectId, {
+          startDate: project.startDate,
+          endDate: project.endDate
+        })
 
-  const totalWeeks =
-      dayjs(project.endDate).diff(dayjs(project.startDate), 'week') + 1
+        const missing = res.data.data ?? []
+
+        const weeks =
+            dayjs(project.endDate).diff(dayjs(project.startDate), 'week') + 1
+
+        totalMissing += missing.length
+        totalWeeks += weeks
+      })
+  )
 
   weeklyReportStatus.value = {
-    missing: missing.length,
-    written: Math.max(totalWeeks - missing.length, 0)
+    missing: totalMissing,
+    written: Math.max(totalWeeks - totalMissing, 0)
   }
 }
 
