@@ -81,20 +81,25 @@
     </div>
 
     <!-- 페이징 -->
-    <div class="pagination">
-      <button disabled>Previous</button>
-      <button class="active">1</button>
-      <button>2</button>
-      <button>3</button>
-      <span>...</span>
-      <button>11</button>
-      <button>Next</button>
+    <div class="pagination" v-if="totalPages > 1">
+      <button :disabled="page === 0" @click="setPage(page - 1)">Previous</button>
+      <template v-for="item in pageItems" :key="item.key">
+        <span v-if="item.type === 'ellipsis'">...</span>
+        <button
+            v-else
+            :class="{ active: item.page === page }"
+            @click="setPage(item.page)"
+        >
+          {{ item.page + 1 }}
+        </button>
+      </template>
+      <button :disabled="page >= totalPages - 1" @click="setPage(page + 1)">Next</button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { fetchProjectList, fetchProjectAchievementRate } from '@/api/project'
 
@@ -114,12 +119,56 @@ type ProjectItem = {
 
 const projects = ref<ProjectItem[]>([])
 const loading = ref(false)
+const page = ref(0)
+const size = ref(10)
+const totalPages = ref(1)
+const totalElements = ref(0)
+
+const pageItems = computed(() => {
+  const total = totalPages.value
+  const current = page.value
+  const items = []
+
+  if (total <= 7) {
+    for (let i = 0; i < total; i += 1) {
+      items.push({ type: 'page', page: i, key: `p-${i}` })
+    }
+    return items
+  }
+
+  items.push({ type: 'page', page: 0, key: 'p-0' })
+
+  const start = Math.max(1, current - 1)
+  const end = Math.min(total - 2, current + 1)
+
+  if (start > 1) {
+    items.push({ type: 'ellipsis', key: `e-start-${start}` })
+  }
+
+  for (let i = start; i <= end; i += 1) {
+    items.push({ type: 'page', page: i, key: `p-${i}` })
+  }
+
+  if (end < total - 2) {
+    items.push({ type: 'ellipsis', key: `e-end-${end}` })
+  }
+
+  items.push({ type: 'page', page: total - 1, key: `p-${total - 1}` })
+  return items
+})
 
 const loadProjects = async () => {
   loading.value = true;
   try {
-    const res = await fetchProjectList();
-    const projectList = res.data;
+    const res = await fetchProjectList({ page: page.value, size: size.value });
+    const payload = res.data.data ?? res.data;
+    const projectList = Array.isArray(payload) ? payload : (payload.content ?? []);
+    const meta = Array.isArray(payload) ? null : payload;
+
+    if (meta) {
+      totalPages.value = meta.totalPages ?? 1;
+      totalElements.value = meta.totalElements ?? projectList.length;
+    }
 
     // 각 프로젝트의 상세 진행률을 가져오기
     const projectsWithRate = await Promise.all(
@@ -157,7 +206,17 @@ const goDetail = (projectId: number) => {
   router.push(`/projects/${projectId}`)
 }
 
+const setPage = (nextPage: number) => {
+  if (nextPage < 0 || nextPage >= totalPages.value) return
+  if (nextPage === page.value) return
+  page.value = nextPage
+}
+
 onMounted(() => {
+  loadProjects()
+})
+
+watch(page, () => {
   loadProjects()
 })
 </script>

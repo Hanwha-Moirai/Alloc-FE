@@ -137,7 +137,8 @@ const toggleEdit = () => {
 const fetchMyProjects = async () => {
   try {
     const res = await fetchProjectList()
-    const list = res.data.data ?? res.data
+    const payload = res.data.data ?? res.data
+    const list = Array.isArray(payload) ? payload : (payload.content ?? [])
 
     myProjectList.value = list.map((p: any) => ({
       id: p.projectId,

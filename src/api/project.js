@@ -1,8 +1,8 @@
 import axios from '@/lib/axios'
 
 //프로젝트 목록 조회
-export const fetchProjectList = () => {
-    return axios.get('/api/projects')
+export const fetchProjectList = (params = {}) => {
+    return axios.get('/api/projects', { params })
 }
 
 //프로젝트 상세 조회
