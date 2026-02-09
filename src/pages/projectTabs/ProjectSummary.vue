@@ -126,10 +126,9 @@
       <div class="log-box">
         <h4>프로젝트 최신 로그</h4>
         <ul>
-          <li>[2025.06.16 18:40] 주간보고가 업데이트되었습니다.</li>
-          <li>[2025.06.15 14:20] 마일스톤 일정이 변경되었습니다.</li>
-          <li>[2025.06.14 10:00] 주간 스크럼 회의가 기록되었습니다.</li>
-          <li>[2025.06.13 17:05] 태스크 상태가 변경되었습니다.</li>
+          <li v-if="isLogLoading">로그 불러오는 중...</li>
+          <li v-else-if="projectLogs.length === 0">로그가 없습니다.</li>
+          <li v-else v-for="(log, idx) in projectLogs" :key="idx">{{ log }}</li>
         </ul>
       </div>
 
@@ -171,6 +170,8 @@ import { Chart, ArcElement, Tooltip, DoughnutController } from 'chart.js'
 
 import { fetchProjectDetail, fetchProjectAchievementRate, updateProject } from '@/api/project'
 import { getUpcomingProjectEvents } from '@/api/calendar'
+import { getWeeklyReportLogs } from '@/api/weeklyReport'
+import { getMeetingRecordLogs } from '@/api/meetingRecord'
 
 Chart.register(ArcElement, Tooltip, DoughnutController)
 
@@ -199,6 +200,8 @@ const progressRate = ref(0)
 
 const upcomingEvents = ref<any[]>([])
 const isUpcomingLoading = ref(false)
+const projectLogs = ref<string[]>([])
+const isLogLoading = ref(false)
 
 const form = reactive({
   projectName: '',
@@ -338,6 +341,36 @@ const loadUpcomingProjectEvents = async () => {
   }
 }
 
+const loadProjectLogs = async () => {
+  isLogLoading.value = true
+  try {
+    const [reportRes, meetingRes] = await Promise.all([
+      getWeeklyReportLogs(projectId, { size: 5 }),
+      getMeetingRecordLogs(projectId, { size: 5 })
+    ])
+
+    const reportLogs: string[] = reportRes.data?.data ?? []
+    const meetingLogs: string[] = meetingRes.data?.data ?? []
+
+    const merged = [...reportLogs, ...meetingLogs]
+    merged.sort((a, b) => extractLogTime(b) - extractLogTime(a))
+    projectLogs.value = merged.slice(0, 8)
+  } catch (e) {
+    console.error('프로젝트 로그 조회 실패', e)
+    projectLogs.value = []
+  } finally {
+    isLogLoading.value = false
+  }
+}
+
+const extractLogTime = (log: string) => {
+  const match = log.match(/^\[(.+?)\]/)
+  if (!match) return 0
+  const value = match[1].replace(/\./g, '-')
+  const time = new Date(value.replace(' ', 'T'))
+  return Number.isNaN(time.getTime()) ? 0 : time.getTime()
+}
+
 /* =======================
  * watchers
  * ======================= */
@@ -375,6 +408,7 @@ onMounted(() => {
   loadProjectDetail()
   loadProjectProgressRate()
   loadUpcomingProjectEvents()
+  loadProjectLogs()
 })
 </script>
 

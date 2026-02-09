@@ -43,14 +43,14 @@
       </div>
     </div>
 
-    <div class="gantt-chart-container">
+    <div class="gantt-chart-container" ref="chartContainer">
       <div class="chart-content" :style="{ width: TOTAL_CHART_WIDTH + 'px' }">
         <div class="chart-grid-background">
           <div v-for="month in months" :key="month.name" class="grid-month-col" :style="{ width: month.width }"></div>
         </div>
 
         <div class="chart-header">
-          <div v-for="month in months" :key="month.name" class="month-col" :style="{ width: month.width }">
+          <div v-for="month in months" :key="month.key" class="month-col" :style="{ width: month.width }">
             <div class="month-name">{{ month.name }}</div>
             <div class="weeks">
               <span v-for="week in month.weeks" :key="week">{{ week }}</span>
@@ -117,7 +117,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref, computed, onMounted, watch} from 'vue'
+import {ref, computed, onMounted, watch, nextTick} from 'vue'
 import { useRoute } from 'vue-router'
 import dayjs from 'dayjs'
 import MilestoneEditModal from '@/components/common/MilestoneEditModal.vue'
@@ -130,6 +130,7 @@ const projectId = Number(route.params.projectId)
 // 상태 관리
 const scheduleData = ref([])
 const isLoading = ref(true)
+const chartContainer = ref<HTMLElement | null>(null)
 
 //보기 모드 상태
 const isViewMenuOpen = ref(false)
@@ -175,6 +176,8 @@ const fetchGanttData = async () => {
     console.error("간트 데이터 로딩 에러:", error);
   } finally {
     isLoading.value = false;
+    await nextTick();
+    scrollToFocus();
   }
 };
 
@@ -183,6 +186,11 @@ onMounted(fetchGanttData)
 watch(() => props.refreshTrigger, () => {
   console.log("부모로부터 데이터 갱신 요청을 받았습니다.");
   fetchGanttData();
+});
+
+watch([scheduleData, currentViewMode], async () => {
+  await nextTick();
+  scrollToFocus();
 });
 
 // --- 보기 모드별 하루당 차지하는 픽셀 폭 (동적 계산) ---
@@ -196,13 +204,35 @@ const pixelPerDay = computed(() => {
   }
 })
 
-//설정값
-const currentYear = 2026
-const startOfYear = dayjs(`${currentYear}-01-01`)
-const endOfYear = dayjs(`${currentYear}-12-31`)
-const totalDaysInYear = endOfYear.diff(startOfYear, 'day') + 1
-const TOTAL_CHART_WIDTH = computed(() => totalDaysInYear * pixelPerDay.value)
-const MONTH_WIDTH = computed(() => TOTAL_CHART_WIDTH.value / 12)
+const parseDate = (value: string) => dayjs(value.replace(/\./g, '-'))
+
+const allDates = computed(() => {
+  const dates: dayjs.Dayjs[] = []
+  scheduleData.value.forEach((group: any) => {
+    if (group?.startDate) dates.push(parseDate(group.startDate))
+    if (group?.endDate) dates.push(parseDate(group.endDate))
+    group?.tasks?.forEach((task: any) => {
+      if (task?.startDate) dates.push(parseDate(task.startDate))
+      if (task?.endDate) dates.push(parseDate(task.endDate))
+    })
+  })
+  return dates
+})
+
+const timelineStart = computed(() => {
+  if (allDates.value.length === 0) return dayjs().startOf('year')
+  const minDate = allDates.value.reduce((min, d) => d.isBefore(min) ? d : min, allDates.value[0])
+  return minDate.startOf('month')
+})
+
+const timelineEnd = computed(() => {
+  if (allDates.value.length === 0) return dayjs().endOf('year')
+  const maxDate = allDates.value.reduce((max, d) => d.isAfter(max) ? d : max, allDates.value[0])
+  return maxDate.endOf('month')
+})
+
+const totalDaysInRange = computed(() => timelineEnd.value.diff(timelineStart.value, 'day') + 1)
+const TOTAL_CHART_WIDTH = computed(() => totalDaysInRange.value * pixelPerDay.value)
 
 const changeViewMode = (mode: string) => {
   currentViewMode.value = mode
@@ -216,39 +246,44 @@ const getProjectColor = (index: number) => projectColors[index % projectColors.l
 
 // --- 타임라인 생성 로직 (일간 보기 대응 추가) ---
 const months = computed(() => {
-  return Array.from({ length: 12 }, (_, i) => {
-    const startOfMonth = dayjs(`${currentYear}-${i + 1}-01`);
-    const daysInMonth = startOfMonth.daysInMonth();
-    const weeks = [];
+  const result: Array<{ key: string; name: string; weeks: number[]; width: string }> = []
+  let cursor = timelineStart.value.startOf('month')
+  const end = timelineEnd.value.startOf('month')
+
+  while (cursor.isSame(end) || cursor.isBefore(end)) {
+    const daysInMonth = cursor.daysInMonth()
+    const weeks: number[] = []
 
     if (currentViewMode.value === '일간') {
-      // 일간 보기일 때는 해당 월의 모든 날짜(1~31)를 추가
       for (let day = 1; day <= daysInMonth; day++) {
-        weeks.push(day);
+        weeks.push(day)
       }
     } else if (currentViewMode.value === '주간') {
-      // 주간 보기는 7일 간격
       for (let day = 1; day <= daysInMonth; day += 7) {
-        weeks.push(day);
+        weeks.push(day)
       }
     } else {
-      // 월간 보기는 주요 지점만
-      weeks.push(1, 8, 15, 22);
+      weeks.push(1, 8, 15, 22)
     }
 
-    return {
-      name: `${i + 1}월`,
+    result.push({
+      key: cursor.format('YYYY-MM'),
+      name: `${cursor.month() + 1}월`,
       weeks,
       width: (daysInMonth * pixelPerDay.value) + 'px'
-    };
-  });
-});
+    })
+
+    cursor = cursor.add(1, 'month')
+  }
+
+  return result
+})
 
 // --- 위치 계산 로직 수정 ---
 const calculatePos = (start: string, end: string) => {
-  const startDate = dayjs(start.replace(/\./g, '-'))
-  const endDate = dayjs(end.replace(/\./g, '-'))
-  const startDiff = startDate.diff(startOfYear, 'day')
+  const startDate = parseDate(start)
+  const endDate = parseDate(end)
+  const startDiff = startDate.diff(timelineStart.value, 'day')
   const duration = endDate.diff(startDate, 'day') + 1
 
   return {
@@ -258,11 +293,25 @@ const calculatePos = (start: string, end: string) => {
 }
 
 const todayPos = computed(() => {
-  const today = dayjs();
-  if (today.year() !== currentYear) return { display: 'none' };
-  const diff = today.diff(startOfYear, 'day');
+  const today = dayjs()
+  if (today.isBefore(timelineStart.value) || today.isAfter(timelineEnd.value)) return { display: 'none' }
+  const diff = today.diff(timelineStart.value, 'day')
   return { left: `${diff * pixelPerDay.value}px`, display: 'block' };
 });
+
+const scrollToFocus = () => {
+  if (!chartContainer.value) return
+  const today = dayjs()
+  const focus = (today.isBefore(timelineStart.value) || today.isAfter(timelineEnd.value))
+    ? allDates.value[0]
+    : today
+
+  if (!focus) return
+
+  const diff = focus.diff(timelineStart.value, 'day')
+  const target = Math.max(0, diff * pixelPerDay.value - 200)
+  chartContainer.value.scrollLeft = target
+}
 
 // --- 메뉴 상태 관리 ---
 const activeMenuId = ref<number | null>(null);
@@ -396,8 +445,8 @@ const targetDeleteId = ref<number | null>(null);
 .sub-task-item { padding: 10px 16px 10px 45px; font-size: 12px; color: #6b7280; border-bottom: 1px solid #f1f1f1; }
 
 /* [오른쪽] 차트 */
-.gantt-chart-container { flex: 1; overflow-x: auto; position: relative; background-color: #fff; }
-.chart-content { position: relative; }
+.gantt-chart-container { flex: 1; overflow-x: auto; overflow-y: hidden; position: relative; background-color: #fff; }
+.chart-content { position: relative; min-width: max-content; }
 
 .chart-grid-background {
   position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; pointer-events: none;

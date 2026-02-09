@@ -77,3 +77,9 @@ export const getMissingWeeklyReports = (projectId, params) => {
         }
     })
 }
+
+export const getWeeklyReportLogs = (projectId, params = {}) => {
+    return axios.get(`/api/projects/${projectId}/docs/report/logs`, {
+        params
+    })
+}

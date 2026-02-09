@@ -47,3 +47,9 @@ export const searchMyMeetingRecords = (params) => {
         }
     });
 };
+
+export const getMeetingRecordLogs = (projectId, params = {}) => {
+    return axios.get(`/api/projects/${projectId}/docs/meeting_record/logs`, {
+        params
+    });
+};
