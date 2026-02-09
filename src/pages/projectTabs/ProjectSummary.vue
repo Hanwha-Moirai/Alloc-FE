@@ -89,9 +89,15 @@
         <div class="chart-box">
           <h4>리스크 유형 분포</h4>
           <div class="legend">
-            <span><span class="dot red"></span> 일정 지연</span>
-            <span><span class="dot blue"></span> 보고 미완</span>
-            <span><span class="dot yellow"></span> 이벤트 실패</span>
+            <span v-if="riskTypeStats.length === 0">데이터 없음</span>
+            <span
+              v-else
+              v-for="item in riskTypeStats"
+              :key="item.risk_type"
+            >
+              <span class="dot" :style="{ backgroundColor: item.color }"></span>
+              {{ item.risk_type }}
+            </span>
           </div>
 
           <div class="risk-wrapper">
@@ -100,20 +106,14 @@
             </div>
 
             <ul class="risk-counts">
-              <li>
-                <span class="dot red"></span>
-                <span class="label">일정 지연</span>
-                <span class="count-val">2</span>
+              <li v-if="riskTypeStats.length === 0">
+                <span class="label">데이터 없음</span>
+                <span class="count-val">0</span>
               </li>
-              <li>
-                <span class="dot blue"></span>
-                <span class="label">보고 미완</span>
-                <span class="count-val">3</span>
-              </li>
-              <li>
-                <span class="dot yellow"></span>
-                <span class="label">이벤트 실패</span>
-                <span class="count-val">2</span>
+              <li v-else v-for="item in riskTypeStats" :key="item.risk_type">
+                <span class="dot" :style="{ backgroundColor: item.color }"></span>
+                <span class="label">{{ item.risk_type }}</span>
+                <span class="count-val">{{ item.count }}</span>
               </li>
             </ul>
           </div>
@@ -169,6 +169,7 @@ import { useRoute } from 'vue-router'
 import { Chart, ArcElement, Tooltip, DoughnutController } from 'chart.js'
 
 import { fetchProjectDetail, fetchProjectAchievementRate, updateProject } from '@/api/project'
+import { fetchRiskTypeSummary } from '@/api/risk'
 import { getUpcomingProjectEvents } from '@/api/calendar'
 import { getWeeklyReportLogs } from '@/api/weeklyReport'
 import { getMeetingRecordLogs } from '@/api/meetingRecord'
@@ -195,8 +196,10 @@ const { isEditing } = toRefs(props)
 const progressChart = ref<HTMLCanvasElement | null>(null)
 let progressChartInstance: Chart | null = null
 const riskChart = ref<HTMLCanvasElement | null>(null)
+let riskChartInstance: Chart | null = null
 
 const progressRate = ref(0)
+const riskTypeStats = ref([])
 
 const upcomingEvents = ref<any[]>([])
 const isUpcomingLoading = ref(false)
@@ -268,12 +271,16 @@ const updateProgressChart = () => {
 const initRiskChart = () => {
   if (!riskChart.value) return
 
-  new Chart(riskChart.value, {
+  const labels = riskTypeStats.value.map((item) => item.risk_type)
+  const data = riskTypeStats.value.map((item) => item.count)
+  const colors = riskTypeStats.value.map((item) => item.color)
+
+  riskChartInstance = new Chart(riskChart.value, {
     type: 'doughnut',
     data: {
       datasets: [{
-        data: [2, 3, 2],
-        backgroundColor: ['#ef4444', '#3b82f6', '#facc15'],
+        data: data.length ? data : [1],
+        backgroundColor: colors.length ? colors : ['#e5e7eb'],
         borderWidth: 0,
       }],
     },
@@ -283,7 +290,7 @@ const initRiskChart = () => {
       cutout: '70%',
       plugins: {
         tooltip: {
-          enabled: true,
+          enabled: data.length > 0,
           displayColors: false,
           callbacks: {
             label: (context) => `${context.raw}개`
@@ -292,6 +299,18 @@ const initRiskChart = () => {
       },
     },
   })
+}
+
+const updateRiskChart = () => {
+  if (!riskChartInstance) {
+    initRiskChart()
+    return
+  }
+  const dataset = riskChartInstance.data.datasets?.[0]
+  if (!dataset) return
+  dataset.data = riskTypeStats.value.length ? riskTypeStats.value.map((item) => item.count) : [1]
+  dataset.backgroundColor = riskTypeStats.value.length ? riskTypeStats.value.map((item) => item.color) : ['#e5e7eb']
+  riskChartInstance.update()
 }
 
 /* =======================
@@ -363,6 +382,23 @@ const loadProjectLogs = async () => {
   }
 }
 
+const loadRiskTypeSummary = async () => {
+  try {
+    const res = await fetchRiskTypeSummary(projectId)
+    const palette = ['#ef4444', '#3b82f6', '#facc15', '#22c55e', '#a855f7', '#f97316']
+    riskTypeStats.value = (res.data ?? []).map((item, idx) => ({
+      risk_type: item.risk_type || '기타',
+      count: Number(item.count ?? 0),
+      color: palette[idx % palette.length],
+    }))
+    updateRiskChart()
+  } catch (e) {
+    console.error('리스크 유형 분포 조회 실패', e)
+    riskTypeStats.value = []
+    updateRiskChart()
+  }
+}
+
 const extractLogTime = (log: string) => {
   const match = log.match(/^\[(.+?)\]/)
   if (!match) return 0
@@ -407,6 +443,7 @@ onMounted(() => {
 
   loadProjectDetail()
   loadProjectProgressRate()
+  loadRiskTypeSummary()
   loadUpcomingProjectEvents()
   loadProjectLogs()
 })

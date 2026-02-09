@@ -22,3 +22,8 @@ export const fetchRiskReportDetail = (projectId, reportId) => {
 export const createRiskReport = (projectId, payload) => {
     return api.post(`/api/projects/${projectId}/docs/risk_report`, payload);
 };
+
+// 리스크 유형 분포
+export const fetchRiskTypeSummary = (projectId) => {
+    return api.get(`/api/projects/${projectId}/docs/risk_types`);
+};

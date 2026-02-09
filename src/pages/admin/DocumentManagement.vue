@@ -106,8 +106,8 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
-import { uploadAdminDocument } from '@/api/document';
+import { computed, onMounted, ref } from 'vue';
+import { fetchAdminDocuments, uploadAdminDocument } from '@/api/document';
 import LoadingModal from '@/components/common/LoadingModal.vue';
 
 const searchText = ref('');
@@ -116,22 +116,24 @@ const currentPage = ref(0);
 const pageSize = 10;
 const fileInput = ref(null);
 
-const documents = ref([
-  {
-    id: 1,
-    name: 'software_development_process_guide.pdf',
-    uploadedAt: '2026-02-07',
-    summary: '프로젝트 관리 및 개발 프로세스 개요 문서.',
-    status: 'SUCCESS'
-  },
-  {
-    id: 2,
-    name: 'ISO31000_sample.pdf',
-    uploadedAt: '2026-02-08',
-    summary: '리스크 관리 기본 정의 및 프로세스 요약.',
-    status: 'PROCESSING'
+const documents = ref([]);
+
+const loadDocuments = async () => {
+  try {
+    const res = await fetchAdminDocuments();
+    const items = res.data ?? [];
+    documents.value = items.map((item) => ({
+      id: item.doc_id,
+      name: item.file_name,
+      uploadedAt: item.uploaded_at ? item.uploaded_at.slice(0, 10) : '-',
+      summary: item.summary_text || '-',
+      status: item.upload_status || 'PROCESSING',
+    }));
+  } catch (err) {
+    console.error('문서 목록 조회 실패', err);
+    documents.value = [];
   }
-]);
+};
 
 const filteredDocs = computed(() => {
   const keyword = searchText.value.trim().toLowerCase();
@@ -171,6 +173,7 @@ const handleUpload = async (event) => {
   try {
     await uploadAdminDocument(file);
     alert('업로드가 완료되었습니다. 처리에는 시간이 걸릴 수 있습니다.');
+    await loadDocuments();
   } catch (err) {
     console.error('PDF 업로드 실패', err);
     alert('업로드에 실패했습니다. 잠시 후 다시 시도해주세요.');
@@ -178,6 +181,10 @@ const handleUpload = async (event) => {
     loading.value = false;
   }
 };
+
+onMounted(() => {
+  loadDocuments();
+});
 
 const statusLabel = (status) => {
   if (status === 'SUCCESS') return '성공';
