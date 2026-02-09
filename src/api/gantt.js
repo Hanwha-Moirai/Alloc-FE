@@ -8,6 +8,11 @@ export const getGanttTasks = (projectId, params = {}) => {
     );
 };
 
+// 사용자 미완료 태스크 조회
+export const getUserIncompleteTasks = () => {
+    return axios.get('/api/users/me/tasks');
+};
+
 // 태스크 생성
 export const createTask = (projectId, data) => {
     return axios.post(`/api/projects/${projectId}/tasks`, data);

@@ -131,7 +131,7 @@ import { Chart, DoughnutController, ArcElement, Tooltip, Legend } from 'chart.js
 import dayjs from 'dayjs'
 import { fetchProjectList } from '@/api/project'
 import { getMyWeeklyEventCount, getUpcomingProjectEvents } from '@/api/calendar'
-import { getGanttTasks } from '@/api/gantt'
+import { getUserIncompleteTasks } from '@/api/gantt'
 import {useRouter} from "vue-router";
 
 Chart.register(DoughnutController, ArcElement, Tooltip, Legend)
@@ -206,22 +206,18 @@ const fetchUpcomingEvents = async () => {
 }
 
 const fetchMyTasks = async () => {
-  if (!projectList.value.length) return
-
-  const projectId = projectList.value[0].projectId
-
-  const res = await getGanttTasks(projectId)
+  const res = await getUserIncompleteTasks()
   const list = res.data.data ?? res.data ?? []
 
   tasks.value = list
 
   // 요약 계산
   const inProgress = list.filter(
-      t => t.status === 'IN_PROGRESS'
+      t => t.taskStatus === 'IN_PROGRESS'
   ).length
 
   const delayed = list.filter(
-      t => t.status === 'DELAYED'
+      t => t.taskStatus === 'DELAYED'
   ).length
 
   taskSummary.value = {
@@ -231,7 +227,7 @@ const fetchMyTasks = async () => {
 
   // 지연 태스크만 따로
   delayedTasks.value = list.filter(
-      t => t.status === 'DELAYED'
+      t => t.taskStatus === 'DELAYED'
   )
 }
 
