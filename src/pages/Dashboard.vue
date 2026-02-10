@@ -155,6 +155,39 @@ const upcomingEvents = ref<any[]>([])
 const delayedTasks = ref<any[]>([])
 const weeklyEventCount = ref(0)
 const router = useRouter()
+
+const resolveEventDateTime = (event: any) => {
+  if (event.startDateTime) return event.startDateTime
+  if (event.eventDateTime) return event.eventDateTime
+  if (event.startAt) return event.startAt
+
+  if (event.startDate && event.startTime) {
+    return `${event.startDate}T${event.startTime}`
+  }
+
+  return event.startDate ?? null
+}
+
+const normalizeUpcomingEvents = (items: any[]) => {
+  return items.map(event => ({
+    ...event,
+    startDateTime: resolveEventDateTime(event)
+  }))
+}
+
+const parseWeeklyEventCount = (res: any) => {
+  const payload = res.data?.data ?? res.data
+
+  if (typeof payload === 'number') return payload
+  if (typeof payload === 'string') {
+    const parsed = Number(payload)
+    return Number.isNaN(parsed) ? 0 : parsed
+  }
+
+  return payload?.count ?? payload?.weeklyEventCount ?? 0
+}
+
+
 const goToProjectList = () => {
   router.push('/projects') // 프로젝트 목록 라우트
 }
@@ -194,7 +227,7 @@ const fetchDashboardData = async () => {
 
 const fetchWeeklyEventCount = async () => {
   const res = await getMyWeeklyEventCount()
-  weeklyEventCount.value = res.data.data?.count ?? 0
+  weeklyEventCount.value = parseWeeklyEventCount(res)
 }
 
 const fetchUpcomingEvents = async () => {
@@ -203,7 +236,8 @@ const fetchUpcomingEvents = async () => {
   const projectId = projectList.value[0].projectId
   const res = await getUpcomingProjectEvents(projectId, 3)
 
-  upcomingEvents.value = res.data.data?.items ?? []
+  const items = res.data?.data?.items ?? res.data?.items ?? []
+  upcomingEvents.value = normalizeUpcomingEvents(items)
 }
 
 const fetchMyTasks = async () => {
